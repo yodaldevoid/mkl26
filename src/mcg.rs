@@ -1,10 +1,13 @@
 use core::mem;
+use core::sync::atomic::{AtomicBool,ATOMIC_BOOL_INIT,Ordering};
 
 use volatile::Volatile;
 use bit_field::BitField;
 
+use osc::OscToken;
+
 #[repr(C,packed)]
-pub struct Mcg {
+struct McgRegs {
     c1:     Volatile<u8>,
     c2:     Volatile<u8>,
     c3:     Volatile<u8>,
@@ -21,10 +24,8 @@ pub struct Mcg {
     c8:     Volatile<u8>,
 }
 
-impl Mcg {
-    pub unsafe fn new() -> &'static mut Mcg {
-        &mut *(0x40064000 as *mut Mcg)
-    }
+pub struct Mcg {
+    reg: &'static mut McgRegs
 }
 
 pub enum OscRange {
@@ -51,15 +52,26 @@ pub enum Clock {
     Stop(Stop)
 }
 
+static MCG_INIT: AtomicBool = ATOMIC_BOOL_INIT;
+
 impl Mcg {
+    pub fn new() -> Mcg {
+        let was_init = MCG_INIT.swap(true, Ordering::Relaxed);
+        if was_init {
+            panic!("Cannot initialize MCG: It's already active");
+        }
+        let reg = unsafe { &mut *(0x40064000 as *mut McgRegs) };
+        Mcg { reg: reg }
+    }
+
     //TODO: Stop
-    pub fn clock(&'static mut self) -> Clock {
+    pub fn clock(self) -> Clock {
         let source: OscSource = unsafe {
-            mem::transmute(self.c1.read().get_bits(6..8))
+            mem::transmute(self.reg.c1.read().get_bits(6..8))
         };
-        let fll_internal = self.c1.read().get_bit(2);
-        let pll_enabled = self.c6.read().get_bit(6);
-        let low_power = self.c2.read().get_bit(1);
+        let fll_internal = self.reg.c1.read().get_bit(2);
+        let pll_enabled = self.reg.c6.read().get_bit(6);
+        let low_power = self.reg.c2.read().get_bit(1);
 
         match (source, fll_internal, pll_enabled, low_power) {
             (OscSource::LockedLoop, true, false, _) => Clock::Fei(Fei { mcg: self }),
@@ -75,54 +87,71 @@ impl Mcg {
     }
 }
 
+impl Drop for Mcg {
+    fn drop(&mut self) {
+        MCG_INIT.store(false, Ordering::Relaxed);
+    }
+}
+
 pub struct Fei {
-    mcg: &'static mut Mcg
+    mcg: Mcg
 }
 
 pub struct Fee {
-    mcg: &'static mut Mcg
+    mcg: Mcg
 }
 
 pub struct Fbi {
-    mcg: &'static mut Mcg
+    mcg: Mcg
 }
 
 pub struct Fbe {
-    mcg: &'static mut Mcg
+    mcg: Mcg
 }
 
 pub struct Pbe {
-    mcg: &'static mut Mcg
+    mcg: Mcg
 }
 
 pub struct Pee {
-    mcg: &'static mut Mcg
+    mcg: Mcg
 }
 
 pub struct Blpi {
-    mcg: &'static mut Mcg
+    mcg: Mcg
 }
 
 pub struct Blpe {
-    mcg: &'static mut Mcg
+    mcg: Mcg
 }
 
 pub struct Stop {
-    mcg: &'static mut Mcg
+    mcg: Mcg
 }
 
 impl Fei {
-    pub fn enable_xtal(&mut self, range: OscRange) {
-        self.mcg.c2.update(|c2| {
+    pub fn enable_xtal(&mut self, range: OscRange, _token: OscToken) {
+        self.mcg.reg.c2.update(|c2| {
             c2.set_bits(4..6, range as u8); // frequency range
             c2.set_bit(2, true); // internal osc
         });
 
-        while !self.mcg.s.read().get_bit(1) {}
+        while !self.mcg.reg.s.read().get_bit(1) {}
+    }
+
+    pub fn disable_xtal(&mut self) -> OscToken {
+        self.mcg.reg.c2.update(|c2| {
+            c2.set_bits(4..6, 0); // frequency range
+            c2.set_bit(2, false); // internal osc
+        });
+
+        while !self.mcg.reg.s.read().get_bit(1) {}
+
+        OscToken::new()
     }
 
     pub fn use_external(self, divide: u32) -> Fbe {
-        let osc = self.mcg.c2.read().get_bits(4..6);
+        let osc = self.mcg.reg.c2.read().get_bits(4..6);
         let frdiv = if osc == OscRange::Low as u8 {
             match divide {
                 1 => 0,
@@ -149,7 +178,7 @@ impl Fei {
             }
         };
 
-        self.mcg.c1.update(|c1| {
+        self.mcg.reg.c1.update(|c1| {
             c1.set_bits(6..8, OscSource::External as u8);
             c1.set_bits(3..6, frdiv);
             c1.set_bit(2, false); // external clock
@@ -159,8 +188,8 @@ impl Fei {
         // the new clock to stabilize before we move on.
         // First: Wait for the FLL to be pointed at the crystal
         // Then: Wait for our clock source to be the crystal osc
-        while self.mcg.s.read().get_bit(4) {}
-        while self.mcg.s.read().get_bits(2..4) != OscSource::External as u8 {}
+        while self.mcg.reg.s.read().get_bit(4) {}
+        while self.mcg.reg.s.read().get_bits(2..4) != OscSource::External as u8 {}
 
         Fbe { mcg: self.mcg }
     }
@@ -176,19 +205,19 @@ impl Fbe {
             panic!("Invalid PLL reference divide factor: {}", denominator);
         }
 
-        self.mcg.c5.update(|c5| {
+        self.mcg.reg.c5.update(|c5| {
             c5.set_bits(0..5, denominator - 1);
         });
 
-        self.mcg.c6.update(|c6| {
+        self.mcg.reg.c6.update(|c6| {
             c6.set_bits(0..5, numerator - 24);
             c6.set_bit(6, true);
         });
 
         // Wait for PLL to be enabled
-        while !self.mcg.s.read().get_bit(5) {}
+        while !self.mcg.reg.s.read().get_bit(5) {}
         // Wait for the PLL to be "locked" and stable
-        while !self.mcg.s.read().get_bit(6) {}
+        while !self.mcg.reg.s.read().get_bit(6) {}
 
         Pbe { mcg: self.mcg }
     }
@@ -196,7 +225,7 @@ impl Fbe {
 
 impl Pbe {
     pub fn use_pll(self) -> Pee {
-        self.mcg.c1.update(|c1| {
+        self.mcg.reg.c1.update(|c1| {
             c1.set_bits(6..8, OscSource::LockedLoop as u8);
         });
 
@@ -206,7 +235,7 @@ impl Pbe {
         // and the PLL at 3. Instead of adding a value to OscSource
         // which would be invalid to set, we just check for the known
         // value "3" here.
-        while self.mcg.s.read().get_bits(2..4) != 3 {}
+        while self.mcg.reg.s.read().get_bits(2..4) != 3 {}
 
         Pee { mcg: self.mcg }
     }

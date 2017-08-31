@@ -1,6 +1,7 @@
 #![feature(lang_items,asm)]
 #![no_std]
 #![no_main]
+#![no_builtins]
 
 extern crate volatile;
 extern crate bit_field;
@@ -12,9 +13,13 @@ mod sim;
 mod uart;
 mod watchdog;
 
+use core::slice;
 use core::fmt::Write;
 
 extern {
+    static mut _bss_start: u8;
+    static mut _bss_end: u8;
+
     fn _stack_top();
 }
 
@@ -34,17 +39,17 @@ pub static _FLASHCONFIG: [u8; 16] = [
 
 #[no_mangle]
 pub extern fn main() {
-    let (wdog, sim, mcg, osc, pin) = unsafe {
+    let (wdog, sim, pin) = unsafe {
         (watchdog::Watchdog::new(),
          sim::Sim::new(),
-         mcg::Mcg::new(),
-         osc::Osc::new(),
          port::Port::new(port::PortName::C).pin(5))
     };
 
     wdog.disable();
+    unsafe { setup_bss() };
     // Enable the crystal oscillator with 10pf of capacitance
-    osc.enable(10);
+    let osc_token = osc::Osc::new().enable(10);
+
     // Set our clocks:
     // core: 72Mhz
     // peripheral: 36MHz
@@ -52,10 +57,11 @@ pub extern fn main() {
     sim.set_dividers(1, 2, 3);
     // We would also set the USB divider here if we wanted to use it.
 
+    let mcg = mcg::Mcg::new();
     if let mcg::Clock::Fei(mut fei) = mcg.clock() {
         // Our 16MHz xtal is "very fast", and needs to be divided
         // by 512 to be in the acceptable FLL range.
-        fei.enable_xtal(mcg::OscRange::VeryHigh);
+        fei.enable_xtal(mcg::OscRange::VeryHigh, osc_token);
         let fbe = fei.use_external(512);
 
         // PLL is 27/6 * xtal == 72MHz
@@ -93,3 +99,13 @@ pub extern fn rust_begin_unwind(_msg: core::fmt::Arguments,
 
 #[lang = "eh_personality"]
 pub extern fn eh_personality() {}
+
+unsafe fn setup_bss() {
+    let bss_start = &mut _bss_start as *mut u8;
+    let bss_end = &mut _bss_end as *mut u8;
+    let bss_len = bss_end as usize - bss_start as usize;
+    let bss = slice::from_raw_parts_mut(bss_start, bss_len);
+    for b in &mut bss.iter_mut() {
+        *b = 0;
+    }
+}
