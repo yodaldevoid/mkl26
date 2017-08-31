@@ -28,17 +28,27 @@ impl Port {
             PortName::E => 0x4004D000 as *mut Port
         }
     }
+
+    pub fn name(&self) -> PortName {
+        let addr = (self as *const Port) as u32;
+        match addr {
+            0x40049000 => PortName::A,
+            0x4004A000 => PortName::B,
+            0x4004B000 => PortName::C,
+            0x4004C000 => PortName::D,
+            0x4004D000 => PortName::E,
+            _ => unreachable!()
+        }
+    }
+
+    pub unsafe fn pin(&mut self, p: usize) -> Pin {
+        Pin { port: self, pin: p }
+    }
 }
 
 pub struct Pin {
     port: *mut Port,
     pin: usize
-}
-
-impl Port {
-    pub unsafe fn pin(&mut self, p: usize) -> Pin {
-        Pin { port: self, pin: p }
-    }
 }
 
 impl Pin {
@@ -47,6 +57,14 @@ impl Pin {
         port.pcr[self.pin].update(|pcr| {
             pcr.set_bits(8..11, mode);
         });
+    }
+
+    pub fn to_gpio(mut self) -> Gpio {
+        unsafe {
+            self.set_mode(1);
+            let port = &mut *self.port;
+            Gpio::new(port.name(), self.pin)
+        }
     }
 }
 
@@ -63,30 +81,6 @@ struct GpioBitband {
 pub struct Gpio {
     gpio: *mut GpioBitband,
     pin: usize
-}
-
-impl Port {
-    pub fn name(&self) -> PortName {
-        let addr = (self as *const Port) as u32;
-        match addr {
-            0x40049000 => PortName::A,
-            0x4004A000 => PortName::B,
-            0x4004B000 => PortName::C,
-            0x4004C000 => PortName::D,
-            0x4004D000 => PortName::E,
-            _ => unreachable!()
-        }
-    }
-}
-
-impl Pin {
-    pub fn to_gpio(mut self) -> Gpio {
-        unsafe {
-            self.set_mode(1);
-            let port = &mut *self.port;
-            Gpio::new(port.name(), self.pin)
-        }
-    }
 }
 
 impl Gpio {
