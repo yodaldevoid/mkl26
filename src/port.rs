@@ -66,6 +66,72 @@ impl Pin {
             Gpio::new(port.name(), self.pin)
         }
     }
+
+    pub fn to_uart_rx(mut self) -> Result<UartRx, ()> {
+        unsafe {
+            let port = &mut *self.port;
+            match (port.name(), self.pin) {
+                (PortName::E, 1) => {
+                    self.set_mode(3);
+                    Ok(UartRx(1))
+                },
+                (PortName::A, 1) => {
+                    self.set_mode(2);
+                    Ok(UartRx(0))
+                },
+                (PortName::B, 16) => {
+                    self.set_mode(3);
+                    Ok(UartRx(0))
+                },
+                (PortName::C, 3) => {
+                    self.set_mode(3);
+                    Ok(UartRx(1))
+                },
+                (PortName::D, 2) => {
+                    self.set_mode(3);
+                    Ok(UartRx(2))
+                },
+                (PortName::D, 6) => {
+                    self.set_mode(3);
+                    Ok(UartRx(0))
+                },
+                _ => Err(())
+            }
+        }
+    }
+
+    pub fn to_uart_tx(mut self) -> Result<UartTx, ()> {
+        unsafe {
+            let port = &mut *self.port;
+            match (port.name(), self.pin) {
+                (PortName::E, 0) => {
+                    self.set_mode(3);
+                    Ok(UartTx(1))
+                },
+                (PortName::A, 2) => {
+                    self.set_mode(2);
+                    Ok(UartTx(0))
+                },
+                (PortName::B, 17) => {
+                    self.set_mode(3);
+                    Ok(UartTx(0))
+                },
+                (PortName::C, 4) => {
+                    self.set_mode(3);
+                    Ok(UartTx(1))
+                },
+                (PortName::D, 3) => {
+                    self.set_mode(3);
+                    Ok(UartTx(2))
+                },
+                (PortName::D, 7) => {
+                    self.set_mode(3);
+                    Ok(UartTx(0))
+                },
+                _ => Err(())
+            }
+        }
+    }
 }
 
 #[repr(C,packed)]
@@ -106,5 +172,20 @@ impl Gpio {
         unsafe {
             (&mut (*self.gpio)).psor[self.pin].write(1);
         }
+    }
+}
+
+pub struct UartRx(u8);
+pub struct UartTx(u8);
+
+impl UartRx {
+    pub fn uart(&self) -> u8 {
+        self.0
+    }
+}
+
+impl UartTx {
+    pub fn uart(&self) -> u8 {
+        self.0
     }
 }

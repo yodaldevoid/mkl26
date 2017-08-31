@@ -7,6 +7,9 @@ pub enum Clock {
     PortC,
     PortD,
     PortE,
+    Uart0,
+    Uart1,
+    Uart2,
 }
 
 #[repr(C,packed)]
@@ -67,6 +70,21 @@ impl Sim {
             Clock::PortE => {
                 self.scgc5.update(|scgc| {
                     scgc.set_bit(13, true);
+                });
+            }
+            Clock::Uart0 => {
+                self.scgc4.update(|scgc| {
+                    scgc.set_bit(10, true);
+                });
+            }
+            Clock::Uart1 => {
+                self.scgc4.update(|scgc| {
+                    scgc.set_bit(11, true);
+                });
+            }
+            Clock::Uart2 => {
+                self.scgc4.update(|scgc| {
+                    scgc.set_bit(12, true);
                 });
             }
         }

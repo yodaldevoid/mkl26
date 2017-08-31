@@ -9,7 +9,10 @@ mod mcg;
 mod osc;
 mod port;
 mod sim;
+mod uart;
 mod watchdog;
+
+use core::fmt::Write;
 
 extern {
     fn _stack_top();
@@ -42,7 +45,6 @@ pub extern fn main() {
     wdog.disable();
     // Enable the crystal oscillator with 10pf of capacitance
     osc.enable(10);
-    sim.enable_clock(sim::Clock::PortC);
     // Set our clocks:
     // core: 72Mhz
     // peripheral: 36MHz
@@ -63,6 +65,17 @@ pub extern fn main() {
         panic!("Somehow the clock wasn't in FEI mode");
     }
 
+    sim.enable_clock(sim::Clock::PortB);
+    sim.enable_clock(sim::Clock::Uart0);
+    let uart = unsafe {
+        let rx = port::Port::new(port::PortName::B).pin(16).to_uart_rx().unwrap();
+        let tx = port::Port::new(port::PortName::B).pin(17).to_uart_tx().unwrap();
+        uart::Uart::new(0, Some(rx), Some(tx), (468, 24)).unwrap()
+    };
+
+    writeln!(uart, "Hello World").unwrap();
+
+    sim.enable_clock(sim::Clock::PortC);
     let mut gpio = pin.to_gpio();
     gpio.output();
     gpio.high();
