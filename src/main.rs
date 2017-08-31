@@ -39,9 +39,8 @@ pub static _FLASHCONFIG: [u8; 16] = [
 
 #[no_mangle]
 pub extern fn main() {
-    let (wdog, sim, pin) = unsafe {
+    let (wdog, pin) = unsafe {
         (watchdog::Watchdog::new(),
-         sim::Sim::new(),
          port::Port::new(port::PortName::C).pin(5))
     };
 
@@ -54,6 +53,7 @@ pub extern fn main() {
     // core: 72Mhz
     // peripheral: 36MHz
     // flash: 24MHz
+    let mut sim = sim::Sim::new();
     sim.set_dividers(1, 2, 3);
     // We would also set the USB divider here if we wanted to use it.
 

@@ -1,3 +1,5 @@
+use core::sync::atomic::{AtomicBool,ATOMIC_BOOL_INIT,Ordering};
+
 use volatile::Volatile;
 use bit_field::BitField;
 
@@ -13,7 +15,7 @@ pub enum Clock {
 }
 
 #[repr(C,packed)]
-pub struct Sim {
+struct SimRegs {
     sopt1:      Volatile<u32>,
     sopt1_cfg:  Volatile<u32>,
     _pad0:      [u32; 1023],
@@ -42,50 +44,61 @@ pub struct Sim {
     uidl:       Volatile<u32>
 }
 
+pub struct Sim {
+    reg: &'static mut SimRegs
+}
+
+static SIM_INIT: AtomicBool = ATOMIC_BOOL_INIT;
+
 impl Sim {
-    pub unsafe fn new() -> &'static mut Sim {
-        &mut *(0x40047000 as *mut Sim)
+    pub fn new() -> Sim {
+        let was_init = SIM_INIT.swap(true, Ordering::Relaxed);
+        if was_init {
+            panic!("Cannot initialize SIM: It's already active");
+        }
+        let reg = unsafe { &mut *(0x40047000 as *mut SimRegs) };
+        Sim { reg: reg }
     }
 
     pub fn enable_clock(&mut self, clock: Clock) {
         match clock {
             Clock::PortA => {
-                self.scgc5.update(|scgc| {
+                self.reg.scgc5.update(|scgc| {
                     scgc.set_bit(9, true);
                 });
             }
             Clock::PortB => {
-                self.scgc5.update(|scgc| {
+                self.reg.scgc5.update(|scgc| {
                     scgc.set_bit(10, true);
                 });
             }
             Clock::PortC => {
-                self.scgc5.update(|scgc| {
+                self.reg.scgc5.update(|scgc| {
                     scgc.set_bit(11, true);
                 });
             }
             Clock::PortD => {
-                self.scgc5.update(|scgc| {
+                self.reg.scgc5.update(|scgc| {
                     scgc.set_bit(12, true);
                 });
             }
             Clock::PortE => {
-                self.scgc5.update(|scgc| {
+                self.reg.scgc5.update(|scgc| {
                     scgc.set_bit(13, true);
                 });
             }
             Clock::Uart0 => {
-                self.scgc4.update(|scgc| {
+                self.reg.scgc4.update(|scgc| {
                     scgc.set_bit(10, true);
                 });
             }
             Clock::Uart1 => {
-                self.scgc4.update(|scgc| {
+                self.reg.scgc4.update(|scgc| {
                     scgc.set_bit(11, true);
                 });
             }
             Clock::Uart2 => {
-                self.scgc4.update(|scgc| {
+                self.reg.scgc4.update(|scgc| {
                     scgc.set_bit(12, true);
                 });
             }
@@ -97,6 +110,12 @@ impl Sim {
         clkdiv.set_bits(28..32, core - 1);
         clkdiv.set_bits(24..28, bus - 1);
         clkdiv.set_bits(16..20, flash - 1);
-        self.clkdiv1.write(clkdiv);
+        self.reg.clkdiv1.write(clkdiv);
+    }
+}
+
+impl Drop for Sim {
+    fn drop(&mut self) {
+        SIM_INIT.store(false, Ordering::Relaxed);
     }
 }
