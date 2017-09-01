@@ -3,15 +3,31 @@ use core::sync::atomic::{AtomicBool,ATOMIC_BOOL_INIT,Ordering};
 use volatile::Volatile;
 use bit_field::BitField;
 
-pub enum Clock {
-    PortA,
-    PortB,
-    PortC,
-    PortD,
-    PortE,
-    Uart0,
-    Uart1,
-    Uart2,
+use port::{Port,PortName,UartRx,UartTx};
+use uart::Uart;
+
+pub struct ClockGate {
+    gate: &'static mut Volatile<u32>
+}
+
+impl ClockGate {
+    fn new(reg: usize, bit: usize) -> ClockGate {
+        assert!(reg <= 7);
+        assert!(bit <= 31);
+        let base: usize = 0x42900500;
+        let reg_offset = 128 * (reg - 1);
+        let bit_offset = 4 * bit;
+        let ptr = (base + reg_offset + bit_offset) as *mut Volatile<u32>;
+        unsafe {
+            ClockGate { gate: &mut *ptr }
+        }
+    }
+}
+
+impl Drop for ClockGate {
+    fn drop(&mut self) {
+        self.gate.write(0);
+    }
 }
 
 #[repr(C,packed)]
@@ -60,57 +76,50 @@ impl Sim {
         Sim { reg: reg }
     }
 
-    pub fn enable_clock(&mut self, clock: Clock) {
-        match clock {
-            Clock::PortA => {
-                self.reg.scgc5.update(|scgc| {
-                    scgc.set_bit(9, true);
-                });
-            }
-            Clock::PortB => {
-                self.reg.scgc5.update(|scgc| {
-                    scgc.set_bit(10, true);
-                });
-            }
-            Clock::PortC => {
-                self.reg.scgc5.update(|scgc| {
-                    scgc.set_bit(11, true);
-                });
-            }
-            Clock::PortD => {
-                self.reg.scgc5.update(|scgc| {
-                    scgc.set_bit(12, true);
-                });
-            }
-            Clock::PortE => {
-                self.reg.scgc5.update(|scgc| {
-                    scgc.set_bit(13, true);
-                });
-            }
-            Clock::Uart0 => {
-                self.reg.scgc4.update(|scgc| {
-                    scgc.set_bit(10, true);
-                });
-            }
-            Clock::Uart1 => {
-                self.reg.scgc4.update(|scgc| {
-                    scgc.set_bit(11, true);
-                });
-            }
-            Clock::Uart2 => {
-                self.reg.scgc4.update(|scgc| {
-                    scgc.set_bit(12, true);
-                });
-            }
-        }
-    }
-
     pub fn set_dividers(&mut self, core: u32, bus: u32, flash: u32) {
         let mut clkdiv: u32 = 0;
         clkdiv.set_bits(28..32, core - 1);
         clkdiv.set_bits(24..28, bus - 1);
         clkdiv.set_bits(16..20, flash - 1);
         self.reg.clkdiv1.write(clkdiv);
+    }
+
+    pub fn port(&mut self, port: PortName) -> Port {
+        let gate = match port {
+            PortName::A => ClockGate::new(5,9),
+            PortName::B => ClockGate::new(5,10),
+            PortName::C => ClockGate::new(5,11),
+            PortName::D => ClockGate::new(5,12),
+            PortName::E => ClockGate::new(5,13),
+        };
+        if gate.gate.read() != 0 {
+            panic!("Cannot create Port instance; it is already in use");
+        }
+        gate.gate.write(1);
+        unsafe {
+            Port::new(port, gate)
+        }
+    }
+
+    pub fn uart<'a, 'b>(&mut self,
+                        uart: u8,
+                        rx: Option<UartRx<'a>>,
+                        tx: Option<UartTx<'b>>,
+                        clkdiv: (u16,u8))
+                        -> Result<Uart<'a, 'b>, ()> {
+        let gate = match uart {
+            0 => ClockGate::new(4, 10),
+            1 => ClockGate::new(4, 11),
+            2 => ClockGate::new(4, 12),
+            _ => return Err(()) //panic!("Cannot enable clock for UART {}", uart)
+        };
+        if gate.gate.read() != 0 {
+            return Err(()) //panic!("Cannot create Uart instance; it is already in use");
+        }
+        gate.gate.write(1);
+        unsafe {
+            Uart::new(uart, rx, tx, clkdiv, gate)
+        }
     }
 }
 

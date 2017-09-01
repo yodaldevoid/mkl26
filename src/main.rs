@@ -16,6 +16,12 @@ mod watchdog;
 use core::slice;
 use core::fmt::Write;
 
+use mcg::{Clock,Mcg,OscRange};
+use osc::Osc;
+use port::PortName;
+use sim::Sim;
+use watchdog::Watchdog;
+
 extern {
     static mut _bss_start: u8;
     static mut _bss_end: u8;
@@ -39,29 +45,27 @@ pub static _FLASHCONFIG: [u8; 16] = [
 
 #[no_mangle]
 pub extern fn main() {
-    let (wdog, pin) = unsafe {
-        (watchdog::Watchdog::new(),
-         port::Port::new(port::PortName::C).pin(5))
-    };
+    unsafe {
+        Watchdog::new().disable();
+        setup_bss();
+    }
 
-    wdog.disable();
-    unsafe { setup_bss() };
     // Enable the crystal oscillator with 10pf of capacitance
-    let osc_token = osc::Osc::new().enable(10);
+    let osc_token = Osc::new().enable(10);
 
     // Set our clocks:
     // core: 72Mhz
     // peripheral: 36MHz
     // flash: 24MHz
-    let mut sim = sim::Sim::new();
+    let mut sim = Sim::new();
     sim.set_dividers(1, 2, 3);
     // We would also set the USB divider here if we wanted to use it.
 
-    let mcg = mcg::Mcg::new();
-    if let mcg::Clock::Fei(mut fei) = mcg.clock() {
+    let mcg = Mcg::new();
+    if let Clock::Fei(mut fei) = mcg.clock() {
         // Our 16MHz xtal is "very fast", and needs to be divided
         // by 512 to be in the acceptable FLL range.
-        fei.enable_xtal(mcg::OscRange::VeryHigh, osc_token);
+        fei.enable_xtal(OscRange::VeryHigh, osc_token);
         let fbe = fei.use_external(512);
 
         // PLL is 27/6 * xtal == 72MHz
@@ -71,18 +75,15 @@ pub extern fn main() {
         panic!("Somehow the clock wasn't in FEI mode");
     }
 
-    sim.enable_clock(sim::Clock::PortB);
-    sim.enable_clock(sim::Clock::Uart0);
-    let uart = unsafe {
-        let rx = port::Port::new(port::PortName::B).pin(16).to_uart_rx().unwrap();
-        let tx = port::Port::new(port::PortName::B).pin(17).to_uart_tx().unwrap();
-        uart::Uart::new(0, Some(rx), Some(tx), (468, 24)).unwrap()
-    };
+    let port_b = sim.port(PortName::B);
+    let rx = port_b.pin(16).to_uart_rx().unwrap();
+    let tx = port_b.pin(17).to_uart_tx().unwrap();
+    let mut uart =sim.uart(0, Some(rx), Some(tx), (468, 24)).unwrap();
 
     writeln!(uart, "Hello World").unwrap();
 
-    sim.enable_clock(sim::Clock::PortC);
-    let mut gpio = pin.to_gpio();
+    let port_c = sim.port(PortName::C);
+    let mut gpio = port_c.pin(5).to_gpio();
     gpio.output();
     gpio.high();
 
