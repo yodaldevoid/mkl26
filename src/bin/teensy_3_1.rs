@@ -4,39 +4,39 @@
 #![no_builtins]
 
 extern crate volatile;
-extern crate bit_field;
+extern crate rusty_teensy;
 
-mod mcg;
-mod osc;
-mod port;
-mod sim;
-mod uart;
-mod watchdog;
-
-use core::slice;
 use core::fmt::Write;
 
 use volatile::Volatile;
 
-use mcg::{Clock,Mcg,OscRange};
-use osc::Osc;
-use port::{Port,PortName};
-use sim::Sim;
-use uart::Uart;
-use watchdog::Watchdog;
-
-extern {
-    static mut _bss_start: u8;
-    static mut _bss_end: u8;
-
-    fn _stack_top();
-}
+use rusty_teensy::*;
+use rusty_teensy::mcg::{Clock,Mcg,OscRange};
+use rusty_teensy::osc::Osc;
+use rusty_teensy::port::{Port,PortName};
+use rusty_teensy::sim::Sim;
+use rusty_teensy::uart::Uart;
+use rusty_teensy::watchdog::Watchdog;
 
 #[link_section = ".vectors"]
 #[no_mangle]
-pub static _VECTORS: [unsafe extern fn(); 2] = [
+pub static _VECTORS: [unsafe extern fn(); 16] = [
     _stack_top,
     main,
+    default_isr,    // NMI
+    default_isr,    // Hard Fault
+    default_isr,    // MemManage Fault
+    default_isr,    // Bus Fault
+    default_isr,    // Usage Fault
+    _fault,         // Reserved
+    _fault,         // Reserved
+    _fault,         // Reserved
+    _fault,         // Reserved
+    default_isr,    // SV Call
+    default_isr,    // Debug Monitor
+    _fault,         // Reserved
+    default_isr,    // Pendable SrvReq
+    default_isr,    // System Tick Timer
 ];
 
 #[link_section = ".flashconfig"]
@@ -97,6 +97,7 @@ pub extern fn main() {
     loop {}
 }
 
+//TODO: change to use USB_Listen for the panic messages
 #[lang = "panic_fmt"]
 #[no_mangle]
 pub extern fn rust_begin_unwind(msg: core::fmt::Arguments,
@@ -120,13 +121,3 @@ pub extern fn rust_begin_unwind(msg: core::fmt::Arguments,
 
 #[lang = "eh_personality"]
 pub extern fn eh_personality() {}
-
-unsafe fn setup_bss() {
-    let bss_start = &mut _bss_start as *mut u8;
-    let bss_end = &mut _bss_end as *mut u8;
-    let bss_len = bss_end as usize - bss_start as usize;
-    let bss = slice::from_raw_parts_mut(bss_start, bss_len);
-    for b in &mut bss.iter_mut() {
-        *b = 0;
-    }
-}
