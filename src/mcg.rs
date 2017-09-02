@@ -239,4 +239,27 @@ impl Pbe {
 
         Pee { mcg: self.mcg }
     }
+
+    pub fn disable_pll(self) -> Fbe {
+        self.mcg.reg.c6.update(|c6| {
+            c6.set_bit(6, false);
+        });
+
+        // Wait for FLL to be enabled
+        while self.mcg.reg.s.read().get_bit(5) {}
+
+        Fbe { mcg: self.mcg }
+    }
+}
+
+impl Pee {
+    pub fn bypass_pll(self) -> Pbe {
+        self.mcg.reg.c1.update(|c1| {
+            c1.set_bits(6..8, OscSource::External as u8);
+        });
+
+        while self.mcg.reg.s.read().get_bits(2..4) != OscSource::External as u8 {}
+
+        Pbe { mcg: self.mcg }
+    }
 }
