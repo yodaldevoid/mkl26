@@ -72,7 +72,7 @@ pub extern fn main() {
         // Our 16MHz xtal is "very fast", and needs to be divided
         // by 512 to be in the acceptable FLL range.
         fei.enable_xtal(OscRange::VeryHigh, osc_token);
-        let fbe = fei.use_external(512);
+        let fbe = fei.use_external_bypass(512);
 
         // PLL is 27/6 * xtal == 72MHz
         let pbe = fbe.enable_pll(27, 6);

@@ -150,7 +150,7 @@ impl Fei {
         OscToken::new()
     }
 
-    pub fn use_external(self, divide: u32) -> Fbe {
+    pub fn use_external_bypass(self, divide: u32) -> Fbe {
         let osc = self.mcg.reg.c2.read().get_bits(4..6);
         let frdiv = if osc == OscRange::Low as u8 {
             match divide {
