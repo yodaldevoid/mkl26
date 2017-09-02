@@ -207,6 +207,12 @@ impl<'a> Gpio<'a> {
             (&mut (*self.gpio)).psor[self.pin.pin].write(1);
         }
     }
+
+    pub fn low(&mut self) {
+        unsafe {
+            (&mut (*self.gpio)).pcor[self.pin.pin].write(1);
+        }
+    }
 }
 
 pub struct UartRx<'a> {
