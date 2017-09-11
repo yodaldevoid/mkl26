@@ -7,8 +7,11 @@ extern crate volatile;
 extern crate rusty_teensy;
 
 use core::fmt::Write;
+use core::str::from_utf8_unchecked;
 
 use volatile::Volatile;
+
+use rusty_teensy::read::{Read,Error};
 
 use rusty_teensy::*;
 use rusty_teensy::mcg::{Clock,Mcg,OscRange};
@@ -81,33 +84,58 @@ pub extern fn main() {
         panic!("Somehow the clock wasn't in FEI mode");
     }
 
-    unsafe {
-        PANIC_PORT = Some(sim.port(PortName::B));
-        let rx = PANIC_PORT.as_ref().unwrap().pin(16).to_uart_rx().unwrap();
-        let tx = PANIC_PORT.as_ref().unwrap().pin(17).to_uart_tx().unwrap();
-        PANIC_WRITER = Some(sim.uart(0, Some(rx), Some(tx), (468, 24)).unwrap());
-        writeln!(PANIC_WRITER.as_mut().unwrap(), "Hello World").unwrap();
-    }
-
+    //let port_a = sim.port(PortName::A);
+    //let port_b = sim.port(PortName::B);
     let port_c = sim.port(PortName::C);
-    let mut gpio = port_c.pin(5).to_gpio();
-    gpio.output();
-    gpio.high();
+    //let port_d = sim.port(PortName::D);
+    //let port_e = sim.port(PortName::E);
 
-    loop {}
+    let rx = port_c.pin(3).to_uart_rx().unwrap();
+    let tx = port_c.pin(4).to_uart_tx().unwrap();
+    let mut uart = sim.uart(1, Some(rx), Some(tx), (468, 24), true, true).unwrap();
+    write!(uart, "\r\nHello World\r\n").unwrap();
+
+    let mut led = port_c.pin(5).to_gpio();
+    led.output();
+    led.high();
+
+    loop {
+        let mut buf = [0; 2];
+        match uart.read(&mut buf) {
+            Ok(n) if n > 0 => {
+                match buf[0] {
+                    b'\r' => write!(uart, "\r\n").unwrap(),
+                    // Backspace
+                    0x08 | 0x7F => write!(uart, "\x08\x7F\x08").unwrap(), 
+                    _ => {
+                        let s = unsafe { from_utf8_unchecked(&buf[..n]) };
+                        write!(uart, "{}", s).unwrap();
+                    }
+                }
+
+                led.low();
+                for _ in 0..1000000 { unsafe { asm!{"nop"} } }
+                led.high();
+                for _ in 0..1000000 { unsafe { asm!{"nop"} } }
+            }
+            _ => {}
+        }
+    }
 }
 
 //TODO: change to use USB_Listen for the panic messages
 #[lang = "panic_fmt"]
 #[no_mangle]
-pub extern fn rust_begin_unwind(msg: core::fmt::Arguments,
-                                file: &'static str,
-                                line: u32) -> ! {
+pub extern fn rust_begin_unwind(_msg: core::fmt::Arguments,
+                                _file: &'static str,
+                                _line: u32) -> ! {
+    /*
     if let Some(uart) = unsafe { PANIC_WRITER.as_mut() } {
         write!(uart, "panicked at '").unwrap();
         uart.write_fmt(msg).unwrap();
         write!(uart, "', {}:{}\n", file, line).unwrap();
     }
+    */
 
     // Reset the MCU after we've printed our panic.
     /*

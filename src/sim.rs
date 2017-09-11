@@ -105,7 +105,9 @@ impl Sim {
                         uart: u8,
                         rx: Option<UartRx<'a>>,
                         tx: Option<UartTx<'b>>,
-                        clkdiv: (u16,u8))
+                        clkdiv: (u16,u8),
+                        rxfifo: bool,
+                        txfifo: bool)
                         -> Result<Uart<'a, 'b>, ()> {
         let gate = match uart {
             0 => ClockGate::new(4, 10),
@@ -118,7 +120,7 @@ impl Sim {
         }
         gate.gate.write(1);
         unsafe {
-            Uart::new(uart, rx, tx, clkdiv, gate)
+            Uart::new(uart, rx, tx, clkdiv, rxfifo, txfifo, gate)
         }
     }
 }
