@@ -7,6 +7,7 @@ extern crate bit_field;
 
 use core::slice;
 
+pub mod adc;
 pub mod mcg;
 pub mod osc;
 pub mod port;

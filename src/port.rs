@@ -86,7 +86,7 @@ pub struct Pin<'a> {
 }
 
 impl<'a> Pin<'a> {
-    pub fn set_mode(&mut self, mode: u32) {
+    fn set_mode(&mut self, mode: u32) {
         self.port.reg().pcr[self.pin].update(|pcr| {
             pcr.set_bits(8..11, mode);
         });
@@ -96,6 +96,50 @@ impl<'a> Pin<'a> {
         unsafe {
             self.set_mode(1);
             Gpio::new(self.port.name(), self)
+        }
+    }
+
+    pub fn to_adc(mut self) -> Result<AdcPin<'a>, ()> {
+        match (self.port.name(), self.pin) {
+            // 45-c2:0-S0,4b
+            (PortName::C, 2) |
+            // 58-d1:0-S0,5b
+            (PortName::D, 1) |
+            // 62-d5:0-S0,6b
+            (PortName::D, 5) |
+            // 63-d6:0-S0,7b
+            (PortName::D, 6) |
+            // 35-b0:0-S0,8
+            // 35-b0:0-S1,8
+            (PortName::B, 0) |
+            // 36-b1:0-S0,9
+            // 36-b1:0-S1,9
+            (PortName::B, 1) |
+            // 37-b2:0-S0,12
+            (PortName::B, 2) |
+            // 38-b3:0-S0,13
+            (PortName::B, 3) |
+            // 43-c0:0-S0,14
+            (PortName::C, 0) |
+            // 44-c1:0-S0,15
+            (PortName::C, 1) |
+
+            //  1-e0:0-S1,4a
+            (PortName::E, 0) |
+            // 53-c8:0-S1,4b
+            (PortName::C, 8) |
+            //  2-e1:0-S1,5a
+            (PortName::E, 1) |
+            // 54-c9:0-S1,5b
+            (PortName::C, 9) |
+            // 55-c10:0-S1,6b
+            (PortName::C, 10) |
+            // 56-c11:0-S1,7b
+            (PortName::C, 11) => {
+                self.set_mode(0);
+                Ok(AdcPin { _pin: self })
+            },
+            _ => Err(())
         }
     }
 
@@ -212,6 +256,20 @@ impl<'a> Gpio<'a> {
         unsafe {
             (&mut (*self.gpio)).pcor[self.pin.pin].write(1);
         }
+    }
+}
+
+pub struct AdcPin<'a> {
+    _pin: Pin<'a>
+}
+
+impl<'a> AdcPin<'a> {
+    pub fn port_name(&self) -> PortName {
+        self._pin.port.name()
+    }
+
+    pub fn pin(&self) -> usize {
+        self._pin.pin
     }
 }
 

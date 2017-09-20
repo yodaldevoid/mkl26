@@ -3,7 +3,8 @@ use core::sync::atomic::{AtomicBool,ATOMIC_BOOL_INIT,Ordering};
 use volatile::Volatile;
 use bit_field::BitField;
 
-use port::{Port,PortName,UartRx,UartTx};
+use adc::{Adc};
+use port::{AdcPin,Port,PortName,UartRx,UartTx};
 use uart::Uart;
 
 pub struct ClockGate {
@@ -121,6 +122,49 @@ impl Sim {
         gate.gate.write(1);
         unsafe {
             Uart::new(uart, rx, tx, clkdiv, rxfifo, txfifo, gate)
+        }
+    }
+
+    pub fn adc<'a, P: Into<Option<AdcPin<'a>>>>(&mut self,
+                    adc: u8,
+                    ch: u8,
+                    mode: u8,
+                    clkdiv: u8,
+                    pin: P)
+                    -> Result<Adc<'a>, ()> {
+        let gate = match adc {
+            0 => ClockGate::new(6, 27),
+            1 => ClockGate::new(3, 27),
+            _ => return Err(()) //panic!("Cannot enable clock for UART {}", uart)
+        };
+        if gate.gate.read() != 0 {
+            return Err(()) //panic!("Cannot create Uart instance; it is already in use");
+        }
+        gate.gate.write(1);
+        unsafe {
+            Adc::new(adc, ch, mode, clkdiv, pin.into(), gate)
+        }
+    }
+
+    pub fn adc_diff<'a, 'b>(&mut self,
+                            adc: u8,
+                            ch: u8,
+                            mode: u8,
+                            clkdiv: u8,
+                            pos: Option<AdcDiffPin<'a>>,
+                            neg: Option<AdcDiffPin<'b>>)
+                            -> Result<AdcDiff<'a, 'b>, ()> {
+        let gate = match adc {
+            0 => ClockGate::new(6, 27),
+            1 => ClockGate::new(3, 27),
+            _ => return Err(()) //panic!("Cannot enable clock for UART {}", uart)
+        };
+        if gate.gate.read() != 0 {
+            return Err(()) //panic!("Cannot create Uart instance; it is already in use");
+        }
+        gate.gate.write(1);
+        unsafe {
+            AdcDiff::new(adc, ch, mode, clkdiv, pos, neg, gate)
         }
     }
 }
