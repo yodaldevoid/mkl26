@@ -102,10 +102,12 @@ impl Sim {
         }
     }
 
-    pub fn uart<'a, 'b>(&mut self,
+    pub fn uart<'a, 'b,
+                R: Into<Option<UartRx<'a>>>,
+                T: Into<Option<UartTx<'b>>>>(&mut self,
                         uart: u8,
-                        rx: Option<UartRx<'a>>,
-                        tx: Option<UartTx<'b>>,
+                        rx: R,
+                        tx: T,
                         clkdiv: (u16,u8),
                         rxfifo: bool,
                         txfifo: bool)
@@ -121,7 +123,7 @@ impl Sim {
         }
         gate.gate.write(1);
         unsafe {
-            Uart::new(uart, rx, tx, clkdiv, rxfifo, txfifo, gate)
+            Uart::new(uart, rx.into(), tx.into(), clkdiv, rxfifo, txfifo, gate)
         }
     }
 
