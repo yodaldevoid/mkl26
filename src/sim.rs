@@ -23,11 +23,23 @@ impl ClockGate {
             ClockGate { gate: &mut *ptr }
         }
     }
+
+    fn enable(&mut self) {
+        unsafe { self.gate.write(1); }
+    }
+
+    fn disable(&mut self) {
+        unsafe { self.gate.write(0); }
+    }
+
+    fn is_enabled(&self) -> bool {
+        self.gate.read() != 0
+    }
 }
 
 impl Drop for ClockGate {
     fn drop(&mut self) {
-        unsafe { self.gate.write(0); }
+        self.disable();
     }
 }
 
@@ -86,17 +98,17 @@ impl Sim {
     }
 
     pub fn port(&mut self, port: PortName) -> Port {
-        let gate = match port {
+        let mut gate = match port {
             PortName::A => ClockGate::new(5,9),
             PortName::B => ClockGate::new(5,10),
             PortName::C => ClockGate::new(5,11),
             PortName::D => ClockGate::new(5,12),
             PortName::E => ClockGate::new(5,13),
         };
-        if gate.gate.read() != 0 {
+        if gate.is_enabled() {
             panic!("Cannot create Port instance; it is already in use");
         }
-        unsafe { gate.gate.write(1); }
+        gate.enable();
         unsafe {
             Port::new(port, gate)
         }
@@ -112,16 +124,16 @@ impl Sim {
                         rxfifo: bool,
                         txfifo: bool)
                         -> Result<Uart<'a, 'b>, ()> {
-        let gate = match uart {
+        let mut gate = match uart {
             0 => ClockGate::new(4, 10),
             1 => ClockGate::new(4, 11),
             2 => ClockGate::new(4, 12),
             _ => return Err(()) //panic!("Cannot enable clock for UART {}", uart)
         };
-        if gate.gate.read() != 0 {
+        if gate.is_enabled() {
             return Err(()) //panic!("Cannot create Uart instance; it is already in use");
         }
-        unsafe { gate.gate.write(1); }
+        gate.enable();
         unsafe {
             Uart::new(uart, rx.into(), tx.into(), clkdiv, rxfifo, txfifo, gate)
         }
@@ -134,15 +146,15 @@ impl Sim {
                     clkdiv: u8,
                     pin: P)
                     -> Result<Adc<'a>, ()> {
-        let gate = match adc {
+        let mut gate = match adc {
             0 => ClockGate::new(6, 27),
             1 => ClockGate::new(3, 27),
             _ => return Err(()) //panic!("Cannot enable clock for UART {}", uart)
         };
-        if gate.gate.read() != 0 {
+        if gate.is_enabled() {
             return Err(()) //panic!("Cannot create Uart instance; it is already in use");
         }
-        unsafe { gate.gate.write(1); }
+        gate.enable();
         unsafe {
             Adc::new(adc, ch, mode, clkdiv, pin.into(), gate)
         }
@@ -156,15 +168,15 @@ impl Sim {
                             pos: Option<AdcDiffPin<'a>>,
                             neg: Option<AdcDiffPin<'b>>)
                             -> Result<AdcDiff<'a, 'b>, ()> {
-        let gate = match adc {
+        let mut gate = match adc {
             0 => ClockGate::new(6, 27),
             1 => ClockGate::new(3, 27),
             _ => return Err(()) //panic!("Cannot enable clock for UART {}", uart)
         };
-        if gate.gate.read() != 0 {
+        if gate.is_enabled() {
             return Err(()) //panic!("Cannot create Uart instance; it is already in use");
         }
-        unsafe { gate.gate.write(1); }
+        gate.enable();
         unsafe {
             AdcDiff::new(adc, ch, mode, clkdiv, pos, neg, gate)
         }
