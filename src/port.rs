@@ -146,6 +146,25 @@ impl<'a> Pin<'a> {
         }
     }
 
+    // Allow the `mut` to line up with other functions. This `mut` is not needed
+    // as there are no iputs that create a new AdcDiffPin which would change the
+    // pin mode, requiring mut.
+    #[allow(unused_mut)]
+    pub fn to_adc_diff(mut self) -> Result<AdcDiffPin<'a>, ()> {
+        match (self.port.name(), self.pin) {
+            //  9-??:0-D0,0P
+            // 10-??:0-D0,0M
+            // 11-??:0-D0,3P
+            // 12-??:0-D0,3M
+
+            // 11-??:0-D1,0P
+            // 12-??:0-D1,0M
+            //  9-??:0-D1,3P
+            // 10-??:0-D1,3M
+            _ => Err(())
+        }
+    }
+
     pub fn to_uart_rx(mut self) -> Result<UartRx<'a>, ()> {
         match (self.port.name(), self.pin) {
             (PortName::E, 1) => {
@@ -267,6 +286,20 @@ pub struct AdcPin<'a> {
 }
 
 impl<'a> AdcPin<'a> {
+    pub fn port_name(&self) -> PortName {
+        self._pin.port.name()
+    }
+
+    pub fn pin(&self) -> usize {
+        self._pin.pin
+    }
+}
+
+pub struct AdcDiffPin<'a> {
+    _pin: Pin<'a>
+}
+
+impl<'a> AdcDiffPin<'a> {
     pub fn port_name(&self) -> PortName {
         self._pin.port.name()
     }

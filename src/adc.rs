@@ -1,7 +1,7 @@
 use volatile_register::{RO,RW};
 use bit_field::BitField;
 
-use port::{AdcPin,PortName};
+use port::{AdcPin,AdcDiffPin,PortName};
 use sim::ClockGate;
 
 #[repr(C,packed)]
@@ -39,6 +39,13 @@ struct AdcRegs {
 pub struct Adc<'a> {
     reg: &'static mut AdcRegs,
     _pin: Option<AdcPin<'a>>,
+    _gate: ClockGate
+}
+
+pub struct AdcDiff<'a,'b> {
+    reg: &'static mut AdcRegs,
+    _pos: Option<AdcDiffPin<'a>>,
+    _neg: Option<AdcDiffPin<'b>>,
     _gate: ClockGate
 }
 
@@ -294,5 +301,212 @@ impl<'a> Adc<'a> {
 
     pub fn read(&mut self) -> u32 {
         self.reg.ra.read()
+    }
+}
+
+impl<'a,'b> AdcDiff<'a,'b> {
+    pub unsafe fn new(id: u8,
+                      ch: u8,
+                      mode: u8,
+                      clkdiv: u8,
+                      pos: Option<AdcDiffPin<'a>>,
+                      neg: Option<AdcDiffPin<'b>>,
+                      gate: ClockGate)
+                      -> Result<AdcDiff<'a,'b>, ()> {
+        let pos_info = pos.as_ref().map(|p| (p.port_name(), p.pin()));
+        let neg_info = neg.as_ref().map(|p| (p.port_name(), p.pin()));
+        match (id, ch) {
+            // ADC0
+            (0, 0) => {
+                match pos_info {
+                    None => {} //  9-??:0-D0,0P
+                    _ => return Err(())
+                }
+                match neg_info {
+                    None => {} // 10-??:0-D0,0M
+                    _ => return Err(())
+                }
+            }
+            (0, 2) => {
+                match pos_info {
+                    None => { //  9-??:0-P0,0P
+                        // Enable PGA?
+                    }
+                    _ => return Err(())
+                }
+                match neg_info {
+                    None => { // 10-??:0-P0,0M
+                        // Enable PGA?
+                    }
+                    _ => return Err(())
+                }
+            }
+            (0, 3) => {
+                match pos_info {
+                    None => {} // 11-??:0-D0,3P
+                    _ => return Err(())
+                }
+                match neg_info {
+                    None => {} // 12-??:0-D0,3M
+                    _ => return Err(())
+                }
+            }
+
+            // ADC1
+            (1, 0) => {
+                match pos_info {
+                    None => {} // 11-??:0-D1,0P
+                    _ => return Err(())
+                }
+                match neg_info {
+                    None => {} // 12-??:0-D1,0M
+                    _ => return Err(())
+                }
+            }
+            (1, 2) => {
+                match pos_info {
+                    None => {} // 11-??:0-P0,0P
+                    _ => return Err(())
+                }
+                match neg_info {
+                    None => {} // 12-??:0-P0,0M
+                    _ => return Err(())
+                }
+            }
+            (1, 3) => {
+                match pos_info {
+                    None => {} //  9-??:0-D1,3P
+                    _ => return Err(())
+                }
+                match neg_info {
+                    None => {} // 10-??:0-D1,3M
+                    _ => return Err(())
+                }
+            }
+
+            (_, 26) => {
+                // Differential Temp Sensor
+                match pos_info {
+                    None => {}
+                    _ => return Err(())
+                }
+                match neg_info {
+                    None => {}
+                    _ => return Err(())
+                }
+            }
+            (_, 27) => {
+                // Differential Bandgap
+                match pos_info {
+                    None => {}
+                    _ => return Err(())
+                }
+                match neg_info {
+                    None => {}
+                    _ => return Err(())
+                }
+            }
+            (_, 29) => {
+                // Differential V_REFSH
+                match pos_info {
+                    None => {}
+                    _ => return Err(())
+                }
+                match neg_info {
+                    None => {}
+                    _ => return Err(())
+                }
+            }
+
+            (_, _) => unimplemented!()
+        }
+
+        let mode = match mode {
+            9 => 0,
+            13 => 1,
+            11 => 2,
+            16 => 3,
+            _ => return Err(()),
+        };
+
+        let clkdiv = match clkdiv {
+            1 => 0,
+            2 => 1,
+            4 => 2,
+            8 => 3,
+            _ => return Err(()),
+        };
+
+        let reg = match id {
+            0 => &mut *(0x4003B000 as *mut AdcRegs),
+            1 => &mut *(0x400BB000 as *mut AdcRegs),
+            _ => return Err(())
+        };
+
+        reg.cfg1.modify(|mut cfg1| {
+            cfg1.set_bits(5..7, clkdiv);
+            cfg1.set_bits(2..4, mode);
+            cfg1
+        });
+
+        reg.sc1a.modify(|mut sc1a| {
+            sc1a.set_bit(5, true);
+            sc1a.set_bits(0..5, ch as u32);
+            sc1a
+        });
+
+        Ok(AdcDiff {reg: reg, _pos: pos, _neg: neg, _gate: gate})
+    }
+
+    pub fn calibrate(&mut self) -> Result<(u32, u32), ()> {
+        unsafe {
+            self.reg.sc3.modify(|mut sc3| {
+                sc3.set_bit(7, true);
+                sc3
+            });
+        }
+        while self.reg.sc3.read().get_bit(7) {}
+
+        if self.reg.sc3.read().get_bit(6) {
+            return Err(())
+        }
+
+        let mut calib_p = self.reg.clp0.read() +
+                        self.reg.clp1.read() +
+                        self.reg.clp2.read() +
+                        self.reg.clp3.read() +
+                        self.reg.clp4.read() +
+                        self.reg.clps.read();
+        calib_p >>= 1;
+        calib_p |= 0x8000;
+        unsafe { self.reg.pg.write(calib_p); }
+
+        let mut calib_m = self.reg.clm0.read() +
+                        self.reg.clm1.read() +
+                        self.reg.clm2.read() +
+                        self.reg.clm3.read() +
+                        self.reg.clm4.read() +
+                        self.reg.clms.read();
+        calib_m >>= 1;
+        calib_m |= 0x8000;
+        unsafe { self.reg.mg.write(calib_m); }
+
+        Ok((calib_p, calib_m))
+    }
+
+    pub fn set_calib(&mut self, calib: u32) {
+        unsafe { self.reg.pg.write(calib); }
+    }
+
+    pub fn start_conv(&mut self) {
+        unsafe { self.reg.sc1a.modify(|sc1a| sc1a); }
+    }
+
+    pub fn is_conv_done(&mut self) -> bool {
+        self.reg.sc1a.read().get_bit(7)
+    }
+
+    pub fn read(&mut self) -> i32 {
+        self.reg.ra.read() as i32
     }
 }

@@ -3,8 +3,8 @@ use core::sync::atomic::{AtomicBool,ATOMIC_BOOL_INIT,Ordering};
 use volatile_register::{RO,RW};
 use bit_field::BitField;
 
-use adc::{Adc};
-use port::{AdcPin,Port,PortName,UartRx,UartTx};
+use adc::{Adc,AdcDiff};
+use port::{AdcPin,AdcDiffPin,Port,PortName,UartRx,UartTx};
 use uart::Uart;
 
 pub struct ClockGate {
