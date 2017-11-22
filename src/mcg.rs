@@ -1,27 +1,27 @@
 use core::mem;
 use core::sync::atomic::{AtomicBool,ATOMIC_BOOL_INIT,Ordering};
 
-use volatile::Volatile;
+use volatile_register::{RO,RW};
 use bit_field::BitField;
 
 use osc::OscToken;
 
 #[repr(C,packed)]
 struct McgRegs {
-    c1:     Volatile<u8>,
-    c2:     Volatile<u8>,
-    c3:     Volatile<u8>,
-    c4:     Volatile<u8>,
-    c5:     Volatile<u8>,
-    c6:     Volatile<u8>,
-    s:      Volatile<u8>,
+    c1:     RW<u8>,
+    c2:     RW<u8>,
+    c3:     RW<u8>,
+    c4:     RW<u8>,
+    c5:     RW<u8>,
+    c6:     RW<u8>,
+    s:      RO<u8>,
     _pad0:  u8,
-    sc:     Volatile<u8>,
+    sc:     RW<u8>,
     _pad1:  u8,
-    atcvh:  Volatile<u8>,
-    atcvl:  Volatile<u8>,
-    c7:     Volatile<u8>,
-    c8:     Volatile<u8>,
+    atcvh:  RW<u8>,
+    atcvl:  RW<u8>,
+    c7:     RW<u8>,
+    c8:     RW<u8>,
 }
 
 pub struct Mcg {
@@ -131,19 +131,25 @@ pub struct Stop {
 
 impl Fei {
     pub fn enable_xtal(&mut self, range: OscRange, _token: OscToken) {
-        self.mcg.reg.c2.update(|c2| {
-            c2.set_bits(4..6, range as u8); // frequency range
-            c2.set_bit(2, true); // internal osc
-        });
+        unsafe {
+            self.mcg.reg.c2.modify(|mut c2| {
+                c2.set_bits(4..6, range as u8); // frequency range
+                c2.set_bit(2, true); // internal osc
+                c2
+            });
+        }
 
         while !self.mcg.reg.s.read().get_bit(1) {}
     }
 
     pub fn disable_xtal(&mut self) -> OscToken {
-        self.mcg.reg.c2.update(|c2| {
-            c2.set_bits(4..6, 0); // frequency range
-            c2.set_bit(2, false); // internal osc
-        });
+        unsafe {
+            self.mcg.reg.c2.modify(|mut c2| {
+                c2.set_bits(4..6, 0); // frequency range
+                c2.set_bit(2, false); // internal osc
+                c2
+            });
+        }
 
         while !self.mcg.reg.s.read().get_bit(1) {}
 
@@ -178,11 +184,14 @@ impl Fei {
             }
         };
 
-        self.mcg.reg.c1.update(|c1| {
-            c1.set_bits(6..8, OscSource::External as u8);
-            c1.set_bits(3..6, frdiv);
-            c1.set_bit(2, false); // external clock
-        });
+        unsafe {
+            self.mcg.reg.c1.modify(|mut c1| {
+                c1.set_bits(6..8, OscSource::External as u8);
+                c1.set_bits(3..6, frdiv);
+                c1.set_bit(2, false); // external clock
+                c1
+            });
+        }
 
         // Once we write to the control register, we need to wait for
         // the new clock to stabilize before we move on.
@@ -205,14 +214,18 @@ impl Fbe {
             panic!("Invalid PLL reference divide factor: {}", denominator);
         }
 
-        self.mcg.reg.c5.update(|c5| {
-            c5.set_bits(0..5, denominator - 1);
-        });
+        unsafe {
+            self.mcg.reg.c5.modify(|mut c5| {
+                c5.set_bits(0..5, denominator - 1);
+                c5
+            });
 
-        self.mcg.reg.c6.update(|c6| {
-            c6.set_bits(0..5, numerator - 24);
-            c6.set_bit(6, true);
-        });
+            self.mcg.reg.c6.modify(|mut c6| {
+                c6.set_bits(0..5, numerator - 24);
+                c6.set_bit(6, true);
+                c6
+            });
+        }
 
         // Wait for PLL to be enabled
         while !self.mcg.reg.s.read().get_bit(5) {}
@@ -225,9 +238,12 @@ impl Fbe {
 
 impl Pbe {
     pub fn use_pll(self) -> Pee {
-        self.mcg.reg.c1.update(|c1| {
-            c1.set_bits(6..8, OscSource::LockedLoop as u8);
-        });
+        unsafe {
+            self.mcg.reg.c1.modify(|mut c1| {
+                c1.set_bits(6..8, OscSource::LockedLoop as u8);
+                c1
+            });
+        }
 
         // mcg.c1 and mcg.s have slightly different behaviors.  In c1,
         // we use one value to indicate "Use whichever LL is
@@ -241,9 +257,12 @@ impl Pbe {
     }
 
     pub fn disable_pll(self) -> Fbe {
-        self.mcg.reg.c6.update(|c6| {
-            c6.set_bit(6, false);
-        });
+        unsafe {
+            self.mcg.reg.c6.modify(|mut c6| {
+                c6.set_bit(6, false);
+                c6
+            });
+        }
 
         // Wait for FLL to be enabled
         while self.mcg.reg.s.read().get_bit(5) {}
@@ -254,9 +273,12 @@ impl Pbe {
 
 impl Pee {
     pub fn bypass_pll(self) -> Pbe {
-        self.mcg.reg.c1.update(|c1| {
-            c1.set_bits(6..8, OscSource::External as u8);
-        });
+        unsafe {
+            self.mcg.reg.c1.modify(|mut c1| {
+                c1.set_bits(6..8, OscSource::External as u8);
+                c1
+            });
+        }
 
         while self.mcg.reg.s.read().get_bits(2..4) != OscSource::External as u8 {}
 

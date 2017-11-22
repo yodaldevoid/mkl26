@@ -1,11 +1,11 @@
 use core::sync::atomic::{AtomicBool,ATOMIC_BOOL_INIT,Ordering};
 
-use volatile::Volatile;
+use volatile_register::RW;
 use bit_field::BitField;
 
 #[repr(C,packed)]
 struct OscRegs {
-    cr: Volatile<u8>
+    cr: RW<u8>
 }
 
 pub struct Osc {
@@ -42,15 +42,18 @@ impl Osc {
         // enable the crystal oscillator
         cr.set_bit(7, true);
 
-        self.reg.cr.write(cr);
+        unsafe { self.reg.cr.write(cr); }
 
         OscToken::new()
     }
 
     pub fn disable(&mut self, _token: OscToken) {
-        self.reg.cr.update(|cr| {
-            cr.set_bit(7, false);
-        });
+        unsafe {
+            self.reg.cr.modify(|mut cr| {
+                cr.set_bit(7, false);
+                cr
+            });
+        }
     }
 }
 

@@ -1,20 +1,20 @@
-use volatile::Volatile;
+use volatile_register::RW;
 use bit_field::BitField;
 
 #[repr(C,packed)]
 pub struct Watchdog {
-    stctrlh:    Volatile<u16>,
-    stctrll:    Volatile<u16>,
-    tovalh:     Volatile<u16>,
-    tovall:     Volatile<u16>,
-    winh:       Volatile<u16>,
-    winl:       Volatile<u16>,
-    refresh:    Volatile<u16>,
-    unlock:     Volatile<u16>,
-    tmrouth:    Volatile<u16>,
-    tmroutl:    Volatile<u16>,
-    rstcnt:     Volatile<u16>,
-    presc:      Volatile<u16>
+    stctrlh:    RW<u16>,
+    stctrll:    RW<u16>,
+    tovalh:     RW<u16>,
+    tovall:     RW<u16>,
+    winh:       RW<u16>,
+    winl:       RW<u16>,
+    refresh:    RW<u16>,
+    unlock:     RW<u16>,
+    tmrouth:    RW<u16>,
+    tmroutl:    RW<u16>,
+    rstcnt:     RW<u16>,
+    presc:      RW<u16>
 }
 
 impl Watchdog {
@@ -23,14 +23,15 @@ impl Watchdog {
     }
 
     pub fn disable(&mut self) {
-        self.unlock.write(0xC520);
-        self.unlock.write(0xD928);
-        unsafe {
+        unsafe{
+            self.unlock.write(0xC520);
+            self.unlock.write(0xD928);
             asm!("nop" : : : "memory");
             asm!("nop" : : : "memory");
+            self.stctrlh.modify(|mut ctrl| {
+                ctrl.set_bit(0, false);
+                ctrl
+            });
         }
-        self.stctrlh.update(|ctrl| {
-            ctrl.set_bit(0, false);
-        });
     }
 }

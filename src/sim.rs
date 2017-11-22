@@ -1,6 +1,6 @@
 use core::sync::atomic::{AtomicBool,ATOMIC_BOOL_INIT,Ordering};
 
-use volatile::Volatile;
+use volatile_register::{RO,RW};
 use bit_field::BitField;
 
 use adc::{Adc};
@@ -8,7 +8,7 @@ use port::{AdcPin,Port,PortName,UartRx,UartTx};
 use uart::Uart;
 
 pub struct ClockGate {
-    gate: &'static mut Volatile<u32>
+    gate: &'static mut RW<u32>
 }
 
 impl ClockGate {
@@ -18,7 +18,7 @@ impl ClockGate {
         let base: usize = 0x42900500;
         let reg_offset = 128 * (reg - 1);
         let bit_offset = 4 * bit;
-        let ptr = (base + reg_offset + bit_offset) as *mut Volatile<u32>;
+        let ptr = (base + reg_offset + bit_offset) as *mut RW<u32>;
         unsafe {
             ClockGate { gate: &mut *ptr }
         }
@@ -27,38 +27,38 @@ impl ClockGate {
 
 impl Drop for ClockGate {
     fn drop(&mut self) {
-        self.gate.write(0);
+        unsafe { self.gate.write(0); }
     }
 }
 
 #[repr(C,packed)]
 struct SimRegs {
-    sopt1:      Volatile<u32>,
-    sopt1_cfg:  Volatile<u32>,
+    sopt1:      RW<u32>,
+    sopt1_cfg:  RW<u32>,
     _pad0:      [u32; 1023],
-    sopt2:      Volatile<u32>,
+    sopt2:      RW<u32>,
     _pad1:      u32,
-    sopt4:      Volatile<u32>,
-    sopt5:      Volatile<u32>,
+    sopt4:      RW<u32>,
+    sopt5:      RW<u32>,
     _pad2:      u32,
-    sopt7:      Volatile<u32>,
+    sopt7:      RW<u32>,
     _pad3:      [u32; 2],
-    sdid:       Volatile<u32>,
+    sdid:       RO<u32>,
     _pad4:      u32,
-    scgc2:      Volatile<u32>,
-    scgc3:      Volatile<u32>,
-    scgc4:      Volatile<u32>,
-    scgc5:      Volatile<u32>,
-    scgc6:      Volatile<u32>,
-    scgc7:      Volatile<u32>,
-    clkdiv1:    Volatile<u32>,
-    clkviv2:    Volatile<u32>,
-    fcfg1:      Volatile<u32>,
-    fcfg2:      Volatile<u32>,
-    uidh:       Volatile<u32>,
-    uidmh:      Volatile<u32>,
-    uidml:      Volatile<u32>,
-    uidl:       Volatile<u32>
+    scgc2:      RW<u32>,
+    scgc3:      RW<u32>,
+    scgc4:      RW<u32>,
+    scgc5:      RW<u32>,
+    scgc6:      RW<u32>,
+    scgc7:      RW<u32>,
+    clkdiv1:    RW<u32>,
+    clkviv2:    RW<u32>,
+    fcfg1:      RO<u32>,
+    fcfg2:      RO<u32>,
+    uidh:       RO<u32>,
+    uidmh:      RO<u32>,
+    uidml:      RO<u32>,
+    uidl:       RO<u32>
 }
 
 pub struct Sim {
@@ -82,7 +82,7 @@ impl Sim {
         clkdiv.set_bits(28..32, core - 1);
         clkdiv.set_bits(24..28, bus - 1);
         clkdiv.set_bits(16..20, flash - 1);
-        self.reg.clkdiv1.write(clkdiv);
+        unsafe { self.reg.clkdiv1.write(clkdiv); }
     }
 
     pub fn port(&mut self, port: PortName) -> Port {
@@ -96,7 +96,7 @@ impl Sim {
         if gate.gate.read() != 0 {
             panic!("Cannot create Port instance; it is already in use");
         }
-        gate.gate.write(1);
+        unsafe { gate.gate.write(1); }
         unsafe {
             Port::new(port, gate)
         }
@@ -121,7 +121,7 @@ impl Sim {
         if gate.gate.read() != 0 {
             return Err(()) //panic!("Cannot create Uart instance; it is already in use");
         }
-        gate.gate.write(1);
+        unsafe { gate.gate.write(1); }
         unsafe {
             Uart::new(uart, rx.into(), tx.into(), clkdiv, rxfifo, txfifo, gate)
         }
@@ -142,7 +142,7 @@ impl Sim {
         if gate.gate.read() != 0 {
             return Err(()) //panic!("Cannot create Uart instance; it is already in use");
         }
-        gate.gate.write(1);
+        unsafe { gate.gate.write(1); }
         unsafe {
             Adc::new(adc, ch, mode, clkdiv, pin.into(), gate)
         }
@@ -164,7 +164,7 @@ impl Sim {
         if gate.gate.read() != 0 {
             return Err(()) //panic!("Cannot create Uart instance; it is already in use");
         }
-        gate.gate.write(1);
+        unsafe { gate.gate.write(1); }
         unsafe {
             AdcDiff::new(adc, ch, mode, clkdiv, pos, neg, gate)
         }

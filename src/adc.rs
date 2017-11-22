@@ -1,4 +1,4 @@
-use volatile::Volatile;
+use volatile_register::{RO,RW};
 use bit_field::BitField;
 
 use port::{AdcPin,PortName};
@@ -6,34 +6,34 @@ use sim::ClockGate;
 
 #[repr(C,packed)]
 struct AdcRegs {
-    sc1a: Volatile<u32>,
-    sc1b: Volatile<u32>,
-    cfg1: Volatile<u32>,
-    cfg2: Volatile<u32>,
-    ra: Volatile<u32>,
-    rb: Volatile<u32>,
-    cv1: Volatile<u32>,
-    cv2: Volatile<u32>,
-    sc2: Volatile<u32>,
-    sc3: Volatile<u32>,
-    ofs: Volatile<u32>,
-    pg: Volatile<u32>,
-    mg: Volatile<u32>,
-    clpd: Volatile<u32>,
-    clps: Volatile<u32>,
-    clp4: Volatile<u32>,
-    clp3: Volatile<u32>,
-    clp2: Volatile<u32>,
-    clp1: Volatile<u32>,
-    clp0: Volatile<u32>,
-    pga: Volatile<u32>,
-    clmd: Volatile<u32>,
-    clms: Volatile<u32>,
-    clm4: Volatile<u32>,
-    clm3: Volatile<u32>,
-    clm2: Volatile<u32>,
-    clm1: Volatile<u32>,
-    clm0: Volatile<u32>,
+    sc1a:   RW<u32>,
+    sc1b:   RW<u32>,
+    cfg1:   RW<u32>,
+    cfg2:   RW<u32>,
+    ra:     RO<u32>,
+    rb:     RO<u32>,
+    cv1:    RW<u32>,
+    cv2:    RW<u32>,
+    sc2:    RW<u32>,
+    sc3:    RW<u32>,
+    ofs:    RW<u32>,
+    pg:     RW<u32>,
+    mg:     RW<u32>,
+    clpd:   RW<u32>,
+    clps:   RW<u32>,
+    clp4:   RW<u32>,
+    clp3:   RW<u32>,
+    clp2:   RW<u32>,
+    clp1:   RW<u32>,
+    clp0:   RW<u32>,
+    pga:    RW<u32>,
+    clmd:   RW<u32>,
+    clms:   RW<u32>,
+    clm4:   RW<u32>,
+    clm3:   RW<u32>,
+    clm2:   RW<u32>,
+    clm1:   RW<u32>,
+    clm0:   RW<u32>,
 }
 
 pub struct Adc<'a> {
@@ -234,27 +234,33 @@ impl<'a> Adc<'a> {
             _ => return Err(())
         };
 
-        reg.cfg1.update(|cfg1| {
+        reg.cfg1.modify(|mut cfg1| {
             cfg1.set_bits(5..7, clkdiv);
             cfg1.set_bits(2..4, mode);
+            cfg1
         });
 
-        reg.cfg2.update(|cfg2| {
+        reg.cfg2.modify(|mut cfg2| {
             cfg2.set_bit(4, mux.value());
+            cfg2
         });
 
-        reg.sc1a.update(|sc1a| {
+        reg.sc1a.modify(|mut sc1a| {
             sc1a.set_bit(5, false);
             sc1a.set_bits(0..5, ch as u32);
+            sc1a
         });
 
         Ok(Adc {reg: reg, _pin: pin, _gate: gate})
     }
 
     pub fn calibrate(&mut self) -> Result<u32, ()> {
-        self.reg.sc3.update(|sc3| {
-            sc3.set_bit(7, true);
-        });
+        unsafe {
+            self.reg.sc3.modify(|mut sc3| {
+                sc3.set_bit(7, true);
+                sc3
+            });
+        }
         while self.reg.sc3.read().get_bit(7) {}
 
         if self.reg.sc3.read().get_bit(6) {
@@ -269,17 +275,17 @@ impl<'a> Adc<'a> {
                         self.reg.clps.read();
         calib >>= 1;
         calib |= 0x8000;
-        self.reg.pg.write(calib);
+        unsafe { self.reg.pg.write(calib); }
 
         Ok(calib)
     }
 
     pub fn set_calib(&mut self, calib: u32) {
-        self.reg.pg.write(calib);
+        unsafe { self.reg.pg.write(calib); }
     }
 
     pub fn start_conv(&mut self) {
-        self.reg.sc1a.update(|_| {})
+        unsafe { self.reg.sc1a.modify(|sc1a| sc1a); }
     }
 
     pub fn is_conv_done(&mut self) -> bool {

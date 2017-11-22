@@ -1,7 +1,7 @@
 use core::cell::UnsafeCell;
 use core::sync::atomic::{AtomicBool,Ordering};
 
-use volatile::Volatile;
+use volatile_register::{RO,RW,WO};
 use bit_field::BitField;
 
 use sim::ClockGate;
@@ -16,11 +16,11 @@ pub enum PortName {
 
 #[repr(C,packed)]
 struct PortRegs {
-    pcr:        [Volatile<u32>; 32],
-    gpclr:      Volatile<u32>,
-    gpchr:      Volatile<u32>,
+    pcr:        [RW<u32>; 32],
+    gpclr:      WO<u32>,
+    gpchr:      WO<u32>,
     reserved_0: [u8; 24],
-    isfr:       Volatile<u32>
+    isfr:       RW<u32>
 }
 
 pub struct Port {
@@ -87,9 +87,12 @@ pub struct Pin<'a> {
 
 impl<'a> Pin<'a> {
     fn set_mode(&mut self, mode: u32) {
-        self.port.reg().pcr[self.pin].update(|pcr| {
-            pcr.set_bits(8..11, mode);
-        });
+        unsafe {
+            self.port.reg().pcr[self.pin].modify(|mut pcr| {
+                pcr.set_bits(8..11, mode);
+                pcr
+            });
+        }
     }
 
     pub fn to_gpio(mut self) -> Gpio<'a> {
@@ -214,12 +217,12 @@ impl <'a> Drop for Pin<'a> {
 
 #[repr(C,packed)]
 struct GpioBitband {
-    pdor: [Volatile<u32>; 32],
-    psor: [Volatile<u32>; 32],
-    pcor: [Volatile<u32>; 32],
-    ptor: [Volatile<u32>; 32],
-    pdir: [Volatile<u32>; 32],
-    pddr: [Volatile<u32>; 32]
+    pdor: [RW<u32>; 32],
+    psor: [WO<u32>; 32],
+    pcor: [WO<u32>; 32],
+    ptor: [WO<u32>; 32],
+    pdir: [RO<u32>; 32],
+    pddr: [RW<u32>; 32]
 }
 
 pub struct Gpio<'a> {

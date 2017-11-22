@@ -2,7 +2,7 @@
 #![no_std]
 #![no_builtins]
 
-extern crate volatile;
+extern crate volatile_register;
 extern crate bit_field;
 
 use core::slice;

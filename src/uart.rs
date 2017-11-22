@@ -3,7 +3,7 @@ use core::fmt::Write;
 
 use read;
 
-use volatile::Volatile;
+use volatile_register::{RO,RW};
 use bit_field::BitField;
 
 use port::{UartRx, UartTx};
@@ -11,62 +11,62 @@ use sim::ClockGate;
 
 #[repr(C,packed)]
 struct UartRegs {
-    bdh: Volatile<u8>,
-    bdl: Volatile<u8>,
-    c1: Volatile<u8>,
-    c2: Volatile<u8>,
-    s1: Volatile<u8>,
-    s2: Volatile<u8>,
-    c3: Volatile<u8>,
-    d: Volatile<u8>,
-    ma1: Volatile<u8>,
-    ma2: Volatile<u8>,
-    c4: Volatile<u8>,
-    c5: Volatile<u8>,
-    ed: Volatile<u8>,
-    modem: Volatile<u8>,
-    ir: Volatile<u8>,
+    bdh:    RW<u8>,
+    bdl:    RW<u8>,
+    c1:     RW<u8>,
+    c2:     RW<u8>,
+    s1:     RO<u8>,
+    s2:     RW<u8>,
+    c3:     RW<u8>,
+    d:      RW<u8>,
+    ma1:    RW<u8>,
+    ma2:    RW<u8>,
+    c4:     RW<u8>,
+    c5:     RW<u8>,
+    ed:     RO<u8>,
+    modem:  RW<u8>,
+    ir:     RW<u8>,
 
     _pad0: u8,
 
-    pfifo: Volatile<u8>,
-    cfifo: Volatile<u8>,
-    sfifo: Volatile<u8>,
-    twfifo: Volatile<u8>,
-    tcfifo: Volatile<u8>,
-    rwfifo: Volatile<u8>,
-    rcfifo: Volatile<u8>,
+    pfifo:  RW<u8>,
+    cfifo:  RW<u8>,
+    sfifo:  RW<u8>,
+    twfifo: RW<u8>,
+    tcfifo: RO<u8>,
+    rwfifo: RW<u8>,
+    rcfifo: RO<u8>,
 
     _pad1: u8,
 
-    c7816: Volatile<u8>,
-    ie7816: Volatile<u8>,
-    is7816: Volatile<u8>,
-    wp7816tx: Volatile<u8>,
-    wn7816: Volatile<u8>,
-    wf7816: Volatile<u8>,
-    et7816: Volatile<u8>,
-    tl7816: Volatile<u8>,
+    c7816:  RW<u8>,
+    ie7816: RW<u8>,
+    is7816: RW<u8>,
+    wp7816tx: RW<u8>,
+    wn7816: RW<u8>,
+    wf7816: RW<u8>,
+    et7816: RW<u8>,
+    tl7816: RW<u8>,
 /*
     _pad2: u8,
 
-    c6: Volatile<u8>,
-    pcth: Volatile<u8>,
-    pctl: Volatile<u8>,
-    b1t: Volatile<u8>,
-    sdth: Volatile<u8>,
-    sdtl: Volatile<u8>,
-    pre: Volatile<u8>,
-    tpl: Volatile<u8>,
-    ie: Volatile<u8>,
-    wb: Volatile<u8>,
-    s3: Volatile<u8>,
-    s4: Volatile<u8>,
-    rpl: Volatile<u8>,
-    rprel: Volatile<u8>,
-    cpw: Volatile<u8>,
-    ridt: Volatile<u8>,
-    tidt: Volatile<u8>,
+    c6:     RW<u8>,
+    pcth:   RW<u8>,
+    pctl:   RW<u8>,
+    b1t:    RW<u8>,
+    sdth:   RW<u8>,
+    sdtl:   RW<u8>,
+    pre:    RW<u8>,
+    tpl:    RW<u8>,
+    ie:     RW<u8>,
+    wb:     RW<u8>,
+    s3:     RW<u8>,
+    s4:     RW<u8>,
+    rpl:    RO<u8>,
+    rprel:  RO<u8>,
+    cpw:    RW<u8>,
+    ridt:   RW<u8>,
+    tidt:   RW<u8>,
 */
 }
 
@@ -112,11 +112,13 @@ impl<'a, 'b> Uart<'a, 'b> {
             _ => return Err(())
         };
 
-        reg.c4.update(|c4| {
+        reg.c4.modify(|mut c4| {
             c4.set_bits(0..5, clkdiv.1);
+            c4
         });
-        reg.bdh.update(|bdh| {
+        reg.bdh.modify(|mut bdh| {
             bdh.set_bits(0..5, clkdiv.0.get_bits(8..13) as u8);
+            bdh
         });
         reg.bdl.write(clkdiv.0.get_bits(0..8) as u8);
 
@@ -125,9 +127,10 @@ impl<'a, 'b> Uart<'a, 'b> {
         pfifo.set_bit(3, rxfifo);
         reg.pfifo.write(pfifo);
 
-        reg.c2.update(|c2| {
+        reg.c2.modify(|mut c2| {
             c2.set_bit(2, rx.is_some());
             c2.set_bit(3, tx.is_some());
+            c2
         });
 
         Ok(Uart {reg: reg, _tx: tx, _rx: rx, _gate: gate})
@@ -142,7 +145,7 @@ impl<'a, 'b> Uart<'a, 'b> {
     pub fn write_byte(&mut self, b: u8) -> Result<(), ()> {
         // wait for tx buffer to not be full
         while !self.reg.s1.read().get_bit(7) {}
-        self.reg.d.write(b);
+        unsafe { self.reg.d.write(b); }
         // wait for tx complete
         while !self.reg.s1.read().get_bit(6) {}
         Ok(())
@@ -155,7 +158,7 @@ impl<'a, 'b> Write for Uart<'a, 'b> {
         for b in s.bytes() {
             // wait for tx buffer to not be full
             while !self.reg.s1.read().get_bit(7) {}
-            self.reg.d.write(b);
+            unsafe { self.reg.d.write(b); }
         }
         // wait for tx complete
         while !self.reg.s1.read().get_bit(6) {}
