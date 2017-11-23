@@ -147,7 +147,7 @@ macro_rules! exception {
 
 #[link_section = ".vectors.exceptions"]
 #[no_mangle]
-pub static EXCEPTIONS: [Option<unsafe extern fn()>; 14] = [
+pub static EXCEPTIONS: [Option<unsafe extern "C" fn()>; 14] = [
     Some(NMI),
     Some(HARD_FAULT),
     Some(MEM_MANAGE),
@@ -166,28 +166,28 @@ pub static EXCEPTIONS: [Option<unsafe extern fn()>; 14] = [
 
 #[linkage = "weak"]
 #[no_mangle]
-extern fn NMI() { default_handler() }
+extern "C" fn NMI() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn HARD_FAULT() { default_handler() }
+extern "C" fn HARD_FAULT() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn MEM_MANAGE() { default_handler() }
+extern "C" fn MEM_MANAGE() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn BUS_FAULT() { default_handler() }
+extern "C" fn BUS_FAULT() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn USAGE_FAULT() { default_handler() }
+extern "C" fn USAGE_FAULT() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn SVCALL() { default_handler() }
+extern "C" fn SVCALL() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DEBUG() { default_handler() }
+extern "C" fn DEBUG() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn PENDSV() { default_handler() }
+extern "C" fn PENDSV() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn SYS_TICK() { default_handler() }
+extern "C" fn SYS_TICK() { default_handler() }

@@ -190,7 +190,7 @@ macro_rules! interrupt {
 
 #[link_section = ".vectors.interrupts"]
 #[no_mangle]
-pub static INTERRUPTS: [Option<unsafe extern fn()>; 95] = [
+pub static INTERRUPTS: [Option<unsafe extern "C" fn()>; 95] = [
     Some(DMA_CHANNEL0),
     Some(DMA_CHANNEL1),
     Some(DMA_CHANNEL2),
@@ -290,208 +290,208 @@ pub static INTERRUPTS: [Option<unsafe extern fn()>; 95] = [
 
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DMA_CHANNEL0() { default_handler() }
+extern "C" fn DMA_CHANNEL0() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DMA_CHANNEL1() { default_handler() }
+extern "C" fn DMA_CHANNEL1() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DMA_CHANNEL2() { default_handler() }
+extern "C" fn DMA_CHANNEL2() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DMA_CHANNEL3() { default_handler() }
+extern "C" fn DMA_CHANNEL3() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DMA_CHANNEL4() { default_handler() }
+extern "C" fn DMA_CHANNEL4() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DMA_CHANNEL5() { default_handler() }
+extern "C" fn DMA_CHANNEL5() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DMA_CHANNEL6() { default_handler() }
+extern "C" fn DMA_CHANNEL6() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DMA_CHANNEL7() { default_handler() }
+extern "C" fn DMA_CHANNEL7() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DMA_CHANNEL8() { default_handler() }
+extern "C" fn DMA_CHANNEL8() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DMA_CHANNEL9() { default_handler() }
+extern "C" fn DMA_CHANNEL9() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DMA_CHANNEL10() { default_handler() }
+extern "C" fn DMA_CHANNEL10() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DMA_CHANNEL11() { default_handler() }
+extern "C" fn DMA_CHANNEL11() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DMA_CHANNEL12() { default_handler() }
+extern "C" fn DMA_CHANNEL12() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DMA_CHANNEL13() { default_handler() }
+extern "C" fn DMA_CHANNEL13() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DMA_CHANNEL14() { default_handler() }
+extern "C" fn DMA_CHANNEL14() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DMA_CHANNEL15() { default_handler() }
+extern "C" fn DMA_CHANNEL15() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DMA_ERROR0_15() { default_handler() }
+extern "C" fn DMA_ERROR0_15() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn FLASH_COMPLETE() { default_handler() }
+extern "C" fn FLASH_COMPLETE() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn FLASH_COLLISION() { default_handler() }
+extern "C" fn FLASH_COLLISION() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn LV_DETECT() { default_handler() }
+extern "C" fn LV_DETECT() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn LLWU() { default_handler() }
+extern "C" fn LLWU() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn WDOG() { default_handler() }
+extern "C" fn WDOG() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn I2C0() { default_handler() }
+extern "C" fn I2C0() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn I2C1() { default_handler() }
+extern "C" fn I2C1() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn SPI0() { default_handler() }
+extern "C" fn SPI0() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn SPI1() { default_handler() }
+extern "C" fn SPI1() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn CAN0_MSG_BUF() { default_handler() }
+extern "C" fn CAN0_MSG_BUF() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn CAN0_BUS_OFF() { default_handler() }
+extern "C" fn CAN0_BUS_OFF() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn CAN0_ERROR() { default_handler() }
+extern "C" fn CAN0_ERROR() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn CAN0_TX_WARN() { default_handler() }
+extern "C" fn CAN0_TX_WARN() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn CAN0_RX_WARN() { default_handler() }
+extern "C" fn CAN0_RX_WARN() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn CAN0_WKUP() { default_handler() }
+extern "C" fn CAN0_WKUP() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn I2S0_TX() { default_handler() }
+extern "C" fn I2S0_TX() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn I2S0_RX() { default_handler() }
+extern "C" fn I2S0_RX() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn UART0_LON() { default_handler() }
+extern "C" fn UART0_LON() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn UART0_STATUS() { default_handler() }
+extern "C" fn UART0_STATUS() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn UART0_ERROR() { default_handler() }
+extern "C" fn UART0_ERROR() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn UART1_STATUS() { default_handler() }
+extern "C" fn UART1_STATUS() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn UART1_ERROR() { default_handler() }
+extern "C" fn UART1_ERROR() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn UART2_STATUS() { default_handler() }
+extern "C" fn UART2_STATUS() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn UART2_ERROR() { default_handler() }
+extern "C" fn UART2_ERROR() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn ADC0() { default_handler() }
+extern "C" fn ADC0() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn ADC1() { default_handler() }
+extern "C" fn ADC1() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn CMP0() { default_handler() }
+extern "C" fn CMP0() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn CMP1() { default_handler() }
+extern "C" fn CMP1() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn CMP2() { default_handler() }
+extern "C" fn CMP2() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn FTM0() { default_handler() }
+extern "C" fn FTM0() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn FTM1() { default_handler() }
+extern "C" fn FTM1() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn FTM2() { default_handler() }
+extern "C" fn FTM2() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn CMT() { default_handler() }
+extern "C" fn CMT() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn RTC_ALARM() { default_handler() }
+extern "C" fn RTC_ALARM() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn RTC_SECONDS() { default_handler() }
+extern "C" fn RTC_SECONDS() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn PIT_CHANNEL0() { default_handler() }
+extern "C" fn PIT_CHANNEL0() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn PIT_CHANNEL1() { default_handler() }
+extern "C" fn PIT_CHANNEL1() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn PIT_CHANNEL2() { default_handler() }
+extern "C" fn PIT_CHANNEL2() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn PIT_CHANNEL3() { default_handler() }
+extern "C" fn PIT_CHANNEL3() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn PDB() { default_handler() }
+extern "C" fn PDB() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn USB_OTG() { default_handler() }
+extern "C" fn USB_OTG() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn USB_CHRG_DETECT() { default_handler() }
+extern "C" fn USB_CHRG_DETECT() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn DAC0() { default_handler() }
+extern "C" fn DAC0() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn TSI() { default_handler() }
+extern "C" fn TSI() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn MCG() { default_handler() }
+extern "C" fn MCG() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn LP_TIM() { default_handler() }
+extern "C" fn LP_TIM() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn PORTA() { default_handler() }
+extern "C" fn PORTA() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn PORTB() { default_handler() }
+extern "C" fn PORTB() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn PORTC() { default_handler() }
+extern "C" fn PORTC() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn PORTD() { default_handler() }
+extern "C" fn PORTD() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn PORTE() { default_handler() }
+extern "C" fn PORTE() { default_handler() }
 #[linkage = "weak"]
 #[no_mangle]
-extern fn SOFTWARE() { default_handler() }
+extern "C" fn SOFTWARE() { default_handler() }

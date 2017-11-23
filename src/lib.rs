@@ -36,7 +36,7 @@ extern {
 #[link_section = ".vector_table.reset_vector"]
 #[no_mangle]
 #[used]
-static RESET_VECTOR: unsafe extern fn() -> ! = reset_handler;
+static RESET_VECTOR: unsafe extern "C" fn() -> ! = reset_handler;
 
 /// The reset handler
 ///
