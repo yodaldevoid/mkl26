@@ -4,11 +4,16 @@ MEMORY
     RAM  (rwx) : ORIGIN = 0x1FFF8000, LENGTH = 64K
 }
 
+PROVIDE(_stack_start = ORIGIN(RAM) + LENGTH(RAM));
+
 SECTIONS
 {
     .text : {
         . = 0;
-        KEEP(*(.vectors))
+        LONG(_stack_start);
+        KEEP(*(.vectors.reset));
+        KEEP(*(.vectors.exceptions))
+        KEEP(*(.vectors.interrupts))
         . = 0x400;
         KEEP(*(.flashconfig))
         . = ALIGN(4);
@@ -25,8 +30,6 @@ SECTIONS
          *(.bss*)
          _bss_end = .;
     } > RAM
-
-    _stack_top = ORIGIN(RAM) + LENGTH(RAM);
 
     /DISCARD/ : {
         *(.ARM.*)
