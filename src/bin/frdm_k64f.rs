@@ -1,45 +1,20 @@
-#![feature(lang_items,asm,drop_types_in_const)]
+#![feature(lang_items,asm)]
 #![no_std]
 #![no_main]
 #![no_builtins]
 
-extern crate volatile;
 extern crate rusty_teensy;
 
 use core::fmt::Write;
 
-use volatile::Volatile;
+use rusty_teensy::read::Read;
 
-use rusty_teensy::read::{Read,Error};
-
-use rusty_teensy::*;
 use rusty_teensy::mcg::{Clock,Mcg,OscRange};
 use rusty_teensy::osc::Osc;
 use rusty_teensy::port::{Port,PortName};
 use rusty_teensy::sim::Sim;
 use rusty_teensy::uart::Uart;
 use rusty_teensy::watchdog::Watchdog;
-
-#[link_section = ".vectors"]
-#[no_mangle]
-pub static _VECTORS: [unsafe extern fn(); 16] = [
-    _stack_top,
-    main,
-    default_isr,    // NMI
-    default_isr,    // Hard Fault
-    default_isr,    // MemManage Fault
-    default_isr,    // Bus Fault
-    default_isr,    // Usage Fault
-    _fault,         // Reserved
-    _fault,         // Reserved
-    _fault,         // Reserved
-    _fault,         // Reserved
-    default_isr,    // SV Call
-    default_isr,    // Debug Monitor
-    _fault,         // Reserved
-    default_isr,    // Pendable SrvReq
-    default_isr,    // System Tick Timer
-];
 
 #[link_section = ".flashconfig"]
 #[no_mangle]
@@ -55,7 +30,6 @@ static mut PANIC_WRITER: Option<Uart<'static, 'static>> = None;
 pub extern fn main() {
     unsafe {
         Watchdog::new().disable();
-        setup_bss();
     }
 
     // Enable the crystal oscillator with 0pf of capacitance
@@ -125,16 +99,15 @@ pub extern fn main() {
 //TODO: change to use USB_Listen for the panic messages
 #[lang = "panic_fmt"]
 #[no_mangle]
-pub extern fn rust_begin_unwind(_msg: core::fmt::Arguments,
-                                _file: &'static str,
-                                _line: u32) -> ! {
-    /*
+pub extern fn begin_panic(_msg: core::fmt::Arguments,
+                          _file: &'static str,
+                          _line: u32,
+                          _col: u32) -> ! {
     if let Some(uart) = unsafe { PANIC_WRITER.as_mut() } {
         write!(uart, "panicked at '").unwrap();
-        uart.write_fmt(msg).unwrap();
-        write!(uart, "', {}:{}\n", file, line).unwrap();
+        uart.write_fmt(_msg).unwrap();
+        write!(uart, "', {}:{}\n", _file, _line).unwrap();
     }
-    */
 
     // Reset the MCU after we've printed our panic.
     /*

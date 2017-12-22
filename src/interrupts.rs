@@ -1,7 +1,5 @@
 //! Interrupts
 
-use exceptions::default_handler;
-
 #[allow(non_camel_case_types)]
 pub enum Interrupt {
     DMA_CHANNEL0,
@@ -75,6 +73,7 @@ pub enum Interrupt {
     SOFTWARE,
 }
 
+// TODO: mabye pull in bare-metal
 /// Interrupt number
 pub unsafe trait Nr {
     /// Returns the number associated with an interrupt
@@ -158,6 +157,11 @@ unsafe impl Nr for Interrupt {
     }
 }
 
+#[linkage = "weak"]
+extern "C" fn default_handler() -> ! {
+    loop {}
+}
+
 #[macro_export]
 macro_rules! interrupt {
     ($NAME: ident, $path: path, locals: { $($lvar: ident: $lty :ident = $lval: expr;)* }) => {
@@ -188,7 +192,7 @@ macro_rules! interrupt {
     }
 }
 
-#[link_section = ".vectors.interrupts"]
+#[link_section = ".vector_table.interrupts"]
 #[no_mangle]
 pub static INTERRUPTS: [Option<unsafe extern "C" fn()>; 95] = [
     Some(DMA_CHANNEL0),

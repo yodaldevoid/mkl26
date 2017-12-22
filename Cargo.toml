@@ -7,3 +7,4 @@ authors = ["Gabriel Smith <ga29smith@gmail.com>"]
 cortex-m = "^0.3"
 volatile-register = "^0.2"
 bit_field = "^0.8"
+cortex-m-rt = "^0.3"
