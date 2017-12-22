@@ -1,5 +1,8 @@
 //! Interrupts
 
+#[cfg(target_arch = "arm")]
+use core::intrinsics;
+
 #[allow(non_camel_case_types)]
 pub enum Interrupt {
     DMA_CHANNEL0,
@@ -157,11 +160,6 @@ unsafe impl Nr for Interrupt {
     }
 }
 
-#[linkage = "weak"]
-extern "C" fn default_handler() -> ! {
-    loop {}
-}
-
 #[macro_export]
 macro_rules! interrupt {
     ($NAME: ident, $path: path, locals: { $($lvar: ident: $lty :ident = $lval: expr;)* }) => {
@@ -173,6 +171,7 @@ macro_rules! interrupt {
         }
         #[allow(non_snake_case)]
         #[no_mangle]
+        #[naked]
         pub extern "C" fn $NAME () {
             let _ = $crate::interrupt::Interrupt::$NAME;
             static mut LOCALS: self::$NAME::Locals = self::$NAME::Locals {
@@ -183,9 +182,11 @@ macro_rules! interrupt {
         }
     };
     ($ NAME: ident, $path: path) => {
-        # [allow(non_snake_case)]
-        # [no_mangle] pub extern "C" fn $ NAME () {
-            let _ = $crate::interrupt::Interrupt::$NAME ;
+        #[allow(non_snake_case)]
+        #[no_mangle]
+        #[naked]
+        pub extern "C" fn $ NAME () {
+            let _ = $crate::interrupt::Interrupt::$NAME;
             let f: fn() = $path;
             f();
         }
@@ -292,210 +293,691 @@ pub static INTERRUPTS: [Option<unsafe extern "C" fn()>; 95] = [
     Some(SOFTWARE),
 ];
 
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn DMA_CHANNEL0() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn DMA_CHANNEL1() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn DMA_CHANNEL2() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn DMA_CHANNEL3() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn DMA_CHANNEL4() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn DMA_CHANNEL5() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn DMA_CHANNEL6() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn DMA_CHANNEL7() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn DMA_CHANNEL8() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn DMA_CHANNEL9() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn DMA_CHANNEL10() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn DMA_CHANNEL11() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn DMA_CHANNEL12() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn DMA_CHANNEL13() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn DMA_CHANNEL14() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn DMA_CHANNEL15() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn DMA_ERROR0_15() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn FLASH_COMPLETE() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn FLASH_COLLISION() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn LV_DETECT() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn LLWU() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn WDOG() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn I2C0() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn I2C1() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn SPI0() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn SPI1() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn CAN0_MSG_BUF() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn CAN0_BUS_OFF() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn CAN0_ERROR() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn CAN0_TX_WARN() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn CAN0_RX_WARN() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn CAN0_WKUP() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn I2S0_TX() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn I2S0_RX() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn UART0_LON() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn UART0_STATUS() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn UART0_ERROR() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn UART1_STATUS() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn UART1_ERROR() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn UART2_STATUS() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn UART2_ERROR() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn ADC0() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn ADC1() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn CMP0() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn CMP1() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn CMP2() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn FTM0() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn FTM1() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn FTM2() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn CMT() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn RTC_ALARM() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn RTC_SECONDS() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn PIT_CHANNEL0() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn PIT_CHANNEL1() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn PIT_CHANNEL2() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn PIT_CHANNEL3() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn PDB() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn USB_OTG() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn USB_CHRG_DETECT() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn DAC0() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn TSI() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn MCG() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn LP_TIM() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn PORTA() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn PORTB() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn PORTC() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn PORTD() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn PORTE() { default_handler() }
-#[linkage = "weak"]
-#[no_mangle]
-extern "C" fn SOFTWARE() { default_handler() }
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn DMA_CHANNEL0() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn DMA_CHANNEL1() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn DMA_CHANNEL2() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn DMA_CHANNEL3() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn DMA_CHANNEL4() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn DMA_CHANNEL5() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn DMA_CHANNEL6() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn DMA_CHANNEL7() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn DMA_CHANNEL8() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn DMA_CHANNEL9() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn DMA_CHANNEL10() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn DMA_CHANNEL11() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn DMA_CHANNEL12() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn DMA_CHANNEL13() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn DMA_CHANNEL14() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[linkage = "weak"]
+#[no_mangle]
+extern "C" fn DMA_CHANNEL15() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn DMA_ERROR0_15() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn FLASH_COMPLETE() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn FLASH_COLLISION() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn LV_DETECT() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn LLWU() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn WDOG() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn I2C0() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn I2C1() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn SPI0() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn SPI1() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn CAN0_MSG_BUF() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn CAN0_BUS_OFF() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn CAN0_ERROR() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn CAN0_TX_WARN() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn CAN0_RX_WARN() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn CAN0_WKUP() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn I2S0_TX() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn I2S0_RX() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn UART0_LON() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn UART0_STATUS() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn UART0_ERROR() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn UART1_STATUS() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn UART1_ERROR() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn UART2_STATUS() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn UART2_ERROR() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn ADC0() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn ADC1() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn CMP0() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn CMP1() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn CMP2() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn FTM0() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn FTM1() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn FTM2() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn CMT() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn RTC_ALARM() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn RTC_SECONDS() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn PIT_CHANNEL0() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn PIT_CHANNEL1() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn PIT_CHANNEL2() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn PIT_CHANNEL3() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn PDB() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn USB_OTG() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn USB_CHRG_DETECT() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn DAC0() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn TSI() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn MCG() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn LP_TIM() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn PORTA() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn PORTB() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn PORTC() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn PORTD() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn PORTE() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}
+#[cfg(target_arch = "arm")]
+#[linkage = "weak"]
+#[naked]
+#[no_mangle]
+extern "C" fn SOFTWARE() {
+    unsafe {
+        asm!("b DEFAULT_HANDLER" :::: "volatile");
+        intrinsics::unreachable();
+    }
+}

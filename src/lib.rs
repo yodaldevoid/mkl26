@@ -4,6 +4,7 @@
 #![feature(core_intrinsics)]
 #![feature(lang_items)]
 #![feature(linkage)]
+#![feature(naked_functions)]
 #![feature(used)]
 #![no_std]
 
