@@ -23,7 +23,7 @@ $(BINARIES): %: $(OUTDIR)/%
 
 .PHONY: $(OUTPUT)
 $(OUTPUT):
-	xargo build --target=thumbv7em-none-eabi --release --bin $(notdir $@)
+	xargo build --release --bin $(notdir $@)
 
 %.hex: %
 	$(OBJCOPY) -O ihex $< $@
