@@ -267,19 +267,21 @@ impl<'a> Adc<'a> {
                 sc3.set_bit(7, true);
                 sc3
             });
-        }
-        while self.reg.sc3.read().get_bit(7) {}
+            while self.reg.sc3.read().get_bit(7) {}
 
-        if self.reg.sc3.read().get_bit(6) {
-            return Err(())
+            if self.reg.sc3.read().get_bit(6) {
+                return Err(())
+            }
         }
 
-        let mut calib = self.reg.clp0.read() +
-                        self.reg.clp1.read() +
-                        self.reg.clp2.read() +
-                        self.reg.clp3.read() +
-                        self.reg.clp4.read() +
-                        self.reg.clps.read();
+        let mut calib = unsafe {
+            self.reg.clp0.read() +
+            self.reg.clp1.read() +
+            self.reg.clp2.read() +
+            self.reg.clp3.read() +
+            self.reg.clp4.read() +
+            self.reg.clps.read()
+        };
         calib >>= 1;
         calib |= 0x8000;
         unsafe { self.reg.pg.write(calib); }
@@ -296,11 +298,11 @@ impl<'a> Adc<'a> {
     }
 
     pub fn is_conv_done(&mut self) -> bool {
-        self.reg.sc1a.read().get_bit(7)
+        unsafe { self.reg.sc1a.read().get_bit(7) }
     }
 
     pub fn read(&mut self) -> u32 {
-        self.reg.ra.read()
+        unsafe { self.reg.ra.read() }
     }
 }
 
@@ -464,29 +466,33 @@ impl<'a,'b> AdcDiff<'a,'b> {
                 sc3.set_bit(7, true);
                 sc3
             });
-        }
-        while self.reg.sc3.read().get_bit(7) {}
+            while self.reg.sc3.read().get_bit(7) {}
 
-        if self.reg.sc3.read().get_bit(6) {
-            return Err(())
+            if self.reg.sc3.read().get_bit(6) {
+                return Err(())
+            }
         }
 
-        let mut calib_p = self.reg.clp0.read() +
-                        self.reg.clp1.read() +
-                        self.reg.clp2.read() +
-                        self.reg.clp3.read() +
-                        self.reg.clp4.read() +
-                        self.reg.clps.read();
+        let mut calib_p = unsafe {
+            self.reg.clp0.read() +
+            self.reg.clp1.read() +
+            self.reg.clp2.read() +
+            self.reg.clp3.read() +
+            self.reg.clp4.read() +
+            self.reg.clps.read()
+        };
         calib_p >>= 1;
         calib_p |= 0x8000;
         unsafe { self.reg.pg.write(calib_p); }
 
-        let mut calib_m = self.reg.clm0.read() +
-                        self.reg.clm1.read() +
-                        self.reg.clm2.read() +
-                        self.reg.clm3.read() +
-                        self.reg.clm4.read() +
-                        self.reg.clms.read();
+        let mut calib_m = unsafe {
+            self.reg.clm0.read() +
+            self.reg.clm1.read() +
+            self.reg.clm2.read() +
+            self.reg.clm3.read() +
+            self.reg.clm4.read() +
+            self.reg.clms.read()
+        };
         calib_m >>= 1;
         calib_m |= 0x8000;
         unsafe { self.reg.mg.write(calib_m); }
@@ -503,10 +509,10 @@ impl<'a,'b> AdcDiff<'a,'b> {
     }
 
     pub fn is_conv_done(&mut self) -> bool {
-        self.reg.sc1a.read().get_bit(7)
+        unsafe { self.reg.sc1a.read().get_bit(7) }
     }
 
     pub fn read(&mut self) -> i32 {
-        self.reg.ra.read() as i32
+        unsafe { self.reg.ra.read() as i32 }
     }
 }
