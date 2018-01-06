@@ -36,8 +36,8 @@ pub extern fn main() {
     let osc_token = Osc::new().enable(0);
 
     // Set our clocks:
-    // core: 100Mhz
-    // peripheral: 50MHz
+    // core/system: 100Mhz
+    // bus: 50MHz
     // flash: 25MHz
     let mut sim = Sim::new();
     sim.set_dividers(1, 2, 4);

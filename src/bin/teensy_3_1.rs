@@ -49,8 +49,8 @@ fn main() {
     let osc_token = Osc::new().enable(10);
 
     // Set our clocks:
-    // core: 72Mhz
-    // peripheral: 36MHz
+    // core/system: 72Mhz
+    // bus: 36MHz
     // flash: 24MHz
     let mut sim = Sim::new();
     sim.set_dividers(1, 2, 3);
@@ -60,8 +60,8 @@ fn main() {
     if let Clock::Fei(mut fei) = mcg.clock() {
         // Our 16MHz xtal is "very fast", and needs to be divided
         // by 512 to be in the acceptable FLL range.
-        fei.enable_xtal(OscRange::VeryHigh, osc_token);
-        let fbe = fei.use_external_bypass(512);
+        let ext_token = fei.enable_xtal(OscRange::VeryHigh, osc_token);
+        let fbe = fei.use_external_bypass(512, ext_token);
 
         // PLL is 27/6 * xtal == 72MHz
         let pbe = fbe.enable_pll(27, 6);

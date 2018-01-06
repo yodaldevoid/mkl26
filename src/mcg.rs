@@ -129,34 +129,104 @@ pub struct Stop {
     mcg: Mcg
 }
 
+pub struct ExtToken {
+    _private: ()
+}
+
+impl ExtToken {
+    fn new() -> ExtToken {
+        ExtToken { _private: () }
+    }
+}
+
 impl Fei {
-    pub fn enable_xtal(&mut self, range: OscRange, _token: OscToken) {
+    pub fn enable_xtal(&mut self, range: OscRange, _token: OscToken) -> ExtToken {
         unsafe {
             self.mcg.reg.c2.modify(|mut c2| {
                 c2.set_bits(4..6, range as u8); // frequency range
-                c2.set_bit(2, true); // internal osc
+                c2.set_bit(2, true); // external osc
                 c2
             });
         }
 
         while !self.mcg.reg.s.read().get_bit(1) {}
+
+        ExtToken::new()
     }
 
-    pub fn disable_xtal(&mut self) -> OscToken {
+    // TODO: Should take token, but token might be gone by the time we get here
+    pub fn disable_xtal(&mut self) {
         unsafe {
             self.mcg.reg.c2.modify(|mut c2| {
-                c2.set_bits(4..6, 0); // frequency range
                 c2.set_bit(2, false); // internal osc
                 c2
             });
         }
 
-        while !self.mcg.reg.s.read().get_bit(1) {}
-
-        OscToken::new()
+        while self.mcg.reg.s.read().get_bit(1) {}
     }
 
-    pub fn use_external_bypass(self, divide: u32) -> Fbe {
+    pub fn use_external(self, divide: u32, _token: ExtToken) -> Fee {
+        let osc = self.mcg.reg.c2.read().get_bits(4..6);
+        let frdiv = if osc == OscRange::Low as u8 {
+            match divide {
+                1 => 0,
+                2 => 1,
+                4 => 2,
+                8 => 3,
+                16 => 4,
+                32 => 5,
+                64 => 6,
+                128 => 7,
+                _ => panic!("Invalid external clock divider: {}", divide)
+            }
+        } else {
+            match divide {
+                32 => 0,
+                64 => 1,
+                128 => 2,
+                256 => 3,
+                512 => 4,
+                1024 => 5,
+                1280 => 6,
+                1536 => 7,
+                _ => panic!("Invalid external clock divider: {}", divide)
+            }
+        };
+
+        unsafe {
+            self.mcg.reg.c1.modify(|mut c1| {
+                c1.set_bits(3..6, frdiv);
+                c1.set_bit(2, false); // external clock
+                c1
+            });
+        }
+
+        // Once we write to the control register, we need to wait for
+        // the new clock to stabilize before we move on.
+        // Wait for the FLL to be pointed at the crystal
+        while self.mcg.reg.s.read().get_bit(4) {}
+
+        Fee { mcg: self.mcg }
+    }
+
+    pub fn bypass(self) -> Fbi {
+        unsafe {
+            self.mcg.reg.c1.modify(|mut c1| {
+                c1.set_bits(6..8, OscSource::Internal as u8);
+                c1
+            });
+        }
+
+        // Once we write to the control register, we need to wait for
+        // the new clock to stabilize before we move on.
+        // Wait for our clock source to be the internal osc
+        while self.mcg.reg.s.read().get_bits(2..4) != OscSource::Internal as u8 {}
+
+        Fbi { mcg: self.mcg }
+    }
+
+    pub fn use_external_bypass(self, divide: u32, _token: ExtToken) -> Fbe {
         let osc = self.mcg.reg.c2.read().get_bits(4..6);
         let frdiv = if osc == OscRange::Low as u8 {
             match divide {
@@ -204,7 +274,257 @@ impl Fei {
     }
 }
 
+impl Fee {
+    pub fn use_internal(self) -> Fei {
+        unsafe {
+            self.mcg.reg.c1.modify(|mut c1| {
+                c1.set_bit(2, true); // internal clock
+                c1
+            });
+        }
+
+        // Once we write to the control register, we need to wait for
+        // the new clock to stabilize before we move on.
+        // Wait for the FLL to be pointed at the internal clock
+        while !self.mcg.reg.s.read().get_bit(4) {}
+
+        Fei { mcg: self.mcg }
+    }
+
+    pub fn bypass(self) -> Fbe {
+        unsafe {
+            self.mcg.reg.c1.modify(|mut c1| {
+                c1.set_bits(6..8, OscSource::External as u8);
+                c1
+            });
+        }
+
+        // Once we write to the control register, we need to wait for
+        // the new clock to stabilize before we move on.
+        // Wait for our clock source to be the crystal osc
+        while self.mcg.reg.s.read().get_bits(2..4) != OscSource::External as u8 {}
+
+        Fbe { mcg: self.mcg }
+    }
+
+    pub fn use_internal_bypass(self) -> Fbi {
+        unsafe {
+            self.mcg.reg.c1.modify(|mut c1| {
+                c1.set_bits(6..8, OscSource::Internal as u8);
+                c1.set_bit(2, true); // internal clock
+                c1
+            });
+        }
+
+        // Once we write to the control register, we need to wait for
+        // the new clock to stabilize before we move on.
+        // First: Wait for the FLL to be pointed at the internal clock
+        // Then: Wait for our clock source to be the internal clock
+        while !self.mcg.reg.s.read().get_bit(4) {}
+        while self.mcg.reg.s.read().get_bits(2..4) != OscSource::Internal as u8 {}
+
+        Fbi { mcg: self.mcg }
+    }
+}
+
+impl Fbi {
+    pub fn enable_xtal(&mut self, range: OscRange, _token: OscToken) -> ExtToken {
+        unsafe {
+            self.mcg.reg.c2.modify(|mut c2| {
+                c2.set_bits(4..6, range as u8); // frequency range
+                c2.set_bit(2, true); // external osc
+                c2
+            });
+        }
+
+        while !self.mcg.reg.s.read().get_bit(1) {}
+
+        ExtToken::new()
+    }
+
+    // TODO: Should take token, but token might be gone by the time we get here
+    pub fn disable_xtal(&mut self) {
+        unsafe {
+            self.mcg.reg.c2.modify(|mut c2| {
+                c2.set_bit(2, false); // internal osc
+                c2
+            });
+        }
+
+        while self.mcg.reg.s.read().get_bit(1) {}
+    }
+
+    pub fn use_external(self, divide: u32, _token: ExtToken) -> Fbe {
+        let osc = self.mcg.reg.c2.read().get_bits(4..6);
+        let frdiv = if osc == OscRange::Low as u8 {
+            match divide {
+                1 => 0,
+                2 => 1,
+                4 => 2,
+                8 => 3,
+                16 => 4,
+                32 => 5,
+                64 => 6,
+                128 => 7,
+                _ => panic!("Invalid external clock divider: {}", divide)
+            }
+        } else {
+            match divide {
+                32 => 0,
+                64 => 1,
+                128 => 2,
+                256 => 3,
+                512 => 4,
+                1024 => 5,
+                1280 => 6,
+                1536 => 7,
+                _ => panic!("Invalid external clock divider: {}", divide)
+            }
+        };
+
+        unsafe {
+            self.mcg.reg.c1.modify(|mut c1| {
+                c1.set_bits(3..6, frdiv);
+                c1.set_bit(2, false); // external clock
+                c1
+            });
+        }
+
+        // Once we write to the control register, we need to wait for
+        // the new clock to stabilize before we move on.
+        // Wait for the FLL to be pointed at the crystal
+        while self.mcg.reg.s.read().get_bit(4) {}
+
+        Fbe { mcg: self.mcg }
+    }
+
+    pub fn use_fll(self) -> Fei {
+        unsafe {
+            self.mcg.reg.c1.modify(|mut c1| {
+                c1.set_bits(6..8, OscSource::LockedLoop as u8);
+                c1
+            });
+        }
+
+        // Once we write to the control register, we need to wait for
+        // the new clock to stabilize before we move on.
+        // Wait for our clock source to be the FLL
+        while self.mcg.reg.s.read().get_bits(2..4) != OscSource::LockedLoop as u8 {}
+
+        Fei { mcg: self.mcg }
+    }
+
+    pub fn use_fll_external(self, divide: u32, _token: ExtToken) -> Fee {
+        let osc = self.mcg.reg.c2.read().get_bits(4..6);
+        let frdiv = if osc == OscRange::Low as u8 {
+            match divide {
+                1 => 0,
+                2 => 1,
+                4 => 2,
+                8 => 3,
+                16 => 4,
+                32 => 5,
+                64 => 6,
+                128 => 7,
+                _ => panic!("Invalid external clock divider: {}", divide)
+            }
+        } else {
+            match divide {
+                32 => 0,
+                64 => 1,
+                128 => 2,
+                256 => 3,
+                512 => 4,
+                1024 => 5,
+                1280 => 6,
+                1536 => 7,
+                _ => panic!("Invalid external clock divider: {}", divide)
+            }
+        };
+
+        unsafe {
+            self.mcg.reg.c1.modify(|mut c1| {
+                c1.set_bits(6..8, OscSource::LockedLoop as u8);
+                c1.set_bits(3..6, frdiv);
+                c1.set_bit(2, false); // external clock
+                c1
+            });
+        }
+
+        // Once we write to the control register, we need to wait for
+        // the new clock to stabilize before we move on.
+        // First: Wait for the FLL to be pointed at the crystal
+        // Then: Wait for our clock source to be the external osc
+        while self.mcg.reg.s.read().get_bit(4) {}
+        while self.mcg.reg.s.read().get_bits(2..4) != OscSource::LockedLoop as u8 {}
+
+        Fee { mcg: self.mcg }
+    }
+
+    pub fn low_power(self) -> Blpi {
+        unsafe {
+            self.mcg.reg.c2.modify(|mut c2| {
+                c2.set_bit(1, true); // low power
+                c2
+            });
+        }
+
+        Blpi { mcg: self.mcg }
+    }
+}
+
 impl Fbe {
+    pub fn use_internal(self) -> Fbi {
+        unsafe {
+            self.mcg.reg.c1.modify(|mut c1| {
+                c1.set_bit(2, true); // internal clock
+                c1
+            });
+        }
+
+        // Once we write to the control register, we need to wait for
+        // the new clock to stabilize before we move on.
+        // Wait for the FLL to be pointed at the internal clock
+        while !self.mcg.reg.s.read().get_bit(4) {}
+
+        Fbi { mcg: self.mcg }
+    }
+
+    pub fn use_fll(self) -> Fee {
+        unsafe {
+            self.mcg.reg.c1.modify(|mut c1| {
+                c1.set_bits(6..8, OscSource::LockedLoop as u8);
+                c1
+            });
+        }
+
+        // Once we write to the control register, we need to wait for
+        // the new clock to stabilize before we move on.
+        // Wait for our clock source to be the FLL
+        while self.mcg.reg.s.read().get_bits(2..4) != OscSource::LockedLoop as u8 {}
+
+        Fee { mcg: self.mcg }
+    }
+
+    pub fn use_fll_internal(self) -> Fei {
+        unsafe {
+            self.mcg.reg.c1.modify(|mut c1| {
+                c1.set_bits(6..8, OscSource::LockedLoop as u8);
+                c1.set_bit(2, true); // internal clock
+                c1
+            });
+        }
+
+        // Once we write to the control register, we need to wait for
+        // the new clock to stabilize before we move on.
+        // First: Wait for the FLL to be pointed at the internal clock
+        // Then: Wait for our clock source to be the FLL
+        while !self.mcg.reg.s.read().get_bit(4) {}
+        while self.mcg.reg.s.read().get_bits(2..4) != OscSource::LockedLoop as u8 {}
+
+        Fei { mcg: self.mcg }
+    }
+
     pub fn enable_pll(self, numerator: u8, denominator: u8) -> Pbe {
         if numerator < 24 || numerator > 55 {
             panic!("Invalid PLL VCO divide factor: {}", numerator);
@@ -234,6 +554,17 @@ impl Fbe {
 
         Pbe { mcg: self.mcg }
     }
+
+    pub fn low_power(self) -> Blpe {
+        unsafe {
+            self.mcg.reg.c2.modify(|mut c2| {
+                c2.set_bit(1, true); // low power
+                c2
+            });
+        }
+
+        Blpe { mcg: self.mcg }
+    }
 }
 
 impl Pbe {
@@ -256,7 +587,7 @@ impl Pbe {
         Pee { mcg: self.mcg }
     }
 
-    pub fn disable_pll(self) -> Fbe {
+    pub fn enable_fll(self) -> Fbe {
         unsafe {
             self.mcg.reg.c6.modify(|mut c6| {
                 c6.set_bit(6, false);
@@ -269,10 +600,21 @@ impl Pbe {
 
         Fbe { mcg: self.mcg }
     }
+
+    pub fn low_power(self) -> Blpe {
+        unsafe {
+            self.mcg.reg.c2.modify(|mut c2| {
+                c2.set_bit(1, true); // low power
+                c2
+            });
+        }
+
+        Blpe { mcg: self.mcg }
+    }
 }
 
 impl Pee {
-    pub fn bypass_pll(self) -> Pbe {
+    pub fn bypass(self) -> Pbe {
         unsafe {
             self.mcg.reg.c1.modify(|mut c1| {
                 c1.set_bits(6..8, OscSource::External as u8);
@@ -281,6 +623,78 @@ impl Pee {
         }
 
         while self.mcg.reg.s.read().get_bits(2..4) != OscSource::External as u8 {}
+
+        Pbe { mcg: self.mcg }
+    }
+}
+
+impl Blpi {
+    pub fn enable_fll(self) -> Fbi {
+        unsafe {
+            self.mcg.reg.c2.modify(|mut c2| {
+                c2.set_bit(1, false); // disable low power
+                c2
+            });
+        }
+
+        // Wait for FLL to be enabled
+        while self.mcg.reg.s.read().get_bit(5) {}
+
+        Fbi { mcg: self.mcg }
+    }
+}
+
+impl Blpe {
+    pub fn enable_fll(self) -> Fbe {
+        unsafe {
+            self.mcg.reg.c6.modify(|mut c6| {
+                c6.set_bit(6, false);
+                c6
+            });
+
+            self.mcg.reg.c2.modify(|mut c2| {
+                c2.set_bit(1, false); // disable low power
+                c2
+            });
+        }
+
+        // Wait for FLL to be enabled
+        while self.mcg.reg.s.read().get_bit(5) {}
+
+        Fbe { mcg: self.mcg }
+    }
+
+    pub fn enable_pll(self, numerator: u8, denominator: u8) -> Pbe {
+        if numerator < 24 || numerator > 55 {
+            panic!("Invalid PLL VCO divide factor: {}", numerator);
+        }
+
+        if denominator < 1 || denominator > 25 {
+            panic!("Invalid PLL reference divide factor: {}", denominator);
+        }
+
+        unsafe {
+            self.mcg.reg.c5.modify(|mut c5| {
+                c5.set_bits(0..5, denominator - 1);
+                c5
+            });
+
+            self.mcg.reg.c6.modify(|mut c6| {
+                c6.set_bits(0..5, numerator - 24);
+                c6.set_bit(6, true);
+                c6
+            });
+
+            self.mcg.reg.c2.modify(|mut c2| {
+                c2.set_bit(1, false); // disable low power
+                c2
+            });
+        }
+
+        // Wait for PLL to be enabled
+        while !self.mcg.reg.s.read().get_bit(5) {}
+        // Wait for the PLL to be "locked" and stable
+        while !self.mcg.reg.s.read().get_bit(6) {}
 
         Pbe { mcg: self.mcg }
     }
