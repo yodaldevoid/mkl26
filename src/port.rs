@@ -85,11 +85,65 @@ pub struct Pin<'a> {
     pin: usize
 }
 
+#[derive(PartialEq)]
+pub enum DriveStrength {
+    Low = 0,
+    High = 1,
+}
+
+#[derive(PartialEq)]
+pub enum SlewRate {
+    Fast = 0,
+    Slow = 1,
+}
+
+pub enum Pull {
+    Disable = 0,
+    Down = 2,
+    Up = 3
+}
+
 impl<'a> Pin<'a> {
     fn set_mode(&mut self, mode: u32) {
         unsafe {
             self.port.reg().pcr[self.pin].modify(|mut pcr| {
                 pcr.set_bits(8..11, mode);
+                pcr
+            });
+        }
+    }
+
+    fn drive_strength(&mut self, strength: DriveStrength) {
+        unsafe {
+            self.port.reg().pcr[self.pin].modify(|mut pcr| {
+                pcr.set_bit(6, strength == DriveStrength::High);
+                pcr
+            });
+        }
+    }
+
+    fn open_drain(&mut self, enable: bool) {
+        unsafe {
+            self.port.reg().pcr[self.pin].modify(|mut pcr| {
+                pcr.set_bit(5, enable);
+                pcr
+            });
+        }
+    }
+
+    fn slew_rate(&mut self, rate: SlewRate) {
+        unsafe {
+            self.port.reg().pcr[self.pin].modify(|mut pcr| {
+                pcr.set_bit(2, rate == SlewRate::Slow);
+                pcr
+            });
+        }
+    }
+
+    fn pull(&mut self, pull: Pull) {
+        unsafe {
+            self.port.reg().pcr[self.pin].modify(|mut pcr| {
+                pcr.set_bits(0..2, pull as u32);
                 pcr
             });
         }
