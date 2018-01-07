@@ -219,6 +219,122 @@ impl<'a> Pin<'a> {
         }
     }
 
+    pub fn to_i2c_scl(mut self, pullup_ext: bool) -> Result<I2cScl<'a>, ()> {
+        let bus = match (self.port.name(), self.pin) {
+            (PortName::E, 1) => {
+                self.set_mode(6);
+                1
+            },
+            (PortName::B, 0) => {
+                self.set_mode(2);
+                0
+            },
+            (PortName::B, 2) => {
+                self.set_mode(2);
+                0
+            },
+            (PortName::C, 10) => {
+                self.set_mode(2);
+                1
+            },
+
+            // k64
+            (PortName::E, 24) => {
+                self.set_mode(5);
+                0
+            },
+            (PortName::A, 12) => {
+                self.set_mode(5);
+                2
+            },
+            (PortName::A, 14) => {
+                self.set_mode(5);
+                2
+            },
+            (PortName::D, 2) => {
+                self.set_mode(7);
+                0
+            },
+            (PortName::D, 8) => {
+                self.set_mode(2);
+                0
+            },
+            _ => return Err(())
+        };
+
+        if pullup_ext {
+            self.drive_strength(DriveStrength::High);
+            self.open_drain(true);
+            self.slew_rate(SlewRate::Slow);
+            self.pull(Pull::Disable);
+        } else {
+            self.drive_strength(DriveStrength::Low);
+            self.open_drain(false);
+            self.slew_rate(SlewRate::Fast);
+            self.pull(Pull::Up);
+        }
+
+        Ok(I2cScl { i2c: bus, _pin: self })
+    }
+
+    pub fn to_i2c_sda(mut self, pullup_ext: bool) -> Result<I2cSda<'a>, ()> {
+        let bus = match (self.port.name(), self.pin) {
+            (PortName::E, 0) => {
+                self.set_mode(6);
+                1
+            },
+            (PortName::B, 1) => {
+                self.set_mode(2);
+                0
+            },
+            (PortName::B, 3) => {
+                self.set_mode(2);
+                0
+            },
+            (PortName::C, 11) => {
+                self.set_mode(2);
+                1
+            },
+
+            // k64
+            (PortName::E, 25) => {
+                self.set_mode(5);
+                0
+            },
+            (PortName::A, 11) => {
+                self.set_mode(5);
+                2
+            },
+            (PortName::A, 13) => {
+                self.set_mode(5);
+                2
+            },
+            (PortName::D, 3) => {
+                self.set_mode(7);
+                0
+            },
+            (PortName::D, 9) => {
+                self.set_mode(2);
+                0
+            },
+            _ => return Err(())
+        };
+
+        if pullup_ext {
+            self.open_drain(true);
+            self.slew_rate(SlewRate::Slow);
+            self.drive_strength(DriveStrength::High);
+            self.pull(Pull::Disable);
+        } else {
+            self.open_drain(false);
+            self.slew_rate(SlewRate::Fast);
+            self.drive_strength(DriveStrength::Low);
+            self.pull(Pull::Up);
+        }
+
+        Ok(I2cSda { i2c: bus, _pin: self })
+    }
+
     pub fn to_uart_rx(mut self) -> Result<UartRx<'a>, ()> {
         match (self.port.name(), self.pin) {
             (PortName::E, 1) => {
@@ -360,6 +476,28 @@ impl<'a> AdcDiffPin<'a> {
 
     pub fn pin(&self) -> usize {
         self._pin.pin
+    }
+}
+
+pub struct I2cScl<'a> {
+    i2c: u8,
+    _pin: Pin<'a>
+}
+
+pub struct I2cSda<'a> {
+    i2c: u8,
+    _pin: Pin<'a>
+}
+
+impl<'a> I2cScl<'a> {
+    pub fn bus(&self) -> u8 {
+        self.i2c
+    }
+}
+
+impl<'a> I2cSda<'a> {
+    pub fn bus(&self) -> u8 {
+        self.i2c
     }
 }
 

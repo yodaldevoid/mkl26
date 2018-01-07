@@ -4,8 +4,16 @@ version = "0.1.0"
 authors = ["Gabriel Smith <ga29smith@gmail.com>"]
 
 [dependencies]
-cortex-m = "^0.3"
-volatile-register = "^0.2"
+arraydeque = { version = "^0.2", default-features = false }
 bare-metal = "^0.1"
 bit_field = "^0.8"
+cortex-m = "^0.3"
 cortex-m-rt = "^0.3"
+volatile-register = "^0.2"
+
+[features]
+default = ["i2c-isr", "i2c-slave", "i2c-dma"] # default to everything on for docs
+
+i2c-isr = []
+i2c-slave = ["i2c-isr"]
+i2c-dma = ["i2c-isr"]

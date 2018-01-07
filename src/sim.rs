@@ -4,7 +4,8 @@ use volatile_register::{RO,RW};
 use bit_field::BitField;
 
 use adc::{Adc,AdcDiff};
-use port::{AdcPin,AdcDiffPin,Port,PortName,UartRx,UartTx};
+use i2c::{I2c,Mode,OpMode};
+use port::{AdcPin,AdcDiffPin,I2cSda,I2cScl,Port,PortName,UartRx,UartTx};
 use uart::Uart;
 
 pub struct ClockGate {
@@ -136,6 +137,28 @@ impl Sim {
         gate.enable();
         unsafe {
             Uart::new(uart, rx.into(), tx.into(), clkdiv, rxfifo, txfifo, gate)
+        }
+    }
+
+    // TODO: support higher bus numbers for other chips
+    pub fn i2c<'a, 'b>(&mut self,
+                       bus: u8,
+                       scl: I2cScl<'a>,
+                       sda: I2cSda<'b>,
+                       mode: Mode,
+                       op_mode: OpMode)
+                       -> Result<I2c<'a, 'b>, ()> {
+        let mut gate = match bus {
+            0 => ClockGate::new(4, 6),
+            1 => ClockGate::new(4, 7),
+            _ => return Err(()) //panic!("Cannot enable clock for I2C {}", bus)
+        };
+        if gate.is_enabled() {
+            return Err(()) //panic!("Cannot create I2c instance; it is already in use");
+        }
+        gate.enable();
+        unsafe {
+            I2c::new(bus, scl, sda, mode, op_mode, gate)
         }
     }
 
