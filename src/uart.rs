@@ -136,6 +136,16 @@ impl<'a, 'b> Uart<'a, 'b> {
 
         Ok(Uart {reg: reg, _tx: tx, _rx: rx, _gate: gate})
     }
+
+    /// clock_freq - Frequency of module clock in Hz. UART0 and UART1 use the
+    ///              system clock and UART2 use the bus clock.
+    pub fn calc_clkdiv(baud: u32, clock_freq: u32) -> (u16, u8) {
+        let divider = clock_freq * 32 / 16 / baud;
+        let coarse = (divider >> 5) & 0x1FFF;
+        let fine = divider & 0x1F;
+        (coarse as u16, fine as u8)
+    }
+
 /*
     pub fn read_byte(&mut self) -> Result<u8, read::Error> {
         // wait for something in the rx buffer
