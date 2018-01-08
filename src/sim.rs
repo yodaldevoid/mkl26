@@ -118,13 +118,13 @@ impl Sim {
     pub fn uart<'a, 'b,
                 R: Into<Option<UartRx<'a>>>,
                 T: Into<Option<UartTx<'b>>>>(&mut self,
-                        uart: u8,
-                        rx: R,
-                        tx: T,
-                        clkdiv: (u16,u8),
-                        rxfifo: bool,
-                        txfifo: bool)
-                        -> Result<Uart<'a, 'b>, ()> {
+                                             uart: u8,
+                                             rx: R,
+                                             tx: T,
+                                             clkdiv: (u16,u8),
+                                             rxfifo: bool,
+                                             txfifo: bool)
+                                             -> Result<Uart<'a, 'b>, ()> {
         let mut gate = match uart {
             0 => ClockGate::new(4, 10),
             1 => ClockGate::new(4, 11),
@@ -163,12 +163,12 @@ impl Sim {
     }
 
     pub fn adc<'a, P: Into<Option<AdcPin<'a>>>>(&mut self,
-                    adc: u8,
-                    ch: u8,
-                    mode: u8,
-                    clkdiv: u8,
-                    pin: P)
-                    -> Result<Adc<'a>, ()> {
+                                                adc: u8,
+                                                ch: u8,
+                                                mode: u8,
+                                                clkdiv: u8,
+                                                pin: P)
+                                                -> Result<Adc<'a>, ()> {
         let mut gate = match adc {
             0 => ClockGate::new(6, 27),
             1 => ClockGate::new(3, 27),

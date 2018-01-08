@@ -80,7 +80,7 @@ pub struct Uart<'a, 'b> {
 // TODO: write a drop impl
 // TODO: flow control
 impl<'a, 'b> Uart<'a, 'b> {
-    pub unsafe fn new(id: u8,
+    pub unsafe fn new(bus: u8,
                       rx: Option<UartRx<'a>>,
                       tx: Option<UartTx<'b>>,
                       clkdiv: (u16,u8),
@@ -89,12 +89,12 @@ impl<'a, 'b> Uart<'a, 'b> {
                       gate: ClockGate)
                       -> Result<Uart<'a, 'b>, ()> {
         if let Some(r) = rx.as_ref() {
-            if r.uart() != id {
+            if r.bus() != bus {
                 return Err(());
             }
         }
         if let Some(t) = tx.as_ref() {
-            if t.uart() != id {
+            if t.bus() != bus {
                 return Err(());
             }
         }
@@ -105,11 +105,11 @@ impl<'a, 'b> Uart<'a, 'b> {
             return Err(())
         }
 
-        let reg = match id {
+        let reg = match bus {
             0 => &mut *(0x4006A000 as *mut UartRegs),
             1 => &mut *(0x4006B000 as *mut UartRegs),
             2 => &mut *(0x4006C000 as *mut UartRegs),
-            _ => return Err(())
+            _ => unimplemented!()
         };
 
         reg.c4.modify(|mut c4| {

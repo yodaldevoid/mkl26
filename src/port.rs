@@ -512,13 +512,13 @@ pub struct UartTx<'a> {
 }
 
 impl<'a> UartRx<'a> {
-    pub fn uart(&self) -> u8 {
+    pub fn bus(&self) -> u8 {
         self.uart
     }
 }
 
 impl<'a> UartTx<'a> {
-    pub fn uart(&self) -> u8 {
+    pub fn bus(&self) -> u8 {
         self.uart
     }
 }
