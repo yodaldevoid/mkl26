@@ -77,8 +77,9 @@ pub struct Uart<'a, 'b> {
     _gate: ClockGate
 }
 
-// TODO: write a drop impl
 // TODO: flow control
+// TODO: support ISR mode
+// TODO: support DMA mode
 impl<'a, 'b> Uart<'a, 'b> {
     pub unsafe fn new(bus: u8,
                       rx: Option<UartRx<'a>>,
@@ -149,6 +150,17 @@ impl<'a, 'b> Uart<'a, 'b> {
         // wait for tx complete
         while !self.reg.s1.read().get_bit(6) {}
         Ok(())
+    }
+}
+
+impl<'a, 'b> Drop for Uart<'a, 'b> {
+    fn drop(&mut self) {
+        unsafe {
+            self.reg.c2.modify(|mut c2| {
+                c2.set_bits(2..4, 0);
+                c2
+            });
+        }
     }
 }
 
