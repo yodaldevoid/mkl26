@@ -146,18 +146,27 @@ impl<'a, 'b> Uart<'a, 'b> {
         (coarse as u16, fine as u8)
     }
 
-/*
     pub fn read_byte(&mut self) -> Result<u8, read::Error> {
         // wait for something in the rx buffer
-        while !self.reg.s1.read().get_bit(5) {}
-        Ok(self.reg.d.read())
+        if self.reg.s1.read().get_bit(5) {
+            Ok(self.reg.d.read())
+        } else {
+            Err(read::Error)
+        }
     }
-*/
+
     pub fn write_byte(&mut self, b: u8) -> Result<(), ()> {
         // wait for tx buffer to not be full
-        while !self.reg.s1.read().get_bit(7) {}
-        unsafe { self.reg.d.write(b); }
-        // wait for tx complete
+        if self.reg.s1.read().get_bit(7) {
+            unsafe { self.reg.d.write(b); }
+            Ok(())
+        } else {
+            Err(())
+        }
+    }
+
+    // TODO: add timeout
+    pub fn flush(&self) -> Result<(), ()> {
         while !self.reg.s1.read().get_bit(6) {}
         Ok(())
     }
@@ -175,15 +184,11 @@ impl<'a, 'b> Drop for Uart<'a, 'b> {
 }
 
 impl<'a, 'b> Write for Uart<'a, 'b> {
-    // TODO: make asynchronous
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for b in s.bytes() {
-            // wait for tx buffer to not be full
-            while !self.reg.s1.read().get_bit(7) {}
-            unsafe { self.reg.d.write(b); }
+            // Retry if the buffer is full
+            while let Err(()) = self.write_byte(b) {}
         }
-        // wait for tx complete
-        while !self.reg.s1.read().get_bit(6) {}
         Ok(())
     }
 }
@@ -193,10 +198,6 @@ impl<'a, 'b> read::Read for Uart<'a, 'b> {
         if buf.len() == 0 {
             return Ok(0);
         }
-
-        // wait for something in the rx buffer
-        // uncomment for synchronous read
-        //while !self.reg.s1.read().get_bit(5) {}
 
         let mut index: usize = 0;
         let rxcount = self.reg.rcfifo.read() as usize;
