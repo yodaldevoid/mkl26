@@ -1,10 +1,11 @@
 use core::sync::atomic::{AtomicBool,ATOMIC_BOOL_INIT,Ordering};
 
+use cortex_m::peripheral::NVIC;
 use volatile_register::{RO,RW};
 use bit_field::BitField;
 
 use adc::{Adc,AdcDiff};
-use i2c::{I2c,Mode,OpMode};
+use i2c::{Address,I2cMaster,I2cSlave,OpMode};
 use port::{AdcPin,AdcDiffPin,I2cSda,I2cScl,Port,PortName,UartRx,UartTx};
 use uart::Uart;
 
@@ -141,14 +142,18 @@ impl Sim {
     }
 
     // TODO: support higher bus numbers for other chips
-    pub fn i2c<'a, 'b>(&mut self,
-                       bus: u8,
-                       scl: I2cScl<'a>,
-                       sda: I2cSda<'b>,
-                       mode: Mode,
-                       op_mode: OpMode)
-                       -> Result<I2c<'a, 'b>, ()> {
-        let mut gate = match bus {
+    pub fn i2c_master<'a, 'b>(&mut self,
+                              scl: I2cScl<'a>,
+                              sda: I2cSda<'b>,
+                              nvic: &mut NVIC,
+                              clkdiv: (u8, u8),
+                              op_mode: OpMode)
+                              -> Result<I2cMaster<'a, 'b>, ()> {
+        if scl.bus() != sda.bus() {
+            return Err(());
+        }
+
+        let mut gate = match scl.bus() {
             0 => ClockGate::new(4, 6),
             1 => ClockGate::new(4, 7),
             _ => return Err(()) //panic!("Cannot enable clock for I2C {}", bus)
@@ -158,7 +163,34 @@ impl Sim {
         }
         gate.enable();
         unsafe {
-            I2c::new(bus, scl, sda, mode, op_mode, gate)
+            I2cMaster::new(scl, sda, nvic, clkdiv, op_mode, gate)
+        }
+    }
+
+    // TODO: support higher bus numbers for other chips
+    #[cfg(feature = "i2c-slave")]
+    pub fn i2c_slave<'a, 'b>(&mut self,
+                             scl: I2cScl<'a>,
+                             sda: I2cSda<'b>,
+                             nvic: &mut NVIC,
+                             addr: Address,
+                             general_call: bool)
+                             -> Result<I2cSlave<'a, 'b>, ()> {
+        if scl.bus() != sda.bus() {
+            return Err(());
+        }
+
+        let mut gate = match scl.bus() {
+            0 => ClockGate::new(4, 6),
+            1 => ClockGate::new(4, 7),
+            _ => return Err(()) //panic!("Cannot enable clock for I2C {}", bus)
+        };
+        if gate.is_enabled() {
+            return Err(()) //panic!("Cannot create I2c instance; it is already in use");
+        }
+        gate.enable();
+        unsafe {
+            I2cSlave::new(scl, sda, nvic, addr, general_call, gate)
         }
     }
 

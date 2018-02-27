@@ -1,5 +1,4 @@
 use core::cell::RefCell;
-use read;
 
 use arraydeque::ArrayDeque;
 use bare_metal::Mutex;
@@ -28,7 +27,7 @@ struct I2cRegs {
     sltl:   RW<u8>,
 }
 
-pub struct I2c<'a, 'b> {
+pub struct I2cMaster<'a, 'b> {
     reg: &'static mut I2cRegs,
     _scl: I2cScl<'a>,
     _sda: I2cSda<'b>,
@@ -37,16 +36,13 @@ pub struct I2c<'a, 'b> {
     op_mode: OpMode,
 }
 
-pub enum Mode {
-    #[cfg(feature = "i2c-slave")]
-    Slave {
-        addr: Address,
-        general_call: bool
-    },
-    Master {
-        mul: u8,
-        clkdiv: u8
-    }
+#[cfg(feature = "i2c-slave")]
+pub struct I2cSlave<'a, 'b> {
+    reg: &'static mut I2cRegs,
+    _scl: I2cScl<'a>,
+    _sda: I2cSda<'b>,
+    _gate: ClockGate,
+    bus: u8,
 }
 
 pub enum Address {
@@ -90,46 +86,30 @@ pub enum Error {
 }
 
 // TODO: write a drop impl
+// TODO: impl Read
+// TODO: impl Write
 // TODO: support DMA mode
 // TODO: support slave address range
 // TODO: way to set slave callbacks
 // TODO: support 10 bit read
 // TODO: maybe rework to use a builder
 // TODO: support higher bus numbers for other chips
-impl<'a, 'b> I2c<'a, 'b> {
-    pub unsafe fn new(bus: u8,
-                      scl: I2cScl<'a>,
+impl<'a, 'b> I2cMaster<'a, 'b> {
+    pub unsafe fn new(scl: I2cScl<'a>,
                       sda: I2cSda<'b>,
-                      mode: Mode,
+                      nvic: &mut NVIC,
+                      (mul, clkdiv): (u8, u8),
                       op_mode: OpMode,
                       gate: ClockGate)
-                      -> Result<I2c<'a, 'b>, ()> {
-        if scl.bus() != bus {
-            return Err(());
+                      -> Result<I2cMaster<'a, 'b>, ()> {
+        if mul >= 3 {
+            return Err(())
         }
-        if sda.bus() != bus {
-            return Err(());
+        if clkdiv >= 64 {
+            return Err(())
         }
 
-        #[allow(unreachable_patterns)]
-        match (&op_mode, &mode) {
-            #[cfg(feature = "i2c-slave")]
-            (&OpMode::ISR, &Mode::Slave { .. }) => {}
-            (_, &Mode::Master { mul, clkdiv }) => {
-                /*
-                if mul != 1 && mul != 2 && mul != 4 {
-                    return Err(())
-                }
-                */
-                if mul >= 3 {
-                    return Err(())
-                }
-                if clkdiv >= 64 {
-                    return Err(())
-                }
-            }
-            _ => return Err(()) // Slave mode must use ISR mode
-        }
+        let bus = sda.bus();
 
         let reg = match bus {
             0 => &mut *(0x40066000 as *mut I2cRegs),
@@ -147,45 +127,19 @@ impl<'a, 'b> I2c<'a, 'b> {
             };
         });
 
-        match &mode {
-            #[cfg(feature = "i2c-slave")]
-            &Mode::Slave { ref addr, ref general_call } => {
-                // c2
-                // - e/d general call
-                // - 10/7 bit addr
-                reg.c2.modify(|mut c2| {
-                    c2.set_bit(7, *general_call);
-                    if let &Address::Bits10(addr) = addr {
-                        c2.set_bit(6, true);
-                        c2.set_bits(0..3, ((addr >> 7) & 0x7) as u8);
-                    } else {
-                        c2.set_bit(6, false);
-                    }
-                    c2
-                });
-                // a1 - slave addr
-                let addr = match addr {
-                    &Address::Bits7(addr) => addr,
-                    &Address::Bits10(addr) => addr as u8,
-                };
-                reg.a1.write(addr << 1);
-            }
-            &Mode::Master { mul, clkdiv } => {
-                // f - clkdiv to set baud
-                reg.f.write((mul << 6) | (clkdiv & 0x3F));
+        // f - clkdiv to set baud
+        reg.f.write((mul << 6) | (clkdiv & 0x3F));
 
-                // TODO: pass this stuff in
-                let bus_freq: u32 = 36_000_000;
-                if bus_freq >= 32 * 12_000_000 {
-                    reg.flt.write(4);
-                } else {
-                    reg.flt.write((bus_freq/12_000_000) as u8);
-                }
-
-                reg.a1.write(0);
-                reg.ra.write(0);
-            }
+        // TODO: pass this stuff in
+        let bus_freq: u32 = 36_000_000;
+        if bus_freq >= 32 * 12_000_000 {
+            reg.flt.write(4);
+        } else {
+            reg.flt.write((bus_freq/12_000_000) as u8);
         }
+
+        reg.a1.write(0);
+        reg.ra.write(0);
 
         // Official Teensy code does this, but doesn't state why
         // TODO: test
@@ -200,18 +154,14 @@ impl<'a, 'b> I2c<'a, 'b> {
                 1 => Interrupt::I2C0,
                 _ => unreachable!(),
             };
-            interrupt::free(|cs| {
-                NVIC.borrow(cs).enable(interrupt);
+            interrupt::free(|_| {
+                nvic.enable(interrupt);
             });
         }
 
-        match mode {
-            #[cfg(feature = "i2c-slave")]
-            Mode::Slave { .. } => reg.c1.write(0xC0), // enable module and interrupts
-            Mode::Master { .. } => reg.c1.write(0x80), // enable module
-        }
+        reg.c1.write(0x80); // enable module
 
-        Ok(I2c { reg: reg, _scl: scl, _sda: sda, _gate: gate, bus: bus, op_mode: op_mode })
+        Ok(I2cMaster { reg: reg, _scl: scl, _sda: sda, _gate: gate, bus: bus, op_mode: op_mode })
     }
 
     pub fn wait_for_interrupt(&mut self) {
@@ -647,7 +597,7 @@ impl<'a, 'b> I2c<'a, 'b> {
 
     // TODO: add timeout
     // TODO: maybe rename to `pop_byte`
-    pub fn read_byte(&self) -> Result<u8, read::Error> {
+    pub fn read_byte(&self) -> Result<u8, ()> {
         interrupt::free(|cs| {
             let mut state = match self.bus {
                 0 => I2C0_STATE.borrow(cs).borrow_mut(),
@@ -657,7 +607,7 @@ impl<'a, 'b> I2c<'a, 'b> {
             // TODO: format! does not exist,find another way
             let state = state.as_mut().expect("I2CX_STATE uninitialized");
 
-            state.rx_buf.pop_front().ok_or(read::Error)
+            state.rx_buf.pop_front().ok_or(())
         })
     }
 
@@ -684,7 +634,7 @@ impl<'a, 'b> I2c<'a, 'b> {
 }
 
 pub struct Transmission<'a:'c, 'b:'c, 'c> {
-    i2c: &'c mut I2c<'a, 'b>
+    i2c: &'c mut I2cMaster<'a, 'b>
 }
 
 impl<'a, 'b, 'c> Transmission<'a, 'b, 'c> {
@@ -698,6 +648,83 @@ impl<'a, 'b, 'c> Transmission<'a, 'b, 'c> {
 
     pub fn write_byte(&mut self, b: u8) -> Result<(), ()> {
         self.i2c.write_byte(b)
+    }
+}
+
+#[cfg(feature = "i2c-slave")]
+impl<'a, 'b> I2cSlave<'a, 'b> {
+    pub unsafe fn new(scl: I2cScl<'a>,
+                      sda: I2cSda<'b>,
+                      nvic: &mut NVIC,
+                      addr: Address,
+                      general_call: bool,
+                      gate: ClockGate)
+                      -> Result<I2cSlave<'a, 'b>, ()> {
+        let bus = sda.bus();
+
+        let reg = match bus {
+            0 => &mut *(0x40066000 as *mut I2cRegs),
+            1 => &mut *(0x40067000 as *mut I2cRegs),
+            _ => unimplemented!()
+        };
+
+        // init ram vars for tx (IICEN and IICIE)
+        // init ram vars
+        interrupt::free(|cs| {
+            match bus {
+                0 => *I2C0_STATE.borrow(cs).borrow_mut() = Some(IsrState::new()),
+                1 => *I2C1_STATE.borrow(cs).borrow_mut() = Some(IsrState::new()),
+                _ => unreachable!(),
+            };
+        });
+
+        // c2
+        // - e/d general call
+        // - 10/7 bit addr
+        reg.c2.modify(|mut c2| {
+            c2.set_bit(7, general_call);
+            if let Address::Bits10(addr) = addr {
+                c2.set_bit(6, true);
+                c2.set_bits(0..3, ((addr >> 7) & 0x7) as u8);
+            } else {
+                c2.set_bit(6, false);
+            }
+            c2
+        });
+        // a1 - slave addr
+        let addr = match addr {
+            Address::Bits7(addr) => addr,
+            Address::Bits10(addr) => addr as u8,
+        };
+        reg.a1.write(addr << 1);
+
+        // Official Teensy code does this, but doesn't state why
+        // TODO: test
+        reg.c2.modify(|mut c2| {
+            c2.set_bit(5, true); // high drive select
+            c2
+        });
+
+        let interrupt = match bus {
+            0 => Interrupt::I2C0,
+            1 => Interrupt::I2C0,
+            _ => unreachable!(),
+        };
+        interrupt::free(|_| {
+            nvic.enable(interrupt);
+        });
+
+        reg.c1.write(0xC0); // enable module and interrupts
+
+        Ok(I2cSlave { reg: reg, _scl: scl, _sda: sda, _gate: gate, bus: bus })
+    }
+
+    pub fn set_rx_callback(&mut self, callback: Option<fn(u8, &ArrayDeque<[u8; 64]>)>) {
+        unimplemented!()
+    }
+
+    pub fn set_tx_callback(&mut self, callback: Option<fn(u8, &mut ArrayDeque<[u8; 64]>)>) {
+        unimplemented!()
     }
 }
 
