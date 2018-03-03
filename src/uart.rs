@@ -1,8 +1,6 @@
 use core::fmt;
 use core::fmt::Write;
 
-use read;
-
 use volatile_register::{RO,RW};
 use bit_field::BitField;
 
@@ -146,12 +144,12 @@ impl<'a, 'b> Uart<'a, 'b> {
         (coarse as u16, fine as u8)
     }
 
-    pub fn read_byte(&mut self) -> Result<u8, read::Error> {
+    pub fn read_byte(&mut self) -> Result<u8, ()> {
         // wait for something in the rx buffer
         if self.reg.s1.read().get_bit(5) {
             Ok(self.reg.d.read())
         } else {
-            Err(read::Error)
+            Err(())
         }
     }
 
@@ -170,31 +168,8 @@ impl<'a, 'b> Uart<'a, 'b> {
         while !self.reg.s1.read().get_bit(6) {}
         Ok(())
     }
-}
 
-impl<'a, 'b> Drop for Uart<'a, 'b> {
-    fn drop(&mut self) {
-        unsafe {
-            self.reg.c2.modify(|mut c2| {
-                c2.set_bits(2..4, 0);
-                c2
-            });
-        }
-    }
-}
-
-impl<'a, 'b> Write for Uart<'a, 'b> {
-    fn write_str(&mut self, s: &str) -> fmt::Result {
-        for b in s.bytes() {
-            // Retry if the buffer is full
-            while let Err(()) = self.write_byte(b) {}
-        }
-        Ok(())
-    }
-}
-
-impl<'a, 'b> read::Read for Uart<'a, 'b> {
-    fn read(&mut self, buf: &mut [u8]) -> Result<usize, read::Error> {
+    pub fn read(&mut self, buf: &mut [u8]) -> Result<usize, ()> {
         if buf.len() == 0 {
             return Ok(0);
         }
@@ -217,5 +192,26 @@ impl<'a, 'b> read::Read for Uart<'a, 'b> {
         buf[index] = self.reg.d.read();
 
         Ok(buf.len())
+    }
+}
+
+impl<'a, 'b> Drop for Uart<'a, 'b> {
+    fn drop(&mut self) {
+        unsafe {
+            self.reg.c2.modify(|mut c2| {
+                c2.set_bits(2..4, 0);
+                c2
+            });
+        }
+    }
+}
+
+impl<'a, 'b> Write for Uart<'a, 'b> {
+    fn write_str(&mut self, s: &str) -> fmt::Result {
+        for b in s.bytes() {
+            // Retry if the buffer is full
+            while let Err(()) = self.write_byte(b) {}
+        }
+        Ok(())
     }
 }

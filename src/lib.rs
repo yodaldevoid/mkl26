@@ -20,7 +20,6 @@ pub mod i2c;
 pub mod mcg;
 pub mod osc;
 pub mod port;
-pub mod read;
 pub mod sim;
 pub mod uart;
 pub mod watchdog;
