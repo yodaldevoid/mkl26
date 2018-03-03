@@ -1,7 +1,7 @@
 use volatile_register::{RO,RW};
 use bit_field::BitField;
 
-use port::{AdcPin,AdcDiffPin,PortName};
+use port::{AdcPin,AdcDiffPPin,AdcDiffMPin,PortName};
 use sim::ClockGate;
 
 #[repr(C,packed)]
@@ -44,8 +44,8 @@ pub struct Adc<'a> {
 
 pub struct AdcDiff<'a,'b> {
     reg: &'static mut AdcRegs,
-    _pos: Option<AdcDiffPin<'a>>,
-    _neg: Option<AdcDiffPin<'b>>,
+    _pos: Option<AdcDiffPPin<'a>>,
+    _neg: Option<AdcDiffMPin<'b>>,
     _gate: ClockGate
 }
 
@@ -74,149 +74,32 @@ impl<'a> Adc<'a> {
                       gate: ClockGate)
                       -> Result<Adc<'a>, ()> {
         let pin_info = pin.as_ref().map(|p| (p.port_name(), p.pin()));
-        let mux = match (id, ch) {
+        let mux = match (id, ch, pin_info) {
             // ADC0
-            (0, 0) => match pin_info {
-                None => AdcMux::A, // 9-??:0-D0,0P
-                _ => return Err(())
-            },
-            (0, 2) => match pin_info {
-                None => AdcMux::A, // 9-??:0-P0,P
-                _ => return Err(())
-            },
-            (0, 3) => match pin_info {
-                None => AdcMux::A, // 11-??:0-D0,3P
-                _ => return Err(())
-            },
-            (0, 4) => match pin_info {
-                Some((PortName::C, 2)) => AdcMux::B, // 45-c2:0-S0,4b
-                _ => return Err(())
-            },
-            (0, 5) => match pin_info {
-                Some((PortName::D, 1)) => AdcMux::B, // 58-d1:0-S0,5b
-                _ => return Err(())
-            },
-            (0, 6) => match pin_info {
-                Some((PortName::D, 5)) => AdcMux::B, // 62-d5:0-S0,6b
-                _ => return Err(())
-            },
-            (0, 7) => match pin_info {
-                Some((PortName::D, 6)) => AdcMux::B, // 63-d6:0-S0,7b
-                _ => return Err(())
-            },
-            (0, 8) => match pin_info {
-                Some((PortName::B, 0)) => AdcMux::A, // 35-b0:0-S0,8
-                _ => return Err(())
-            },
-            (0, 9) => match pin_info {
-                Some((PortName::B, 1)) => AdcMux::A, // 36-b1:0-S0,9
-                _ => return Err(())
-            },
-            (0, 12) => match pin_info {
-                Some((PortName::B, 2)) => AdcMux::A, // 37-b2:0-S0,12
-                _ => return Err(())
-            },
-            (0, 13) => match pin_info {
-                Some((PortName::B, 3)) => AdcMux::A, // 38-b3:0-S0,13
-                _ => return Err(())
-            },
-            (0, 14) => match pin_info {
-                Some((PortName::C, 0)) => AdcMux::A, // 43-c0:0-S0,14
-                _ => return Err(())
-            },
-            (0, 15) => match pin_info {
-                Some((PortName::C, 1)) => AdcMux::A, // 44-c1:0-S0,15
-                _ => return Err(())
-            },
-            (0, 19) => match pin_info {
-                None => AdcMux::A, // 10-??:0-D0,0M
-                _ => return Err(())
-            },
-            (0, 21) => match pin_info {
-                None => AdcMux::A, // 12-??:0-D0,3M
-                _ => return Err(())
-            },
-            (0, 22) => match pin_info {
-                None => AdcMux::A, // VREF Output
-                _ => return Err(())
-            },
-            (0, 23) => match pin_info {
-                None => AdcMux::A, // 18-??:?-S0,23 / 12-bit DAC0 Output
-                _ => return Err(())
-            },
+            (0, 0,  Some((PortName::E, 20))) => AdcMux::A, //  9-e20:0-S0,0
+            (0, 3,  Some((PortName::E, 22))) => AdcMux::A, // 11-e22:0-S0,3
+            (0, 4,  Some((PortName::E, 21))) => AdcMux::A, // 10-e21:0-S0,4a
+            (0, 4,  Some((PortName::E, 29))) => AdcMux::B, // 17-e29:0-S0,4b
+            (0, 5,  Some((PortName::D, 1)))  => AdcMux::B, // 58-d1:0-S0,5b
+            (0, 6,  Some((PortName::D, 5)))  => AdcMux::B, // 62-d5:0-S0,6b
+            (0, 7,  Some((PortName::E, 23))) => AdcMux::A, // 12-e23:0-S0,7a
+            (0, 7,  Some((PortName::D, 6)))  => AdcMux::B, // 58-d6:0-S0,7b
+            (0, 8,  Some((PortName::B, 0)))  => AdcMux::A, // 35-b0:0-S0,8
+            (0, 9,  Some((PortName::B, 1)))  => AdcMux::A, // 36-b1:0-S0,9
+            (0, 11, Some((PortName::C, 2)))  => AdcMux::A, // 45-c2:0-S0,11
+            (0, 12, Some((PortName::B, 2)))  => AdcMux::A, // 37-b2:0-S0,12
+            (0, 13, Some((PortName::B, 3)))  => AdcMux::A, // 38-b3:0-S0,13
+            (0, 14, Some((PortName::C, 0)))  => AdcMux::A, // 43-c0:0-S0,14
+            (0, 15, Some((PortName::C, 1)))  => AdcMux::A, // 44-c1:0-S0,15
+            (0, 23, Some((PortName::E, 30))) => AdcMux::A, // 18-e30:0-S0,23
 
-            // ADC1
-            (1, 0) => match pin_info {
-                None => AdcMux::A, // 11-??:0-D1,0P
-                _ => return Err(())
-            },
-            (1, 2) => match pin_info {
-                None => AdcMux::A, // 11-??:0-P1,P
-                _ => return Err(())
-            },
-            (1, 3) => match pin_info {
-                None => AdcMux::A, // 9-??:0-D1,3P
-                _ => return Err(())
-            },
-            (1, 4) => match pin_info {
-                Some((PortName::E, 0)) => AdcMux::A, //  1-e0:0-S1,4a
-                Some((PortName::C, 8)) => AdcMux::B, // 53-c8:0-S1,4b
-                _ => return Err(())
-            },
-            (1, 5) => match pin_info {
-                Some((PortName::E, 1)) => AdcMux::A, //  2-e1:0-S1,5a
-                Some((PortName::C, 9)) => AdcMux::B, // 54-c9:0-S1,5b
-                _ => return Err(())
-            },
-            (1, 6) => match pin_info {
-                Some((PortName::C, 10)) => AdcMux::B, // 55-c10:0-S1,6b
-                _ => return Err(())
-            },
-            (1, 7) => match pin_info {
-                Some((PortName::C, 11)) => AdcMux::B, // 56-c11:0-S1,7b
-                _ => return Err(())
-            },
-            (1, 8) => match pin_info {
-                Some((PortName::B, 0)) => AdcMux::A, // 35-b0:0-S1,8
-                _ => return Err(())
-            },
-            (1, 9) => match pin_info {
-                Some((PortName::B, 1)) => AdcMux::A, // 36-b1:0-S1,9
-                _ => return Err(())
-            },
-            (1, 18) => match pin_info {
-                None => AdcMux::A, // 17-??:?-S1,18 / VREF Output
-                _ => return Err(())
-            },
-            (1, 19) => match pin_info {
-                None => AdcMux::A, // 12-??:0-D1,0M
-                _ => return Err(())
-            },
+            (_, 26, None) => AdcMux::A, // Single-ended Temp Sensor
+            (_, 27, None) => AdcMux::A, // Single-ended Bandgap
+            (_, 29, None) => AdcMux::A, // Single-ended V_REFSH
+            (_, 30, None) => AdcMux::A, // Single-ended V_REFSL
+            //(_, 31, None) => AdcMux::A, // Disabled
 
-            (_, 26) => match pin_info {
-                None => AdcMux::A, // Single-ended Temp Sensor
-                _ => return Err(())
-            },
-            (_, 27) => match pin_info {
-                None => AdcMux::A, // Single-ended Bandgap
-                _ => return Err(())
-            },
-            (_, 29) => match pin_info {
-                None => AdcMux::A, // Single-ended V_REFSH
-                _ => return Err(())
-            }
-            (_, 30) => match pin_info {
-                None => AdcMux::A, // Single-ended V_REFSL
-                _ => return Err(())
-            }
-            /*
-            (_, 31) => match pin_info {
-                None => AdcMux::A, // Disabled
-                _ => return Err(())
-            }
-            */
-
-            (_, _) => unimplemented!()
+            (_, _, _) => return Err(()),
         };
 
         let mode = match mode {
@@ -311,116 +194,29 @@ impl<'a,'b> AdcDiff<'a,'b> {
                       ch: u8,
                       mode: u8,
                       clkdiv: u8,
-                      pos: Option<AdcDiffPin<'a>>,
-                      neg: Option<AdcDiffPin<'b>>,
+                      pos: Option<AdcDiffPPin<'a>>,
+                      neg: Option<AdcDiffMPin<'b>>,
                       gate: ClockGate)
                       -> Result<AdcDiff<'a,'b>, ()> {
         let pos_info = pos.as_ref().map(|p| (p.port_name(), p.pin()));
         let neg_info = neg.as_ref().map(|p| (p.port_name(), p.pin()));
-        match (id, ch) {
+        match (id, ch, pos_info, neg_info) {
             // ADC0
-            (0, 0) => {
-                match pos_info {
-                    None => {} //  9-??:0-D0,0P
-                    _ => return Err(())
-                }
-                match neg_info {
-                    None => {} // 10-??:0-D0,0M
-                    _ => return Err(())
-                }
-            }
-            (0, 2) => {
-                match pos_info {
-                    None => { //  9-??:0-P0,0P
-                        // Enable PGA?
-                    }
-                    _ => return Err(())
-                }
-                match neg_info {
-                    None => { // 10-??:0-P0,0M
-                        // Enable PGA?
-                    }
-                    _ => return Err(())
-                }
-            }
-            (0, 3) => {
-                match pos_info {
-                    None => {} // 11-??:0-D0,3P
-                    _ => return Err(())
-                }
-                match neg_info {
-                    None => {} // 12-??:0-D0,3M
-                    _ => return Err(())
-                }
-            }
+            //  9-e20:0-D0,0P
+            // 10-e21:0-D0,0M
+            (0, 0, Some((PortName::E, 20)), Some((PortName::E, 21))) |
+            // 11-e22:0-D0,3P
+            // 12-e23:0-D0,3M
+            (0, 3, Some((PortName::E, 22)), Some((PortName::E, 23))) |
 
-            // ADC1
-            (1, 0) => {
-                match pos_info {
-                    None => {} // 11-??:0-D1,0P
-                    _ => return Err(())
-                }
-                match neg_info {
-                    None => {} // 12-??:0-D1,0M
-                    _ => return Err(())
-                }
-            }
-            (1, 2) => {
-                match pos_info {
-                    None => {} // 11-??:0-P0,0P
-                    _ => return Err(())
-                }
-                match neg_info {
-                    None => {} // 12-??:0-P0,0M
-                    _ => return Err(())
-                }
-            }
-            (1, 3) => {
-                match pos_info {
-                    None => {} //  9-??:0-D1,3P
-                    _ => return Err(())
-                }
-                match neg_info {
-                    None => {} // 10-??:0-D1,3M
-                    _ => return Err(())
-                }
-            }
+            // Differential Temp Sensor
+            (_, 26, None, None) |
+            // Differential Bandgap
+            (_, 27, None, None) |
+            // Differential V_REFSH
+            (_, 29, None, None) => {}
 
-            (_, 26) => {
-                // Differential Temp Sensor
-                match pos_info {
-                    None => {}
-                    _ => return Err(())
-                }
-                match neg_info {
-                    None => {}
-                    _ => return Err(())
-                }
-            }
-            (_, 27) => {
-                // Differential Bandgap
-                match pos_info {
-                    None => {}
-                    _ => return Err(())
-                }
-                match neg_info {
-                    None => {}
-                    _ => return Err(())
-                }
-            }
-            (_, 29) => {
-                // Differential V_REFSH
-                match pos_info {
-                    None => {}
-                    _ => return Err(())
-                }
-                match neg_info {
-                    None => {}
-                    _ => return Err(())
-                }
-            }
-
-            (_, _) => unimplemented!()
+            (_, _, _, _) => return Err(())
         }
 
         let mode = match mode {

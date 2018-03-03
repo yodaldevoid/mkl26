@@ -6,7 +6,7 @@ use adc::{Adc,AdcDiff};
 use i2c::{I2cMaster,OpMode};
 #[cfg(feature = "i2c-slave")]
 use i2c::{Address,I2cSlave};
-use port::{AdcPin,AdcDiffPin,I2cSda,I2cScl,Port,PortName,UartRx,UartTx};
+use port::{AdcPin,AdcDiffPPin,AdcDiffMPin,I2cSda,I2cScl,Port,PortName,UartRx,UartTx};
 use uart::Uart;
 
 pub struct ClockGate {
@@ -216,7 +216,6 @@ impl Sim {
                                                 -> Result<Adc<'a>, ()> {
         let mut gate = match adc {
             0 => ClockGate::new(6, 27),
-            1 => ClockGate::new(3, 27),
             _ => return Err(()) //panic!("Cannot enable clock for UART {}", uart)
         };
         if gate.is_enabled() {
@@ -233,12 +232,11 @@ impl Sim {
                             ch: u8,
                             mode: u8,
                             clkdiv: u8,
-                            pos: Option<AdcDiffPin<'a>>,
-                            neg: Option<AdcDiffPin<'b>>)
+                            pos: Option<AdcDiffPPin<'a>>,
+                            neg: Option<AdcDiffMPin<'b>>)
                             -> Result<AdcDiff<'a, 'b>, ()> {
         let mut gate = match adc {
             0 => ClockGate::new(6, 27),
-            1 => ClockGate::new(3, 27),
             _ => return Err(()) //panic!("Cannot enable clock for UART {}", uart)
         };
         if gate.is_enabled() {

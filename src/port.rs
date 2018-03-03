@@ -160,19 +160,21 @@ impl<'a> Pin<'a> {
 
     pub fn to_adc(mut self) -> Result<AdcPin<'a>, ()> {
         match (self.port.name(), self.pin) {
-            // 45-c2:0-S0,4b
-            (PortName::C, 2) |
-            // 58-d1:0-S0,5b
-            (PortName::D, 1) |
-            // 62-d5:0-S0,6b
-            (PortName::D, 5) |
-            // 63-d6:0-S0,7b
-            (PortName::D, 6) |
+            //  9-e20:0-S0,0
+            (PortName::E, 20) |
+            // 10-e21:0-S0,4a
+            (PortName::E, 21) |
+            // 11-e22:0-S0,3
+            (PortName::E, 22) |
+            // 12-e23:0-S0,7a
+            (PortName::E, 23) |
+            // 17-e29:0-S0,4b
+            (PortName::E, 29) |
+            // 18-e30:0-S0,23
+            (PortName::E, 30) |
             // 35-b0:0-S0,8
-            // 35-b0:0-S1,8
             (PortName::B, 0) |
             // 36-b1:0-S0,9
-            // 36-b1:0-S1,9
             (PortName::B, 1) |
             // 37-b2:0-S0,12
             (PortName::B, 2) |
@@ -182,19 +184,14 @@ impl<'a> Pin<'a> {
             (PortName::C, 0) |
             // 44-c1:0-S0,15
             (PortName::C, 1) |
-
-            //  1-e0:0-S1,4a
-            (PortName::E, 0) |
-            // 53-c8:0-S1,4b
-            (PortName::C, 8) |
-            //  2-e1:0-S1,5a
-            (PortName::E, 1) |
-            // 54-c9:0-S1,5b
-            (PortName::C, 9) |
-            // 55-c10:0-S1,6b
-            (PortName::C, 10) |
-            // 56-c11:0-S1,7b
-            (PortName::C, 11) => {
+            // 45-c2:0-S0,11
+            (PortName::C, 2) |
+            // 58-d1:0-S0,5b
+            (PortName::D, 1) |
+            // 62-d5:0-S0,6b
+            (PortName::D, 5) |
+            // 58-d6:0-S0,7b
+            (PortName::D, 6) => {
                 self.set_mode(0);
                 Ok(AdcPin { _pin: self })
             },
@@ -202,21 +199,28 @@ impl<'a> Pin<'a> {
         }
     }
 
-    // Allow the `mut` to line up with other functions. This `mut` is not needed
-    // as there are no iputs that create a new AdcDiffPin which would change the
-    // pin mode, requiring mut.
-    #[allow(unused_mut)]
-    pub fn to_adc_diff(mut self) -> Result<AdcDiffPin<'a>, ()> {
+    pub fn to_adc_diff_p(mut self) -> Result<AdcDiffPPin<'a>, ()> {
         match (self.port.name(), self.pin) {
-            //  9-??:0-D0,0P
-            // 10-??:0-D0,0M
-            // 11-??:0-D0,3P
-            // 12-??:0-D0,3M
+            //  9-e20:0-D0,0P
+            (PortName::E, 20) |
+            // 11-e22:0-D0,3P
+            (PortName::E, 22) => {
+                self.set_mode(0);
+                Ok(AdcDiffPPin { _pin: self })
+            }
+            _ => Err(())
+        }
+    }
 
-            // 11-??:0-D1,0P
-            // 12-??:0-D1,0M
-            //  9-??:0-D1,3P
-            // 10-??:0-D1,3M
+    pub fn to_adc_diff_m(mut self) -> Result<AdcDiffMPin<'a>, ()> {
+        match (self.port.name(), self.pin) {
+            // 10-e21:0-D0,0M
+            (PortName::E, 21) |
+            // 12-e23:0-D0,3M
+            (PortName::E, 23) => {
+                self.set_mode(0);
+                Ok(AdcDiffMPin { _pin: self })
+            }
             _ => Err(())
         }
     }
@@ -227,6 +231,14 @@ impl<'a> Pin<'a> {
                 self.set_mode(6);
                 1
             },
+            (PortName::E, 24) => {
+                self.set_mode(5);
+                0
+            },
+            (PortName::A, 3) => {
+                self.set_mode(2);
+                1
+            },
             (PortName::B, 0) => {
                 self.set_mode(2);
                 0
@@ -235,31 +247,17 @@ impl<'a> Pin<'a> {
                 self.set_mode(2);
                 0
             },
-            (PortName::C, 10) => {
+            (PortName::C, 1) => {
                 self.set_mode(2);
                 1
             },
-
-            // k64
-            (PortName::E, 24) => {
-                self.set_mode(5);
-                0
-            },
-            (PortName::A, 12) => {
-                self.set_mode(5);
-                2
-            },
-            (PortName::A, 14) => {
-                self.set_mode(5);
-                2
-            },
-            (PortName::D, 2) => {
-                self.set_mode(7);
-                0
-            },
-            (PortName::D, 8) => {
+            (PortName::C, 8) => {
                 self.set_mode(2);
                 0
+            },
+            (PortName::C, 10) => {
+                self.set_mode(2);
+                1
             },
             _ => return Err(())
         };
@@ -285,6 +283,14 @@ impl<'a> Pin<'a> {
                 self.set_mode(6);
                 1
             },
+            (PortName::E, 25) => {
+                self.set_mode(5);
+                0
+            },
+            (PortName::A, 4) => {
+                self.set_mode(2);
+                1
+            },
             (PortName::B, 1) => {
                 self.set_mode(2);
                 0
@@ -293,31 +299,17 @@ impl<'a> Pin<'a> {
                 self.set_mode(2);
                 0
             },
-            (PortName::C, 11) => {
+            (PortName::C, 2) => {
                 self.set_mode(2);
                 1
             },
-
-            // k64
-            (PortName::E, 25) => {
-                self.set_mode(5);
-                0
-            },
-            (PortName::A, 11) => {
-                self.set_mode(5);
-                2
-            },
-            (PortName::A, 13) => {
-                self.set_mode(5);
-                2
-            },
-            (PortName::D, 3) => {
-                self.set_mode(7);
-                0
-            },
-            (PortName::D, 9) => {
+            (PortName::C, 9) => {
                 self.set_mode(2);
                 0
+            },
+            (PortName::C, 11) => {
+                self.set_mode(2);
+                1
             },
             _ => return Err(())
         };
@@ -343,9 +335,21 @@ impl<'a> Pin<'a> {
                 self.set_mode(3);
                 Ok(UartRx { uart: 1, _pin: self })
             },
+            (PortName::E, 21) => {
+                self.set_mode(4);
+                Ok(UartRx { uart: 0, _pin: self })
+            },
+            (PortName::E, 23) => {
+                self.set_mode(4);
+                Ok(UartRx { uart: 2, _pin: self })
+            },
             (PortName::A, 1) => {
                 self.set_mode(2);
                 Ok(UartRx { uart: 0, _pin: self })
+            },
+            (PortName::A, 18) => {
+                self.set_mode(3);
+                Ok(UartRx { uart: 1, _pin: self })
             },
             (PortName::B, 16) => {
                 self.set_mode(3);
@@ -356,6 +360,10 @@ impl<'a> Pin<'a> {
                 Ok(UartRx { uart: 1, _pin: self })
             },
             (PortName::D, 2) => {
+                self.set_mode(3);
+                Ok(UartRx { uart: 2, _pin: self })
+            },
+            (PortName::D, 4) => {
                 self.set_mode(3);
                 Ok(UartRx { uart: 2, _pin: self })
             },
@@ -373,9 +381,21 @@ impl<'a> Pin<'a> {
                 self.set_mode(3);
                 Ok(UartTx { uart: 1, _pin: self })
             },
+            (PortName::E, 20) => {
+                self.set_mode(4);
+                Ok(UartTx { uart: 0, _pin: self })
+            },
+            (PortName::E, 22) => {
+                self.set_mode(4);
+                Ok(UartTx { uart: 2, _pin: self })
+            },
             (PortName::A, 2) => {
                 self.set_mode(2);
                 Ok(UartTx { uart: 0, _pin: self })
+            },
+            (PortName::A, 19) => {
+                self.set_mode(3);
+                Ok(UartTx { uart: 1, _pin: self })
             },
             (PortName::B, 17) => {
                 self.set_mode(3);
@@ -386,6 +406,10 @@ impl<'a> Pin<'a> {
                 Ok(UartTx { uart: 1, _pin: self })
             },
             (PortName::D, 3) => {
+                self.set_mode(3);
+                Ok(UartTx { uart: 2, _pin: self })
+            },
+            (PortName::D, 5) => {
                 self.set_mode(3);
                 Ok(UartTx { uart: 2, _pin: self })
             },
@@ -505,11 +529,25 @@ impl<'a> AdcPin<'a> {
     }
 }
 
-pub struct AdcDiffPin<'a> {
+pub struct AdcDiffPPin<'a> {
     _pin: Pin<'a>
 }
 
-impl<'a> AdcDiffPin<'a> {
+impl<'a> AdcDiffPPin<'a> {
+    pub fn port_name(&self) -> PortName {
+        self._pin.port.name()
+    }
+
+    pub fn pin(&self) -> usize {
+        self._pin.pin
+    }
+}
+
+pub struct AdcDiffMPin<'a> {
+    _pin: Pin<'a>
+}
+
+impl<'a> AdcDiffMPin<'a> {
     pub fn port_name(&self) -> PortName {
         self._pin.port.name()
     }
