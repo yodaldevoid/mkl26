@@ -1,29 +1,26 @@
 OBJCOPY=arm-none-eabi-objcopy
 
-OUTDIR=target/thumbv7em-none-eabi/release
+OUTDIR=target/thumbv6m-none-eabi/release
 
-BINARIES=teensy_3_1 frdm_k64f
+BINARIES=blink
 OUTPUT=$(addprefix $(OUTDIR)/,$(BINARIES))
-
-TEENSY_3_1_HEX=$(OUTDIR)/teensy_3_1.hex
 
 all:: $(BINARIES)
 
 .PHONY: flash_teensy
-flash_teensy: $(TEENSY_3_1_HEX)
-	teensy_loader_cli -w --mcu=mk20dx256 $< -v
-
-.PHONY: flash_frdm_k64f
-flash_frdm_k64f: frdm_k64f
-	udisksctl mount -b  /dev/disk/by-label/MBED
-	cp $(OUTDIR)/$< /media/$(USER)/MBED/ && sync; udisksctl unmount -b  /dev/disk/by-label/MBED
+flash_teensy: $(OUTDIR)/$(BIN)
+	teensy_loader_cli -w --mcu=mkl26z64 $(OUTDIR)/$(BIN) -v
 
 .PHONY: $(BINARIES)
 $(BINARIES): %: $(OUTDIR)/%
 
 .PHONY: $(OUTPUT)
 $(OUTPUT):
-	xargo build --release --bin $(notdir $@)
+	xargo build --release --example $(notdir $@)
+
+.PHONY: lib
+lib:
+	xargo build --release --lib
 
 %.hex: %
 	$(OBJCOPY) -O ihex $< $@

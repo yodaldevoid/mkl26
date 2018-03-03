@@ -1,5 +1,5 @@
 [package]
-name = "rusty_teensy"
+name = "mkl26"
 version = "0.1.0"
 authors = ["Gabriel Smith <ga29smith@gmail.com>"]
 
@@ -7,7 +7,7 @@ authors = ["Gabriel Smith <ga29smith@gmail.com>"]
 arraydeque = { version = "^0.2", default-features = false }
 bare-metal = "^0.1"
 bit_field = "^0.8"
-cortex-m = "^0.3"
+cortex-m = "^0.4"
 cortex-m-rt = "^0.3"
 volatile-register = "^0.2"
 
