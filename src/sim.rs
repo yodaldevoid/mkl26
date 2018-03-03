@@ -10,32 +10,43 @@ use port::{AdcPin,AdcDiffPin,I2cSda,I2cScl,Port,PortName,UartRx,UartTx};
 use uart::Uart;
 
 pub struct ClockGate {
-    gate: &'static mut RW<u32>
+    gate: &'static mut RW<u32>,
+    bit: u8
 }
 
 impl ClockGate {
     fn new(reg: usize, bit: usize) -> ClockGate {
         assert!(reg <= 7);
         assert!(bit <= 31);
-        let base: usize = 0x42900500;
-        let reg_offset = 128 * (reg - 1);
-        let bit_offset = 4 * bit;
-        let ptr = (base + reg_offset + bit_offset) as *mut RW<u32>;
+        // TODO: use BME in the absence of bitbanding
+        let base: usize = 0x40048028;
+        let reg_offset = 4 * (reg - 1);
+        let ptr = (base + reg_offset) as *mut RW<u32>;
         unsafe {
-            ClockGate { gate: &mut *ptr }
+            ClockGate { gate: &mut *ptr, bit: bit as u8 }
         }
     }
 
     fn enable(&mut self) {
-        unsafe { self.gate.write(1); }
+        unsafe {
+            self.gate.modify(|mut gate| {
+                gate.set_bit(self.bit, true);
+                gate
+            });
+        }
     }
 
     fn disable(&mut self) {
-        unsafe { self.gate.write(0); }
+        unsafe {
+            self.gate.modify(|mut gate| {
+                gate.set_bit(self.bit, false);
+                gate
+            });
+        }
     }
 
     fn is_enabled(&self) -> bool {
-        self.gate.read() != 0
+        self.gate.read().get_bit(self.bit)
     }
 }
 
