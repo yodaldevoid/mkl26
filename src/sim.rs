@@ -1,6 +1,6 @@
-use cortex_m::peripheral::NVIC;
-use volatile_register::{RO,RW,WO};
 use bit_field::BitField;
+use cortex_m::peripheral::NVIC;
+use volatile_register::{RO,RW};
 
 use adc::{Adc,AdcDiff};
 use i2c::{I2cMaster,OpMode};
@@ -82,8 +82,6 @@ struct SimRegs {
     uidmh:      RO<u32>,
     uidml:      RO<u32>,
     uidl:       RO<u32>,
-    copc:       RW<u32>,
-    srvcop:     WO<u32>
 }
 
 pub struct Sim {
@@ -253,5 +251,74 @@ impl Drop for Sim {
     fn drop(&mut self) {
         // TODO: fake atomic
         unsafe { SIM_INIT = false; }
+    }
+}
+
+pub mod cop {
+    use bit_field::BitField;
+    use volatile_register::{RW,WO};
+
+    pub enum Timeout {
+        /// COP timeout after 2^5 LPO cycles or 2^13 bus clock cycles.
+        Short = 1,
+        /// COP timeout after 2^8 LPO cycles or 2^16 bus clock cycles.
+        Medium = 2,
+        /// COP timeout after 2^10 LPO cycles or 2^18 bus clock cycles.
+        Long = 3
+    }
+
+    pub enum ClockSource {
+        /// Internal 1 kHZ clock is the source to COP
+        Internal,
+        /// Bus clock is the source to COP.
+        Bus(Windowing)
+    }
+
+    pub enum Windowing {
+        Normal = 0,
+        Windowed = 1
+    }
+
+    struct CopRegs {
+        copc:   RW<u32>,
+        srvcop: WO<u32>
+    }
+
+    pub struct Cop {
+        reg: &'static mut CopRegs
+    }
+
+    impl Cop {
+        pub fn new() -> Cop {
+            let reg = unsafe { &mut *(0x4004_8100 as *mut CopRegs) };
+            Cop { reg }
+        }
+
+        /// Initializes the COP with the given settings.
+        ///
+        /// `None` disables the COP.
+        ///
+        /// Once called the first time, this function effectively does nothing as
+        /// the COP control register can only be written once.
+        pub unsafe fn init(&mut self, settings: Option<(Timeout, ClockSource)>) {
+            fn map_settings((timeout, source): (Timeout, ClockSource)) -> u32 {
+                let mut copc = 0;
+                copc.set_bits(2..4, timeout as u32);
+                if let ClockSource::Bus(windowing) = source {
+                    copc.set_bit(1, true);
+                    copc.set_bit(0, windowing as u32 == 1);
+                }
+                copc
+            }
+
+            self.reg.copc.write(settings.map_or(0, map_settings));
+        }
+
+        /// Resets the COP timout counter.
+        #[inline(always)]
+        pub unsafe fn reset(&mut self) {
+            self.reg.srvcop.write(0x55);
+            self.reg.srvcop.write(0xAA);
+        }
     }
 }
