@@ -1,5 +1,5 @@
 use cortex_m::peripheral::NVIC;
-use volatile_register::{RO,RW};
+use volatile_register::{RO,RW,WO};
 use bit_field::BitField;
 
 use adc::{Adc,AdcDiff};
@@ -58,21 +58,21 @@ struct SimRegs {
     sopt7:      RW<u32>,
     _pad3:      [u32; 2],
     sdid:       RO<u32>,
-    _pad4:      u32,
-    scgc2:      RW<u32>,
-    scgc3:      RW<u32>,
+    _pad4:      [u32; 3],
     scgc4:      RW<u32>,
     scgc5:      RW<u32>,
     scgc6:      RW<u32>,
     scgc7:      RW<u32>,
     clkdiv1:    RW<u32>,
-    clkviv2:    RW<u32>,
+    _pad5:      u32,
     fcfg1:      RO<u32>,
     fcfg2:      RO<u32>,
-    uidh:       RO<u32>,
+    _pad6:      u32,
     uidmh:      RO<u32>,
     uidml:      RO<u32>,
-    uidl:       RO<u32>
+    uidl:       RO<u32>,
+    copc:       RW<u32>,
+    srvcop:     WO<u32>
 }
 
 pub struct Sim {
@@ -94,11 +94,10 @@ impl Sim {
         Sim { reg: reg }
     }
 
-    pub fn set_dividers(&mut self, core: u32, bus: u32, flash: u32) {
+    pub fn set_dividers(&mut self, core: u32, bus_flash: u32) {
         let mut clkdiv: u32 = 0;
         clkdiv.set_bits(28..32, core - 1);
-        clkdiv.set_bits(24..28, bus - 1);
-        clkdiv.set_bits(16..20, flash - 1);
+        clkdiv.set_bits(16..18, bus_flash - 1);
         unsafe { self.reg.clkdiv1.write(clkdiv); }
     }
 
