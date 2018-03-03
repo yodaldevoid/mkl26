@@ -1,5 +1,3 @@
-use core::sync::atomic::{AtomicBool,ATOMIC_BOOL_INIT,Ordering};
-
 use volatile_register::RW;
 use bit_field::BitField;
 
@@ -16,11 +14,14 @@ pub struct OscToken {
     _private: ()
 }
 
-static OSC_INIT: AtomicBool = ATOMIC_BOOL_INIT;
+// TODO: fake atomic
+static mut OSC_INIT: bool = false;
 
 impl Osc {
     pub fn new() -> Osc {
-        let was_init = OSC_INIT.swap(true, Ordering::Relaxed);
+        // TODO: fake atomic
+        let was_init = unsafe { OSC_INIT };
+        unsafe { OSC_INIT = true; }
         if was_init {
             panic!("Cannot initialize OSC: It's already active");
         }
@@ -59,7 +60,8 @@ impl Osc {
 
 impl Drop for Osc {
     fn drop(&mut self) {
-        OSC_INIT.store(false, Ordering::Relaxed);
+        // TODO: fake atomic
+        unsafe { OSC_INIT = false; }
     }
 }
 

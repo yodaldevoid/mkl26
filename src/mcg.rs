@@ -1,5 +1,4 @@
 use core::mem;
-use core::sync::atomic::{AtomicBool,ATOMIC_BOOL_INIT,Ordering};
 
 use volatile_register::{RO,RW};
 use bit_field::BitField;
@@ -52,11 +51,14 @@ pub enum Clock {
     Stop(Stop)
 }
 
-static MCG_INIT: AtomicBool = ATOMIC_BOOL_INIT;
+// TODO: fake atomic
+static mut MCG_INIT: bool = false;
 
 impl Mcg {
     pub fn new() -> Mcg {
-        let was_init = MCG_INIT.swap(true, Ordering::Relaxed);
+        // TODO: fake atomic
+        let was_init = unsafe { MCG_INIT };
+        unsafe { MCG_INIT = true; }
         if was_init {
             panic!("Cannot initialize MCG: It's already active");
         }
@@ -89,7 +91,8 @@ impl Mcg {
 
 impl Drop for Mcg {
     fn drop(&mut self) {
-        MCG_INIT.store(false, Ordering::Relaxed);
+        // TODO: fake atomic
+        unsafe { MCG_INIT = false; }
     }
 }
 

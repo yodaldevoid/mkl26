@@ -1,5 +1,3 @@
-use core::sync::atomic::{AtomicBool,ATOMIC_BOOL_INIT,Ordering};
-
 use cortex_m::peripheral::NVIC;
 use volatile_register::{RO,RW};
 use bit_field::BitField;
@@ -81,11 +79,14 @@ pub struct Sim {
     reg: &'static mut SimRegs
 }
 
-static SIM_INIT: AtomicBool = ATOMIC_BOOL_INIT;
+// TODO: fake atomic
+static mut SIM_INIT: bool = false;
 
 impl Sim {
     pub fn new() -> Sim {
-        let was_init = SIM_INIT.swap(true, Ordering::Relaxed);
+        // TODO: fake atomic
+        let was_init = unsafe { SIM_INIT };
+        unsafe { SIM_INIT = true; }
         if was_init {
             panic!("Cannot initialize SIM: It's already active");
         }
@@ -242,6 +243,7 @@ impl Sim {
 
 impl Drop for Sim {
     fn drop(&mut self) {
-        SIM_INIT.store(false, Ordering::Relaxed);
+        // TODO: fake atomic
+        unsafe { SIM_INIT = false; }
     }
 }

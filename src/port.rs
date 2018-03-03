@@ -1,5 +1,4 @@
-use core::cell::UnsafeCell;
-use core::sync::atomic::{AtomicBool,Ordering};
+use core::cell::{Cell,UnsafeCell};
 
 use volatile_register::{RO,RW,WO};
 use bit_field::BitField;
@@ -25,7 +24,8 @@ struct PortRegs {
 
 pub struct Port {
     reg: UnsafeCell<&'static mut PortRegs>,
-    locks: [AtomicBool; 32],
+    // TODO: fake atomic
+    locks: [Cell<bool>; 32],
     _gate: ClockGate
 }
 
@@ -56,7 +56,8 @@ impl Port {
 
     pub fn pin(&self, p: usize) -> Pin {
         assert!(p < 32);
-        let was_init = self.locks[p].swap(true, Ordering::Relaxed);
+        // TODO: fake atomic
+        let was_init = self.locks[p].replace(true);
         if was_init {
             panic!("Pin {} is already in use", p);
         }
@@ -65,7 +66,8 @@ impl Port {
 
     unsafe fn drop_pin(&self, p: usize) {
         assert!(p < 32);
-        self.locks[p].store(false, Ordering::Relaxed)
+        // TODO: fake atomic
+        self.locks[p].set(false)
     }
 
     fn reg(&self) -> &'static mut PortRegs {
