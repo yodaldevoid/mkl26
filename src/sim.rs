@@ -5,7 +5,9 @@ use volatile_register::{RO,RW};
 use bit_field::BitField;
 
 use adc::{Adc,AdcDiff};
-use i2c::{Address,I2cMaster,I2cSlave,OpMode};
+use i2c::{I2cMaster,OpMode};
+#[cfg(feature = "i2c-slave")]
+use i2c::{Address,I2cSlave};
 use port::{AdcPin,AdcDiffPin,I2cSda,I2cScl,Port,PortName,UartRx,UartTx};
 use uart::Uart;
 
