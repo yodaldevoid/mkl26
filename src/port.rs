@@ -407,48 +407,86 @@ impl <'a> Drop for Pin<'a> {
 }
 
 #[repr(C,packed)]
-struct GpioBitband {
-    pdor: [RW<u32>; 32],
-    psor: [WO<u32>; 32],
-    pcor: [WO<u32>; 32],
-    ptor: [WO<u32>; 32],
-    pdir: [RO<u32>; 32],
-    pddr: [RW<u32>; 32]
+struct GpioReg {
+    pdor: RW<u32>,
+    psor: WO<u32>,
+    pcor: WO<u32>,
+    ptor: WO<u32>,
+    pdir: RO<u32>,
+    pddr: RW<u32>
 }
 
+
+// TODO: maybe split into input and output
 pub struct Gpio<'a> {
-    gpio: *mut GpioBitband,
+    gpio: *mut GpioReg,
     pin: Pin<'a>
 }
 
 impl<'a> Gpio<'a> {
+    // TODO: BME?
     pub unsafe fn new(port: PortName, pin: Pin<'a>) -> Gpio<'a> {
         let gpio = match port {
-            PortName::A => 0x43FE0000 as *mut GpioBitband,
-            PortName::B => 0x43FE0800 as *mut GpioBitband,
-            PortName::C => 0x43FE1000 as *mut GpioBitband,
-            PortName::D => 0x43FE1800 as *mut GpioBitband,
-            PortName::E => 0x43FE2000 as *mut GpioBitband
+            // GPIO
+            #[cfg(not(feature = "fgpio"))]
+            PortName::A => 0x400FF000 as *mut GpioReg,
+            #[cfg(not(feature = "fgpio"))]
+            PortName::B => 0x400FF040 as *mut GpioReg,
+            #[cfg(not(feature = "fgpio"))]
+            PortName::C => 0x400FF080 as *mut GpioReg,
+            #[cfg(not(feature = "fgpio"))]
+            PortName::D => 0x400FF0C0 as *mut GpioReg,
+            #[cfg(not(feature = "fgpio"))]
+            PortName::E => 0x400FF100 as *mut GpioReg,
+            // FGPIO
+            #[cfg(feature = "fgpio")]
+            PortName::A => 0xF8000000 as *mut GpioReg,
+            #[cfg(feature = "fgpio")]
+            PortName::B => 0xF8000040 as *mut GpioReg,
+            #[cfg(feature = "fgpio")]
+            PortName::C => 0xF8000080 as *mut GpioReg,
+            #[cfg(feature = "fgpio")]
+            PortName::D => 0xF80000C0 as *mut GpioReg,
+            #[cfg(feature = "fgpio")]
+            PortName::E => 0xF8000100 as *mut GpioReg,
         };
 
         Gpio { gpio: gpio, pin: pin }
     }
 
+    pub fn input(&mut self) {
+        unsafe {
+            (&mut (*self.gpio)).pddr.modify(|mut pddr| {
+                pddr &= !(1 << self.pin.pin);
+                pddr
+            });
+        }
+    }
+
     pub fn output(&mut self) {
         unsafe {
-            (&mut (*self.gpio)).pddr[self.pin.pin].write(1);
+            (&mut (*self.gpio)).pddr.modify(|mut pddr| {
+                pddr |= 1 << self.pin.pin;
+                pddr
+            });
         }
     }
 
     pub fn high(&mut self) {
         unsafe {
-            (&mut (*self.gpio)).psor[self.pin.pin].write(1);
+            (&mut (*self.gpio)).psor.write(1 << self.pin.pin);
         }
     }
 
     pub fn low(&mut self) {
         unsafe {
-            (&mut (*self.gpio)).pcor[self.pin.pin].write(1);
+            (&mut (*self.gpio)).pcor.write(1 << self.pin.pin);
+        }
+    }
+
+    pub fn toggle(&mut self) {
+        unsafe {
+            (&mut (*self.gpio)).ptor.write(1 << self.pin.pin);
         }
     }
 }

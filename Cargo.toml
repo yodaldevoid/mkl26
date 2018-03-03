@@ -12,7 +12,9 @@ cortex-m-rt = "^0.3"
 volatile-register = "^0.2"
 
 [features]
-default = ["i2c-isr", "i2c-slave", "i2c-dma"] # default to everything on for docs
+default = ["i2c-isr", "i2c-slave", "i2c-dma", "fgpio"] # default to everything on for docs
+
+fgpio = []
 
 i2c-isr = []
 i2c-slave = ["i2c-isr"]
