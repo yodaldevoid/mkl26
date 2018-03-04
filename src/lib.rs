@@ -1,4 +1,5 @@
 #![feature(compiler_builtins_lib)]
+#![feature(const_fn)]
 #![feature(core_intrinsics)]
 #![feature(global_asm)]
 #![feature(lang_items)]
@@ -16,6 +17,7 @@ extern crate volatile_register;
 pub mod interrupts;
 
 pub mod adc;
+pub mod atomic;
 pub mod i2c;
 pub mod mcg;
 pub mod osc;
