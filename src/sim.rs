@@ -3,6 +3,7 @@ use cortex_m::peripheral::NVIC;
 use volatile_register::{RO,RW};
 
 use adc::{Adc,AdcDiff};
+use atomic::BmeAtomic;
 use i2c::{I2cMaster,OpMode};
 #[cfg(feature = "i2c-slave")]
 use i2c::{Address,I2cSlave};
@@ -10,7 +11,7 @@ use port::{AdcPin,AdcDiffPPin,AdcDiffMPin,I2cSda,I2cScl,Port,PortName,UartRx,Uar
 use uart::Uart;
 
 pub struct ClockGate {
-    gate: &'static mut RW<u32>,
+    gate: &'static mut BmeAtomic<u32>,
     bit: u8
 }
 
@@ -18,10 +19,9 @@ impl ClockGate {
     fn new(reg: usize, bit: usize) -> ClockGate {
         assert!(reg <= 7);
         assert!(bit <= 31);
-        // TODO: use BME in the absence of bitbanding
         let base: usize = 0x40048028;
         let reg_offset = 4 * (reg - 1);
-        let ptr = (base + reg_offset) as *mut RW<u32>;
+        let ptr = (base + reg_offset) as *mut BmeAtomic<u32>;
         unsafe {
             ClockGate { gate: &mut *ptr, bit: bit as u8 }
         }
@@ -29,24 +29,18 @@ impl ClockGate {
 
     fn enable(&mut self) {
         unsafe {
-            self.gate.modify(|mut gate| {
-                gate.set_bit(self.bit, true);
-                gate
-            });
+            self.gate.or(*0.set_bit(self.bit, true));
         }
     }
 
     fn disable(&mut self) {
         unsafe {
-            self.gate.modify(|mut gate| {
-                gate.set_bit(self.bit, false);
-                gate
-            });
+            self.gate.and(*u32::max_value().set_bit(self.bit, false));
         }
     }
 
     fn is_enabled(&self) -> bool {
-        self.gate.read().get_bit(self.bit)
+        unsafe { self.gate.ubfx(self.bit as usize, 1) != 0 }
     }
 }
 
