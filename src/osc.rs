@@ -1,6 +1,8 @@
 use volatile_register::RW;
 use bit_field::BitField;
 
+use atomic::InterruptAtomic;
+
 #[repr(C,packed)]
 struct OscRegs {
     cr: RW<u8>
@@ -14,14 +16,11 @@ pub struct OscToken {
     _private: ()
 }
 
-// TODO: fake atomic
-static mut OSC_INIT: bool = false;
+static OSC_INIT: InterruptAtomic<bool> = InterruptAtomic::new(false);
 
 impl Osc {
     pub fn new() -> Osc {
-        // TODO: fake atomic
-        let was_init = unsafe { OSC_INIT };
-        unsafe { OSC_INIT = true; }
+        let was_init = OSC_INIT.swap(true);
         if was_init {
             panic!("Cannot initialize OSC: It's already active");
         }
@@ -60,8 +59,7 @@ impl Osc {
 
 impl Drop for Osc {
     fn drop(&mut self) {
-        // TODO: fake atomic
-        unsafe { OSC_INIT = false; }
+        OSC_INIT.store(false);
     }
 }
 

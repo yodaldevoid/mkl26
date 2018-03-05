@@ -3,7 +3,7 @@ use cortex_m::peripheral::NVIC;
 use volatile_register::{RO,RW};
 
 use adc::{Adc,AdcDiff};
-use atomic::BmeAtomic;
+use atomic::{BmeAtomic,InterruptAtomic};
 use i2c::{I2cMaster,OpMode};
 #[cfg(feature = "i2c-slave")]
 use i2c::{Address,I2cSlave};
@@ -82,14 +82,11 @@ pub struct Sim {
     reg: &'static mut SimRegs
 }
 
-// TODO: fake atomic
-static mut SIM_INIT: bool = false;
+static SIM_INIT: InterruptAtomic<bool> = InterruptAtomic::new(false);
 
 impl Sim {
     pub fn new() -> Sim {
-        // TODO: fake atomic
-        let was_init = unsafe { SIM_INIT };
-        unsafe { SIM_INIT = true; }
+        let was_init = SIM_INIT.swap(true);
         if was_init {
             panic!("Cannot initialize SIM: It's already active");
         }
@@ -243,8 +240,7 @@ impl Sim {
 
 impl Drop for Sim {
     fn drop(&mut self) {
-        // TODO: fake atomic
-        unsafe { SIM_INIT = false; }
+        SIM_INIT.store(false);
     }
 }
 

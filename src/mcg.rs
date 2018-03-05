@@ -3,6 +3,7 @@ use core::mem;
 use volatile_register::{RO,RW};
 use bit_field::BitField;
 
+use atomic::InterruptAtomic;
 use osc::OscToken;
 
 #[repr(C,packed)]
@@ -51,14 +52,11 @@ pub enum Clock {
     Stop(Stop)
 }
 
-// TODO: fake atomic
-static mut MCG_INIT: bool = false;
+static MCG_INIT: InterruptAtomic<bool> = InterruptAtomic::new(false);
 
 impl Mcg {
     pub fn new() -> Mcg {
-        // TODO: fake atomic
-        let was_init = unsafe { MCG_INIT };
-        unsafe { MCG_INIT = true; }
+        let was_init = MCG_INIT.swap(true);
         if was_init {
             panic!("Cannot initialize MCG: It's already active");
         }
@@ -91,8 +89,7 @@ impl Mcg {
 
 impl Drop for Mcg {
     fn drop(&mut self) {
-        // TODO: fake atomic
-        unsafe { MCG_INIT = false; }
+        MCG_INIT.store(false);
     }
 }
 
