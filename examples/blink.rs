@@ -45,8 +45,8 @@ fn main() {
         let ext_token = fei.enable_xtal(OscRange::VeryHigh, osc_token);
         let fbe = fei.use_external_bypass(512, ext_token);
 
-        // PLL is 27/6 * xtal == 72MHz
-        let pbe = fbe.enable_pll(27, 6);
+        // PLL is 24/8 * xtal == 48MHz
+        let pbe = fbe.enable_pll(24, 8);
         pbe.use_pll();
     } else {
         panic!("Somehow the clock wasn't in FEI mode");
