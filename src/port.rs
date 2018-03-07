@@ -333,6 +333,10 @@ impl<'a> Pin<'a> {
                 self.set_mode(3);
                 Ok(UartRx { uart: 1, _pin: self })
             },
+            (PortName::E, 17) => {
+                self.set_mode(3);
+                Ok(UartRx { uart: 2, _pin: self })
+            },
             (PortName::E, 21) => {
                 self.set_mode(4);
                 Ok(UartRx { uart: 0, _pin: self })
@@ -343,6 +347,10 @@ impl<'a> Pin<'a> {
             },
             (PortName::A, 1) => {
                 self.set_mode(2);
+                Ok(UartRx { uart: 0, _pin: self })
+            },
+            (PortName::A, 15) => {
+                self.set_mode(3);
                 Ok(UartRx { uart: 0, _pin: self })
             },
             (PortName::A, 18) => {
@@ -379,6 +387,10 @@ impl<'a> Pin<'a> {
                 self.set_mode(3);
                 Ok(UartTx { uart: 1, _pin: self })
             },
+            (PortName::E, 16) => {
+                self.set_mode(3);
+                Ok(UartTx { uart: 2, _pin: self })
+            },
             (PortName::E, 20) => {
                 self.set_mode(4);
                 Ok(UartTx { uart: 0, _pin: self })
@@ -389,6 +401,10 @@ impl<'a> Pin<'a> {
             },
             (PortName::A, 2) => {
                 self.set_mode(2);
+                Ok(UartTx { uart: 0, _pin: self })
+            },
+            (PortName::A, 14) => {
+                self.set_mode(3);
                 Ok(UartTx { uart: 0, _pin: self })
             },
             (PortName::A, 19) => {

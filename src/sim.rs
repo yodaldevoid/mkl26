@@ -152,22 +152,20 @@ impl Sim {
                                              uart: u8,
                                              rx: R,
                                              tx: T,
-                                             clkdiv: (u16,u8),
-                                             rxfifo: bool,
-                                             txfifo: bool)
-                                             -> Result<Uart<'a, 'b>, ()> {
+                                             clkdiv: u16)
+                                             -> Result<Uart<'a, 'b, u8>, ()> {
         let mut gate = match uart {
             0 => ClockGate::new(4, 10),
             1 => ClockGate::new(4, 11),
             2 => ClockGate::new(4, 12),
-            _ => return Err(()) //panic!("Cannot enable clock for UART {}", uart)
+            _ => return Err(())
         };
         if gate.is_enabled() {
-            return Err(()) //panic!("Cannot create Uart instance; it is already in use");
+            return Err(())
         }
         gate.enable();
         unsafe {
-            Uart::new(uart, rx.into(), tx.into(), clkdiv, rxfifo, txfifo, gate)
+            Uart::new(uart, rx.into(), tx.into(), clkdiv, gate)
         }
     }
 
