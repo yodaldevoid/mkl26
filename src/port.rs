@@ -1,7 +1,7 @@
 use core::cell::UnsafeCell;
 
-use volatile_register::{RO,RW,WO};
 use bit_field::BitField;
+use volatile_register::{RO,RW,WO};
 
 use atomic::InterruptAtomic;
 use sim::ClockGate;

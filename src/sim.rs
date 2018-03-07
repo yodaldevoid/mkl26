@@ -50,6 +50,14 @@ impl Drop for ClockGate {
     }
 }
 
+/// MCGPLLCLK/MCGFLLCLK clock source
+pub enum PllFllSel {
+    /// FLL
+    Fll = 0,
+    /// PLL divided by 2
+    PllDiv2 = 1
+}
+
 #[repr(C,packed)]
 struct SimRegs {
     sopt1:      RW<u32>,
@@ -99,6 +107,14 @@ impl Sim {
         clkdiv.set_bits(28..32, core - 1);
         clkdiv.set_bits(16..18, bus_flash - 1);
         unsafe { self.reg.clkdiv1.write(clkdiv); }
+    }
+
+    /// Select which clock is output on the MCGPLLCLK/MCGFLLCLK clock source
+    pub unsafe fn select_pll_fll(&mut self, sel: PllFllSel) {
+        self.reg.sopt2.modify(|mut sopt2| {
+            sopt2.set_bit(16, sel as u8 == 1);
+            sopt2
+        });
     }
 
     pub fn port(&mut self, port: PortName) -> Port {

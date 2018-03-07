@@ -1,10 +1,11 @@
 use core::mem;
 
-use volatile_register::{RO,RW};
 use bit_field::BitField;
+use volatile_register::{RO,RW};
 
 use atomic::InterruptAtomic;
 use osc::OscToken;
+use sim::{PllFllSel, Sim};
 
 #[repr(C,packed)]
 struct McgRegs {
@@ -126,7 +127,7 @@ pub struct Blpe {
 }
 
 pub struct Stop {
-    mcg: Mcg
+    _mcg: Mcg
 }
 
 pub struct ExtToken {
@@ -525,7 +526,7 @@ impl Fbe {
         Fei { mcg: self.mcg }
     }
 
-    pub fn enable_pll(self, numerator: u8, denominator: u8) -> Pbe {
+    pub fn enable_pll(self, numerator: u8, denominator: u8, sim: &mut Sim) -> Pbe {
         if numerator < 24 || numerator > 55 {
             panic!("Invalid PLL VCO divide factor: {}", numerator);
         }
@@ -551,6 +552,8 @@ impl Fbe {
         while !self.mcg.reg.s.read().get_bit(5) {}
         // Wait for the PLL to be "locked" and stable
         while !self.mcg.reg.s.read().get_bit(6) {}
+
+        unsafe { sim.select_pll_fll(PllFllSel::PllDiv2); }
 
         Pbe { mcg: self.mcg }
     }
@@ -587,7 +590,7 @@ impl Pbe {
         Pee { mcg: self.mcg }
     }
 
-    pub fn enable_fll(self) -> Fbe {
+    pub fn enable_fll(self, sim: &mut Sim) -> Fbe {
         unsafe {
             self.mcg.reg.c6.modify(|mut c6| {
                 c6.set_bit(6, false);
@@ -597,6 +600,8 @@ impl Pbe {
 
         // Wait for FLL to be enabled
         while self.mcg.reg.s.read().get_bit(5) {}
+
+        unsafe { sim.select_pll_fll(PllFllSel::Fll); }
 
         Fbe { mcg: self.mcg }
     }
@@ -645,7 +650,7 @@ impl Blpi {
 }
 
 impl Blpe {
-    pub fn enable_fll(self) -> Fbe {
+    pub fn enable_fll(self, sim: &mut Sim) -> Fbe {
         unsafe {
             self.mcg.reg.c6.modify(|mut c6| {
                 c6.set_bit(6, false);
@@ -661,10 +666,12 @@ impl Blpe {
         // Wait for FLL to be enabled
         while self.mcg.reg.s.read().get_bit(5) {}
 
+        unsafe { sim.select_pll_fll(PllFllSel::Fll); }
+
         Fbe { mcg: self.mcg }
     }
 
-    pub fn enable_pll(self, numerator: u8, denominator: u8) -> Pbe {
+    pub fn enable_pll(self, numerator: u8, denominator: u8, sim: &mut Sim) -> Pbe {
         if numerator < 24 || numerator > 55 {
             panic!("Invalid PLL VCO divide factor: {}", numerator);
         }
@@ -695,6 +702,8 @@ impl Blpe {
         while !self.mcg.reg.s.read().get_bit(5) {}
         // Wait for the PLL to be "locked" and stable
         while !self.mcg.reg.s.read().get_bit(6) {}
+
+        unsafe { sim.select_pll_fll(PllFllSel::PllDiv2); }
 
         Pbe { mcg: self.mcg }
     }
