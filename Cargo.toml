@@ -23,5 +23,8 @@ i2c-dma = ["i2c-isr"]
 [[example]]
 name = "blink"
 
+[[example]]
+name = "uart"
+
 [patch.crates-io]
 cortex-m-rt = { git = "https://github.com/yodaldevoid/cortex-m-rt.git", branch = "init_array" }
