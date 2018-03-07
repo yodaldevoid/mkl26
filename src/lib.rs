@@ -1,9 +1,7 @@
 #![feature(compiler_builtins_lib)]
 #![feature(const_fn)]
-#![feature(core_intrinsics)]
 #![feature(global_asm)]
-#![feature(lang_items)]
-#![feature(naked_functions)]
+#![feature(untagged_unions)]
 #![no_std]
 
 extern crate arraydeque;
