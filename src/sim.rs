@@ -8,7 +8,7 @@ use i2c::{I2cMaster,OpMode};
 #[cfg(feature = "i2c-slave")]
 use i2c::{Address,I2cSlave};
 use port::{AdcPin,AdcDiffPPin,AdcDiffMPin,I2cSda,I2cScl,Port,PortName,UartRx,UartTx};
-use uart::Uart;
+use uart::{Uart,ConnMode};
 
 pub struct ClockGate {
     gate: &'static mut BmeAtomic<u32>,
@@ -148,12 +148,13 @@ impl Sim {
 
     pub fn uart<'a, 'b,
                 R: Into<Option<UartRx<'a>>>,
-                T: Into<Option<UartTx<'b>>>>(&mut self,
-                                             uart: u8,
-                                             rx: R,
-                                             tx: T,
-                                             clkdiv: u16)
-                                             -> Result<Uart<'a, 'b, u8>, ()> {
+                T: Into<Option<UartTx<'b>>>>(
+        &mut self,
+        uart: u8,
+        rx: R,
+        tx: T,
+        clkdiv: u16
+    ) -> Result<Uart<'a, 'b, u8>, ()> {
         let mut gate = match uart {
             0 => ClockGate::new(4, 10),
             1 => ClockGate::new(4, 11),
@@ -165,7 +166,23 @@ impl Sim {
         }
         gate.enable();
         unsafe {
-            Uart::new(uart, rx.into(), tx.into(), clkdiv, gate)
+            Uart::new(uart, rx.into(), tx.into(), clkdiv, ConnMode::TwoWire, gate)
+        }
+    }
+
+    pub fn uart_loopback<'a, 'b>(&mut self, uart: u8, clkdiv: u16) -> Result<Uart<'a, 'b, u8>, ()> {
+        let mut gate = match uart {
+            0 => ClockGate::new(4, 10),
+            1 => ClockGate::new(4, 11),
+            2 => ClockGate::new(4, 12),
+            _ => return Err(())
+        };
+        if gate.is_enabled() {
+            return Err(())
+        }
+        gate.enable();
+        unsafe {
+            Uart::new(uart, None, None, clkdiv, ConnMode::Loop, gate)
         }
     }
 

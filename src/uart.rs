@@ -52,6 +52,11 @@ pub struct Uart<'a, 'b, B> {
     _char: PhantomData<B>,
 }
 
+pub(crate) enum ConnMode {
+    TwoWire,
+    Loop,
+}
+
 /// clock_freq - Frequency of module clock in Hz. UART0 uses the clock specified by
 /// SIM_SOPT2[UART0SRC]. UART1 and UART2 use the bus clock.
 pub fn calc_clkdiv(baud: u32, clock_freq: u32) -> u16 {
@@ -65,12 +70,14 @@ pub fn calc_clkdiv(baud: u32, clock_freq: u32) -> u16 {
 // TODO: 10 bit mode
 // TODO: stop bits
 impl<'a, 'b> Uart<'a, 'b, u8> {
-    pub unsafe fn new(bus: u8,
-                      rx: Option<UartRx<'a>>,
-                      tx: Option<UartTx<'b>>,
-                      clkdiv: u16,
-                      gate: ClockGate)
-                      -> Result<Uart<'a, 'b, u8>, ()> {
+    pub(crate) unsafe fn new(
+        bus: u8,
+        rx: Option<UartRx<'a>>,
+        tx: Option<UartTx<'b>>,
+        clkdiv: u16,
+        conn_mode: ConnMode,
+        gate: ClockGate
+    ) -> Result<Uart<'a, 'b, u8>, ()> {
         if let Some(r) = rx.as_ref() {
             if r.bus() != bus {
                 return Err(());
@@ -98,9 +105,29 @@ impl<'a, 'b> Uart<'a, 'b, u8> {
         });
         reg.bdl.write(clkdiv.get_bits(0..8) as u8);
 
+        reg.c1.modify(|mut c1| {
+            match conn_mode {
+                ConnMode::TwoWire => {
+                    c1.set_bit(7, false);
+                }
+                ConnMode::Loop => {
+                    c1.set_bit(7, true);
+                    c1.set_bit(5, false);
+                }
+            }
+            c1
+        });
+
         reg.c2.modify(|mut c2| {
-            c2.set_bit(2, rx.is_some());
-            c2.set_bit(3, tx.is_some());
+            match conn_mode {
+                ConnMode::TwoWire => {
+                    c2.set_bit(2, rx.is_some());
+                    c2.set_bit(3, tx.is_some());
+                }
+                ConnMode::Loop => {
+                    c2.set_bits(2..4, 0x3);
+                }
+            }
             c2
         });
 
