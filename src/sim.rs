@@ -58,6 +58,18 @@ pub enum PllFllSel {
     PllDiv2 = 1
 }
 
+/// UART0 transmit and receive clock source
+pub enum Uart0ClkSrc {
+    /// Transmit and receive clock disabled
+    Disabled = 0,
+    /// MCG FLL output or MCG PLL output divided by 2. Which determined by PLLFLLSEL.
+    McgXLL = 1,
+    /// System oscillator from OSCCLK
+    OscER = 2,
+    /// MCG internal reference clock
+    McgIR = 3
+}
+
 #[repr(C,packed)]
 struct SimRegs {
     sopt1:      RW<u32>,
@@ -157,6 +169,13 @@ impl Sim {
         unsafe {
             Uart::new(uart, rx.into(), tx.into(), clkdiv, rxfifo, txfifo, gate)
         }
+    }
+
+    pub unsafe fn set_uart0_clksrc(&mut self, clksrc: Uart0ClkSrc) {
+        self.reg.sopt2.modify(|mut sopt2| {
+            sopt2.set_bits(26..28, clksrc as u32);
+            sopt2
+        });
     }
 
     // TODO: support higher bus numbers for other chips
