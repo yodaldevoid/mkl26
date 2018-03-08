@@ -46,7 +46,7 @@ fn main() {
         let fbe = fei.use_external_bypass(512, ext_token);
 
         // PLL is 24/8 * xtal == 48MHz
-        let pbe = fbe.enable_pll(24, 8);
+        let pbe = fbe.enable_pll(24, 8, &mut sim);
         pbe.use_pll();
     } else {
         panic!("Somehow the clock wasn't in FEI mode");
