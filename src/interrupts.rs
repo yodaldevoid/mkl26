@@ -149,7 +149,8 @@ global_asm!(
     "
     .thumb_func
     DH_TRAMPOLINE:
-        b DEFAULT_HANDLER
+        ldr r0,=DEFAULT_HANDLER
+        bx r0
     "
 );
 
