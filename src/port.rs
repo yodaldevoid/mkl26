@@ -327,6 +327,210 @@ impl<'a> Pin<'a> {
         Ok(I2cSda { i2c: bus, _pin: self })
     }
 
+    pub fn to_spi_mosi(mut self) -> Result<SpiMosi<'a>, ()> {
+        match (self.port.name(), self.pin) {
+            (PortName::E, 1) => {
+                self.set_mode(2);
+                Ok(SpiMosi { spi: 1, _pin: self })
+            },
+            (PortName::E, 3) => {
+                self.set_mode(5);
+                Ok(SpiMosi { spi: 1, _pin: self })
+            },
+            (PortName::E, 18) => {
+                self.set_mode(2);
+                Ok(SpiMosi { spi: 0, _pin: self })
+            },
+            (PortName::E, 19) => {
+                self.set_mode(5);
+                Ok(SpiMosi { spi: 0, _pin: self })
+            },
+            (PortName::A, 16) => {
+                self.set_mode(2);
+                Ok(SpiMosi { spi: 0, _pin: self })
+            },
+            (PortName::A, 17) => {
+                self.set_mode(5);
+                Ok(SpiMosi { spi: 0, _pin: self })
+            },
+            (PortName::B, 16) => {
+                self.set_mode(2);
+                Ok(SpiMosi { spi: 1, _pin: self })
+            },
+            (PortName::B, 17) => {
+                self.set_mode(5);
+                Ok(SpiMosi { spi: 1, _pin: self })
+            },
+            (PortName::C, 6) => {
+                self.set_mode(2);
+                Ok(SpiMosi { spi: 0, _pin: self })
+            },
+            (PortName::C, 7) => {
+                self.set_mode(5);
+                Ok(SpiMosi { spi: 1, _pin: self })
+            },
+            (PortName::D, 2) => {
+                self.set_mode(2);
+                Ok(SpiMosi { spi: 0, _pin: self })
+            },
+            (PortName::D, 3) => {
+                self.set_mode(5);
+                Ok(SpiMosi { spi: 0, _pin: self })
+            },
+            (PortName::D, 6) => {
+                self.set_mode(2);
+                Ok(SpiMosi { spi: 1, _pin: self })
+            },
+            (PortName::D, 7) => {
+                self.set_mode(5);
+                Ok(SpiMosi { spi: 1, _pin: self })
+            },
+            _ => Err(())
+        }
+    }
+
+    pub fn to_spi_miso(mut self) -> Result<SpiMiso<'a>, ()> {
+        match (self.port.name(), self.pin) {
+            (PortName::E, 0) => {
+                self.set_mode(2);
+                Ok(SpiMiso { spi: 1, _pin: self })
+            },
+            (PortName::E, 1) => {
+                self.set_mode(5);
+                Ok(SpiMiso { spi: 1, _pin: self })
+            },
+            (PortName::E, 3) => {
+                self.set_mode(2);
+                Ok(SpiMiso { spi: 1, _pin: self })
+            },
+            (PortName::E, 18) => {
+                self.set_mode(5);
+                Ok(SpiMiso { spi: 0, _pin: self })
+            },
+            (PortName::E, 19) => {
+                self.set_mode(2);
+                Ok(SpiMiso { spi: 0, _pin: self })
+            },
+            (PortName::A, 16) => {
+                self.set_mode(5);
+                Ok(SpiMiso { spi: 0, _pin: self })
+            },
+            (PortName::A, 17) => {
+                self.set_mode(2);
+                Ok(SpiMiso { spi: 0, _pin: self })
+            },
+            (PortName::B, 16) => {
+                self.set_mode(5);
+                Ok(SpiMiso { spi: 1, _pin: self })
+            },
+            (PortName::B, 17) => {
+                self.set_mode(2);
+                Ok(SpiMiso { spi: 1, _pin: self })
+            },
+            (PortName::C, 6) => {
+                self.set_mode(5);
+                Ok(SpiMiso { spi: 0, _pin: self })
+            },
+            (PortName::C, 7) => {
+                self.set_mode(2);
+                Ok(SpiMiso { spi: 1, _pin: self })
+            },
+            (PortName::D, 2) => {
+                self.set_mode(5);
+                Ok(SpiMiso { spi: 0, _pin: self })
+            },
+            (PortName::D, 3) => {
+                self.set_mode(2);
+                Ok(SpiMiso { spi: 0, _pin: self })
+            },
+            (PortName::D, 6) => {
+                self.set_mode(5);
+                Ok(SpiMiso { spi: 1, _pin: self })
+            },
+            (PortName::D, 7) => {
+                self.set_mode(2);
+                Ok(SpiMiso { spi: 1, _pin: self })
+            },
+            _ => Err(())
+        }
+    }
+
+    pub fn to_spi_sck(mut self) -> Result<SpiSck<'a>, ()> {
+        match (self.port.name(), self.pin) {
+            (PortName::E, 2) => {
+                self.set_mode(2);
+                Ok(SpiSck { spi: 1, _pin: self })
+            },
+            (PortName::E, 17) => {
+                self.set_mode(2);
+                Ok(SpiSck { spi: 0, _pin: self })
+            },
+            (PortName::A, 15) => {
+                self.set_mode(2);
+                Ok(SpiSck { spi: 0, _pin: self })
+            },
+            (PortName::B, 9) => {
+                self.set_mode(2);
+                Ok(SpiSck { spi: 1, _pin: self })
+            },
+            (PortName::B, 11) => {
+                self.set_mode(2);
+                Ok(SpiSck { spi: 1, _pin: self })
+            },
+            (PortName::C, 5) => {
+                self.set_mode(2);
+                Ok(SpiSck { spi: 0, _pin: self })
+            },
+            (PortName::D, 1) => {
+                self.set_mode(2);
+                Ok(SpiSck { spi: 0, _pin: self })
+            },
+            (PortName::D, 5) => {
+                self.set_mode(2);
+                Ok(SpiSck { spi: 1, _pin: self })
+            },
+            _ => Err(())
+        }
+    }
+
+    pub fn to_spi_cs(mut self) -> Result<SpiCs<'a>, ()> {
+        match (self.port.name(), self.pin) {
+            (PortName::E, 4) => {
+                self.set_mode(2);
+                Ok(SpiCs { spi: 1, _pin: self })
+            },
+            (PortName::E, 16) => {
+                self.set_mode(2);
+                Ok(SpiCs { spi: 0, _pin: self })
+            },
+            (PortName::A, 14) => {
+                self.set_mode(2);
+                Ok(SpiCs { spi: 0, _pin: self })
+            },
+            (PortName::B, 8) => {
+                self.set_mode(2);
+                Ok(SpiCs { spi: 1, _pin: self })
+            },
+            (PortName::B, 10) => {
+                self.set_mode(2);
+                Ok(SpiCs { spi: 1, _pin: self })
+            },
+            (PortName::C, 4) => {
+                self.set_mode(2);
+                Ok(SpiCs { spi: 0, _pin: self })
+            },
+            (PortName::D, 0) => {
+                self.set_mode(2);
+                Ok(SpiCs { spi: 0, _pin: self })
+            },
+            (PortName::D, 4) => {
+                self.set_mode(2);
+                Ok(SpiCs { spi: 1, _pin: self })
+            },
+            _ => Err(())
+        }
+    }
+
     pub fn to_uart_rx(mut self) -> Result<UartRx<'a>, ()> {
         match (self.port.name(), self.pin) {
             (PortName::E, 1) => {
@@ -590,6 +794,50 @@ impl<'a> I2cScl<'a> {
 impl<'a> I2cSda<'a> {
     pub fn bus(&self) -> u8 {
         self.i2c
+    }
+}
+
+pub struct SpiMosi<'a> {
+    spi: u8,
+    _pin: Pin<'a>
+}
+
+pub struct SpiMiso<'a> {
+    spi: u8,
+    _pin: Pin<'a>
+}
+
+pub struct SpiSck<'a> {
+    spi: u8,
+    _pin: Pin<'a>
+}
+
+pub struct SpiCs<'a> {
+    spi: u8,
+    _pin: Pin<'a>
+}
+
+impl<'a> SpiMosi<'a> {
+    pub fn bus(&self) -> u8 {
+        self.spi
+    }
+}
+
+impl<'a> SpiMiso<'a> {
+    pub fn bus(&self) -> u8 {
+        self.spi
+    }
+}
+
+impl<'a> SpiSck<'a> {
+    pub fn bus(&self) -> u8 {
+        self.spi
+    }
+}
+
+impl<'a> SpiCs<'a> {
+    pub fn bus(&self) -> u8 {
+        self.spi
     }
 }
 

@@ -1,13 +1,19 @@
 use bit_field::BitField;
 use cortex_m::peripheral::NVIC;
+use ux::{u3, u4};
 use volatile_register::{RO,RW};
 
 use adc::{Adc,AdcDiff};
 use atomic::{BmeAtomic,InterruptAtomic};
-use i2c::{I2cMaster,OpMode};
+use i2c::{self,I2cMaster};
 #[cfg(feature = "i2c-slave")]
 use i2c::{Address,I2cSlave};
-use port::{AdcPin,AdcDiffPPin,AdcDiffMPin,I2cSda,I2cScl,Port,PortName,UartRx,UartTx};
+use port::{AdcPin, AdcDiffPPin, AdcDiffMPin};
+use port::{I2cSda, I2cScl};
+use port::{Port, PortName};
+use port::{SpiCs, SpiMiso, SpiMosi, SpiSck};
+use port::{UartRx, UartTx};
+use spi::{self, Phase, Polarity, SpiMaster};
 use uart::{Uart,ConnMode};
 
 pub struct ClockGate {
@@ -193,13 +199,12 @@ impl Sim {
         });
     }
 
-    // TODO: support higher bus numbers for other chips
     pub fn i2c_master<'a, 'b>(&mut self,
                               scl: I2cScl<'a>,
                               sda: I2cSda<'b>,
                               nvic: &mut NVIC,
                               clkdiv: (u8, u8),
-                              op_mode: OpMode)
+                              op_mode: i2c::OpMode)
                               -> Result<I2cMaster<'a, 'b>, ()> {
         if scl.bus() != sda.bus() {
             return Err(());
@@ -219,7 +224,6 @@ impl Sim {
         }
     }
 
-    // TODO: support higher bus numbers for other chips
     #[cfg(feature = "i2c-slave")]
     pub fn i2c_slave<'a, 'b>(&mut self,
                              scl: I2cScl<'a>,
@@ -243,6 +247,50 @@ impl Sim {
         gate.enable();
         unsafe {
             I2cSlave::new(scl, sda, nvic, addr, general_call, gate)
+        }
+    }
+
+    pub fn spi_master<'a, 'b, 'c, 'd, O, I, S, W>(
+        &mut self,
+        mosi: O,
+        miso: I,
+        sck: SpiSck<'c>,
+        cs: S,
+        clkdiv: (u3, u4),
+        op_mode: spi::OpMode,
+        polarity: Polarity,
+        phase: Phase,
+        fifo: bool,
+    ) -> Result<SpiMaster<'a, 'b, 'c, 'd, W>, ()>
+    where
+        O: Into<Option<SpiMosi<'a>>>,
+        I: Into<Option<SpiMiso<'b>>>,
+        S: Into<Option<SpiCs<'d>>>,
+        W: spi::Word,
+    {
+        let mut gate = match sck.bus() {
+            0 => ClockGate::new(4, 22),
+            1 => ClockGate::new(4, 23),
+            _ => return Err(())
+        };
+        if gate.is_enabled() {
+            return Err(())
+        }
+        gate.enable();
+
+        unsafe {
+            SpiMaster::new(
+                mosi.into(),
+                miso.into(),
+                sck,
+                cs.into(),
+                clkdiv,
+                op_mode,
+                polarity,
+                phase,
+                fifo,
+                gate,
+            )
         }
     }
 

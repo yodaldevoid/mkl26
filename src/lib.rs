@@ -9,6 +9,7 @@ extern crate bare_metal;
 extern crate bit_field;
 extern crate cortex_m;
 extern crate cortex_m_rt;
+extern crate ux;
 extern crate volatile_register;
 
 #[macro_use]
@@ -21,4 +22,5 @@ pub mod mcg;
 pub mod osc;
 pub mod port;
 pub mod sim;
+pub mod spi;
 pub mod uart;
