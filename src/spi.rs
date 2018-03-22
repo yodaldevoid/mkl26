@@ -4,6 +4,8 @@ use core::marker::PhantomData;
 
 use bit_field::BitField;
 use ux::{u3, u4};
+use embedded_hal::spi::{FullDuplex, Phase, Polarity};
+use nb::{self, Error};
 use volatile_register::{RO, RW};
 
 use port::{Gpio, SpiMosi, SpiMiso, SpiSck, SpiCs};
@@ -56,18 +58,9 @@ pub enum OpMode {
     DMA
 }
 
-#[derive(PartialEq)]
-pub enum Polarity {
-    IdleLow,
-    IdleHigh,
-}
-
-#[derive(PartialEq)]
-pub enum Phase {
-    CaptureOnFirstTransition,
-    CaptureOnSecondTransition,
-}
-
+/// Marker trait for word sizes supported by the SPI peripheral
+///
+/// An implementation detail.
 pub trait Word {
     fn size() -> usize;
 }
@@ -84,13 +77,15 @@ impl Word for u16 {
     }
 }
 
+// SPI0 uses the bus clock
+// SPI1 uses the system clock
 //pub fn calc_clkdiv(baud: u32, clock_freq: u32) -> (u3, u4) {
 //    let clkdiv = (clock_freq / baud) as u8;
 //    clkdiv = (sppr + 1) x 2^(spr + 1);
 //}
 
 // TODO: single wire mode
-// TODO: low power mode3
+// TODO: low power mode
 // TODO: DMA Rx
 // TODO: DMA Tx
 // TODO: MSb/LSb
@@ -189,8 +184,10 @@ impl<'a, 'b, 'c, 'd, W: Word> SpiMaster<'a, 'b, 'c, 'd, W> {
     }
 }
 
-impl<'a, 'b, 'c, 'd> SpiMaster<'a, 'b, 'c, 'd, u8> {
-    pub fn send(&mut self, word: u8) -> Result<(), ()> {
+impl<'a, 'b, 'c, 'd> FullDuplex<u8> for SpiMaster<'a, 'b, 'c, 'd, u8> {
+    type Error = ();
+
+    fn send(&mut self, word: u8) -> nb::Result<(), Self::Error> {
         if self.op_mode == OpMode::IMM {
             if self.reg.s.read().get_bit(5) {
                 unsafe {
@@ -198,30 +195,30 @@ impl<'a, 'b, 'c, 'd> SpiMaster<'a, 'b, 'c, 'd, u8> {
                 }
                 Ok(())
             } else {
-                Err(())
+                Err(Error::WouldBlock)
             }
         } else {
             unimplemented!()
         }
     }
 
-    pub fn read(&mut self) -> Result<u8, ()> {
+    fn read(&mut self) -> nb::Result<u8, Self::Error> {
         if self.op_mode == OpMode::IMM {
             if self.reg.s.read().get_bit(7) {
                 Ok(self.reg.dl.read())
             } else {
-                Err(())
+                Err(Error::WouldBlock)
             }
         } else {
             unimplemented!()
         }
     }
-
-    // TODO: check match
 }
 
-impl<'a, 'b, 'c, 'd> SpiMaster<'a, 'b, 'c, 'd, u16> {
-    pub fn send(&mut self, word: u16) -> Result<(), ()> {
+impl<'a, 'b, 'c, 'd> FullDuplex<u16> for SpiMaster<'a, 'b, 'c, 'd, u16> {
+    type Error = ();
+
+    fn send(&mut self, word: u16) -> nb::Result<(), Self::Error> {
         if self.op_mode == OpMode::IMM {
             if self.reg.s.read().get_bit(5) {
                 unsafe {
@@ -230,25 +227,23 @@ impl<'a, 'b, 'c, 'd> SpiMaster<'a, 'b, 'c, 'd, u16> {
                 }
                 Ok(())
             } else {
-                Err(())
+                Err(Error::WouldBlock)
             }
         } else {
             unimplemented!()
         }
     }
 
-    pub fn read(&mut self) -> Result<u16, ()> {
+    fn read(&mut self) -> nb::Result<u16, Self::Error> {
         if self.op_mode == OpMode::IMM {
             if self.reg.s.read().get_bit(7) {
                 let d = ((self.reg.dh.read() as u16) << 8) | (self.reg.dl.read() as u16);
                 Ok(d)
             } else {
-                Err(())
+                Err(Error::WouldBlock)
             }
         } else {
             unimplemented!()
         }
     }
-
-    // TODO: check match
 }

@@ -9,6 +9,8 @@ extern crate bare_metal;
 extern crate bit_field;
 extern crate cortex_m;
 extern crate cortex_m_rt;
+extern crate embedded_hal;
+extern crate nb;
 extern crate ux;
 extern crate volatile_register;
 

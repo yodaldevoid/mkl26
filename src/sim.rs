@@ -1,5 +1,6 @@
 use bit_field::BitField;
 use cortex_m::peripheral::NVIC;
+use embedded_hal::spi::Mode;
 use ux::{u3, u4};
 use volatile_register::{RO,RW};
 
@@ -13,7 +14,7 @@ use port::{I2cSda, I2cScl};
 use port::{Port, PortName};
 use port::{SpiCs, SpiMiso, SpiMosi, SpiSck};
 use port::{UartRx, UartTx};
-use spi::{self, Phase, Polarity, SpiMaster};
+use spi::{self, SpiMaster};
 use uart::{Uart,ConnMode};
 
 pub struct ClockGate {
@@ -254,8 +255,7 @@ impl Sim {
         cs: S,
         clkdiv: (u3, u4),
         op_mode: spi::OpMode,
-        polarity: Polarity,
-        phase: Phase,
+        Mode { polarity, phase }: Mode,
         fifo: bool,
     ) -> Result<SpiMaster<'a, 'b, 'c, 'd, W>, ()>
     where
