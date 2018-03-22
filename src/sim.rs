@@ -232,10 +232,6 @@ impl Sim {
                              addr: Address,
                              general_call: bool)
                              -> Result<I2cSlave<'a, 'b>, ()> {
-        if scl.bus() != sda.bus() {
-            return Err(());
-        }
-
         let mut gate = match scl.bus() {
             0 => ClockGate::new(4, 6),
             1 => ClockGate::new(4, 7),

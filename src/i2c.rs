@@ -102,6 +102,10 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
                       op_mode: OpMode,
                       gate: ClockGate)
                       -> Result<I2cMaster<'a, 'b>, ()> {
+        if scl.bus() != sda.bus() {
+            return Err(());
+        }
+
         if mul >= 3 {
             return Err(())
         }
@@ -245,17 +249,17 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
             state.tx_buf.clear();
             match addr {
                 Address::Bits7(addr) => {
-                    if state.tx_buf.push_back(addr << 1).is_some() {
+                    if state.tx_buf.push_back(addr << 1).is_err() {
                         panic!("Failed to push address to TX buffer");
                     }
                 },
                 Address::Bits10(addr) => {
                     let upper = *0.set_bits(1..3, (addr >> 8) as u8).set_bits(3..8, 0b11110);
                     let lower = addr as u8;
-                    if state.tx_buf.push_back(upper).is_some() {
+                    if state.tx_buf.push_back(upper).is_err() {
                         panic!("Failed to push upper byte of address to TX buffer");
                     }
-                    if state.tx_buf.push_back(lower).is_some() {
+                    if state.tx_buf.push_back(lower).is_err() {
                         panic!("Failed to push lower byte of address to TX buffer");
                     }
                 }
@@ -491,7 +495,8 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
                             }
                         }
 
-                        state.rx_buf.push_back(self.reg.d.read()); // read in data
+                        // TODO: error condition
+                        let _ = state.rx_buf.push_back(self.reg.d.read()); // read in data
                     }
 
                     if state.status == Status::Receive || state.status == Status::Timeout {
@@ -624,11 +629,7 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
             // TODO: format! does not exist,find another way
             let state = state.as_mut().expect("I2CX_STATE uninitialized");
 
-            if state.tx_buf.push_back(b).is_none() {
-                Ok(())
-            } else {
-                Err(())
-            }
+            state.tx_buf.push_back(b).map_err(|_| ())
         })
     }
 }
@@ -660,6 +661,10 @@ impl<'a, 'b> I2cSlave<'a, 'b> {
                       general_call: bool,
                       gate: ClockGate)
                       -> Result<I2cSlave<'a, 'b>, ()> {
+        if scl.bus() != sda.bus() {
+            return Err(());
+        }
+
         let bus = sda.bus();
 
         let reg = match bus {
@@ -729,13 +734,14 @@ impl<'a, 'b> I2cSlave<'a, 'b> {
 }
 
 // TODO: maybe spit to enum for master/slave functionality
-// TODO: somehow allow users to specify the size of th buffers. may require const generics
+// TODO: somehow allow users to specify the size of the buffers. may require const generics
 struct IsrState {
     status: Status,
     stop: Stop,
     rx_req: usize, // TODO: maybe make option
     timeout_rx_nak: bool,
     tx_buf: ArrayDeque<[u8; 64]>,
+    // TODO: maybe make wrapping?
     rx_buf: ArrayDeque<[u8; 64]>,
 
     #[cfg(feature = "i2c-slave")]
@@ -959,7 +965,8 @@ unsafe fn isr(reg: &mut I2cRegs, state: &mut IsrState) {
                     });
                 }
                 
-                state.rx_buf.push_back(reg.d.read()); // read in data
+                // TODO: error condition
+                let _ = state.rx_buf.push_back(reg.d.read()); // read in data
             } else {
                 // we should not be here. something went really wrong
                 state.status = Status::Fatal;
@@ -1061,7 +1068,8 @@ unsafe fn isr(reg: &mut I2cRegs, state: &mut IsrState) {
                         attachInterrupt(31, i2c_t3::sda1_rising_isr, RISING);
                     */
 
-                    state.rx_buf.push_back(reg.d.read());
+                    // TODO: error condition
+                    let _ = state.rx_buf.push_back(reg.d.read());
                 }
             }
         }
