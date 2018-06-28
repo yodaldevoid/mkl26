@@ -214,10 +214,10 @@ impl Sim {
         let mut gate = match scl.bus() {
             0 => ClockGate::new(4, 6),
             1 => ClockGate::new(4, 7),
-            _ => return Err(()) //panic!("Cannot enable clock for I2C {}", bus)
+            _ => return Err(())
         };
         if gate.is_enabled() {
-            return Err(()) //panic!("Cannot create I2c instance; it is already in use");
+            return Err(())
         }
         gate.enable();
         unsafe {
@@ -236,10 +236,10 @@ impl Sim {
         let mut gate = match scl.bus() {
             0 => ClockGate::new(4, 6),
             1 => ClockGate::new(4, 7),
-            _ => return Err(()) //panic!("Cannot enable clock for I2C {}", bus)
+            _ => return Err(())
         };
         if gate.is_enabled() {
-            return Err(()) //panic!("Cannot create I2c instance; it is already in use");
+            return Err(())
         }
         gate.enable();
         unsafe {
@@ -299,10 +299,10 @@ impl Sim {
                                                 -> Result<Adc<'a>, ()> {
         let mut gate = match adc {
             0 => ClockGate::new(6, 27),
-            _ => return Err(()) //panic!("Cannot enable clock for UART {}", uart)
+            _ => return Err(())
         };
         if gate.is_enabled() {
-            return Err(()) //panic!("Cannot create Uart instance; it is already in use");
+            return Err(())
         }
         gate.enable();
         unsafe {
@@ -320,10 +320,10 @@ impl Sim {
                             -> Result<AdcDiff<'a, 'b>, ()> {
         let mut gate = match adc {
             0 => ClockGate::new(6, 27),
-            _ => return Err(()) //panic!("Cannot enable clock for UART {}", uart)
+            _ => return Err(())
         };
         if gate.is_enabled() {
-            return Err(()) //panic!("Cannot create Uart instance; it is already in use");
+            return Err(())
         }
         gate.enable();
         unsafe {

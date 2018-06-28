@@ -1,5 +1,5 @@
-use volatile_register::RW;
 use bit_field::BitField;
+use volatile_register::RW;
 
 use atomic::InterruptAtomic;
 

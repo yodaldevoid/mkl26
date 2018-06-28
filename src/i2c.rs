@@ -38,7 +38,7 @@ pub struct I2cMaster<'a, 'b> {
 
 #[cfg(feature = "i2c-slave")]
 pub struct I2cSlave<'a, 'b> {
-    reg: &'static mut I2cRegs,
+    _reg: &'static mut I2cRegs,
     _scl: I2cScl<'a>,
     _sda: I2cSda<'b>,
     _gate: ClockGate,
@@ -721,7 +721,7 @@ impl<'a, 'b> I2cSlave<'a, 'b> {
 
         reg.c1.write(0xC0); // enable module and interrupts
 
-        Ok(I2cSlave { reg: reg, _scl: scl, _sda: sda, _gate: gate, bus: bus })
+        Ok(I2cSlave { _reg: reg, _scl: scl, _sda: sda, _gate: gate, bus: bus })
     }
 
     pub fn set_rx_callback(&mut self, callback: Option<fn(u8, &ArrayDeque<[u8; 64]>)>) {

@@ -1,4 +1,3 @@
-#![feature(compiler_builtins_lib)]
 #![feature(const_fn)]
 #![feature(global_asm)]
 #![feature(untagged_unions)]
