@@ -1,9 +1,8 @@
-//! FIFO is 8 bytes big
+//! FIFO is 8 bytes big on SPI1. No FIFO on SPI0.
 
 use core::marker::PhantomData;
 
 use bit_field::BitField;
-use ux::{u3, u4};
 use embedded_hal::spi::{FullDuplex, Phase, Polarity};
 use nb::{self, Error};
 use volatile_register::{RO, RW};
@@ -21,6 +20,7 @@ struct SpiRegs {
     mh: RW<u8>,
     dl: RW<u8>,
     dh: RW<u8>,
+    _pad0: [u8; 2],
     ci: RW<u8>,
     c3: RW<u8>,
 }
@@ -36,14 +36,38 @@ pub struct SpiMaster<'a, 'b, 'c, 'd, W: Word> {
     op_mode: OpMode,
 }
 
+#[cfg(feature = "spi-slave")]
 pub struct SpiSlave<'a, 'b, 'c, 'd, W: Word> {
     reg: &'static mut SpiRegs,
     _mosi: Option<SpiMosi<'a>>,
     _miso: Option<SpiMiso<'b>>,
     _sck: SpiSck<'c>,
-    _cs: Option<SpiCs<'d>>,
+    _cs: SpiCs<'d>,
     _gate: ClockGate,
     _char: PhantomData<W>,
+}
+
+pub enum Prescale {
+    Div1 = 0,
+    Div2 = 1,
+    Div3 = 2,
+    Div4 = 3,
+    Div5 = 4,
+    Div6 = 5,
+    Div7 = 6,
+    Div8 = 7,
+}
+
+pub enum Divisor {
+    Div2 = 0,
+    Div4 = 1,
+    Div8 = 2,
+    Div16 = 3,
+    Div32 = 4,
+    Div64 = 5,
+    Div128 = 6,
+    Div256 = 7,
+    Div512 = 8,
 }
 
 #[derive(PartialEq)]
@@ -97,7 +121,7 @@ impl<'a, 'b, 'c, 'd, W: Word> SpiMaster<'a, 'b, 'c, 'd, W> {
         miso: Option<SpiMiso<'b>>,
         sck: SpiSck<'c>,
         cs: Option<SpiCs<'d>>,
-        clkdiv: (u3, u4),
+        clkdiv: (Prescale, Divisor),
         op_mode: OpMode,
         polarity: Polarity,
         phase: Phase,
@@ -120,9 +144,6 @@ impl<'a, 'b, 'c, 'd, W: Word> SpiMaster<'a, 'b, 'c, 'd, W> {
             if cs.bus() != bus {
                 return Err(());
             }
-        }
-        if clkdiv.0 > u3::new(7) || clkdiv.1 > u4::new(8) {
-            return Err(());
         }
 
         let reg = match bus {
@@ -155,17 +176,19 @@ impl<'a, 'b, 'c, 'd, W: Word> SpiMaster<'a, 'b, 'c, 'd, W> {
         c2.set_bit(0, false); // SPI Bidirectional (single wire) mode enable
         reg.c2.write(c2);
 
-        let mut c3 = 0;
-        c3.set_bit(3, true); // FIFO interrpt flag clearing method
-        c3.set_bit(2, fifo); // Tx FIFO nearly empty interrupt enable
-        c3.set_bit(1, fifo); // Rx FIFO nearly full interrupt enable
-        c3.set_bit(0, fifo); // FIFO mode enable
-        reg.c3.write(c3);
+        if bus == 1 {
+            let mut c3 = 0;
+            c3.set_bit(3, true); // FIFO interrpt flag clearing method
+            c3.set_bit(2, fifo); // Tx FIFO nearly empty interrupt enable
+            c3.set_bit(1, fifo); // Rx FIFO nearly full interrupt enable
+            c3.set_bit(0, fifo); // FIFO mode enable
+            reg.c3.write(c3);
+        }
 
         // BR
         let mut br: u8 = 0;
-        br.set_bits(4..7, clkdiv.0.into());
-        br.set_bits(0..4, clkdiv.1.into());
+        br.set_bits(4..7, clkdiv.0 as u8);
+        br.set_bits(0..4, clkdiv.1 as u8);
         reg.br.write(br);
 
         // MH/ML

@@ -1,7 +1,6 @@
 use bit_field::BitField;
 use cortex_m::peripheral::NVIC;
 use embedded_hal::spi::Mode;
-use ux::{u3, u4};
 use volatile_register::{RO,RW};
 
 use adc::{Adc,AdcDiff};
@@ -14,12 +13,12 @@ use port::{I2cSda, I2cScl};
 use port::{Port, PortName};
 use port::{SpiCs, SpiMiso, SpiMosi, SpiSck};
 use port::{UartRx, UartTx};
-use spi::{self, SpiMaster};
+use spi::{self, Divisor, Prescale, SpiMaster};
 use uart::{Uart,ConnMode};
 
 pub struct ClockGate {
     gate: &'static mut BmeAtomic<u32>,
-    bit: u8
+    bit: u8 // TODO: replace with a const generic when that comes around?
 }
 
 impl ClockGate {
@@ -253,7 +252,7 @@ impl Sim {
         miso: I,
         sck: SpiSck<'c>,
         cs: S,
-        clkdiv: (u3, u4),
+        clkdiv: (Prescale, Divisor),
         op_mode: spi::OpMode,
         Mode { polarity, phase }: Mode,
         fifo: bool,

@@ -367,7 +367,7 @@ impl<'a> Pin<'a> {
             },
             (PortName::C, 7) => {
                 self.set_mode(5);
-                Ok(SpiMosi { spi: 1, _pin: self })
+                Ok(SpiMosi { spi: 0, _pin: self })
             },
             (PortName::D, 2) => {
                 self.set_mode(2);
@@ -433,7 +433,7 @@ impl<'a> Pin<'a> {
             },
             (PortName::C, 7) => {
                 self.set_mode(2);
-                Ok(SpiMiso { spi: 1, _pin: self })
+                Ok(SpiMiso { spi: 0, _pin: self })
             },
             (PortName::D, 2) => {
                 self.set_mode(5);

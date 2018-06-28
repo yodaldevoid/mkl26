@@ -5,12 +5,14 @@
 
 extern crate arraydeque;
 extern crate bare_metal;
+#[cfg(feature = "spi-isr")]
+#[macro_use]
+extern crate bitflags;
 extern crate bit_field;
 extern crate cortex_m;
 extern crate cortex_m_rt;
 extern crate embedded_hal;
 extern crate nb;
-extern crate ux;
 extern crate volatile_register;
 
 #[macro_use]
