@@ -705,6 +705,12 @@ impl<'a> Gpio<'a> {
         }
     }
 
+    pub fn read(&self) -> bool {
+        unsafe {
+            (&mut (*self.gpio)).pdir.read().get_bit(self.pin.pin as u8)
+        }
+    }
+
     pub fn output(&mut self) {
         unsafe {
             (&mut (*self.gpio)).pddr.modify(|mut pddr| {

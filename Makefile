@@ -1,9 +1,10 @@
-OBJCOPY=arm-none-eabi-objcopy
+OBJCOPY = arm-none-eabi-objcopy
 
-OUTDIR=target/thumbv6m-none-eabi/release
+OUTDIR = target/thumbv6m-none-eabi/release
 
-BINARIES=blink
-OUTPUT=$(addprefix $(OUTDIR)/,$(BINARIES))
+OUTPUT = $(addprefix $(OUTDIR)/,$(BINARIES))
+
+BUILD_FLAGS ?= ""
 
 all:: $(BINARIES)
 
@@ -11,16 +12,16 @@ all:: $(BINARIES)
 flash_teensy: $(OUTDIR)/$(BIN)
 	teensy_loader_cli -w --mcu=mkl26z64 $(OUTDIR)/$(BIN) -v
 
-.PHONY: $(BINARIES)
-$(BINARIES): %: $(OUTDIR)/%
+.PHONY: %
+%: $(OUTDIR)/%
 
-.PHONY: $(OUTPUT)
-$(OUTPUT):
-	xargo build --release --example $(notdir $@)
+.PHONY: $(OUTDIR)/%
+$(OUTDIR)/%:
+	xargo build --release --example $(notdir $@) ${BUILD_FLAGS}
 
 .PHONY: lib
 lib:
-	xargo build --release --lib
+	xargo build --release --lib ${BUILD_FLAGS}
 
 %.hex: %
 	$(OBJCOPY) -O ihex $< $@
