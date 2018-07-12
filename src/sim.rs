@@ -3,7 +3,7 @@ use cortex_m::peripheral::NVIC;
 use embedded_hal::spi::Mode;
 use volatile_register::{RO,RW};
 
-use adc::{Adc,AdcDiff};
+use adc::{self, Adc, AdcDiff};
 use atomic::{BmeAtomic,InterruptAtomic};
 use i2c::{self,I2cMaster};
 #[cfg(feature = "i2c-slave")]
@@ -289,13 +289,15 @@ impl Sim {
         }
     }
 
-    pub fn adc<'a, P: Into<Option<AdcPin<'a>>>>(&mut self,
-                                                adc: u8,
-                                                ch: u8,
-                                                mode: u8,
-                                                clkdiv: u8,
-                                                pin: P)
-                                                -> Result<Adc<'a>, ()> {
+    pub fn adc<'a, P: Into<Option<AdcPin<'a>>>>(
+        &mut self,
+        adc: u8,
+        ch: u8,
+        resolution: adc::Resolution,
+        clkdiv: adc::Divisor,
+        vref: adc::VoltageRef,
+        pin: P
+    ) -> Result<Adc<'a>, ()> {
         let mut gate = match adc {
             0 => ClockGate::new(6, 27),
             _ => return Err(())
@@ -305,18 +307,24 @@ impl Sim {
         }
         gate.enable();
         unsafe {
-            Adc::new(adc, ch, mode, clkdiv, pin.into(), gate)
+            Adc::new(adc, ch, resolution, clkdiv, vref, pin.into(), gate)
         }
     }
 
-    pub fn adc_diff<'a, 'b>(&mut self,
-                            adc: u8,
-                            ch: u8,
-                            mode: u8,
-                            clkdiv: u8,
-                            pos: Option<AdcDiffPPin<'a>>,
-                            neg: Option<AdcDiffMPin<'b>>)
-                            -> Result<AdcDiff<'a, 'b>, ()> {
+    pub fn adc_diff<'a, 'b, P, N>(
+        &mut self,
+        adc: u8,
+        ch: u8,
+        resolution: adc::Resolution,
+        clkdiv: adc::Divisor,
+        vref: adc::VoltageRef,
+        pos: P,
+        neg: N
+    ) -> Result<AdcDiff<'a, 'b>, ()>
+    where
+        P: Into<Option<AdcDiffPPin<'a>>>,
+        N: Into<Option<AdcDiffMPin<'b>>>,
+    {
         let mut gate = match adc {
             0 => ClockGate::new(6, 27),
             _ => return Err(())
@@ -326,7 +334,7 @@ impl Sim {
         }
         gate.enable();
         unsafe {
-            AdcDiff::new(adc, ch, mode, clkdiv, pos, neg, gate)
+            AdcDiff::new(adc, ch, resolution, clkdiv, vref, pos.into(), neg.into(), gate)
         }
     }
 }

@@ -49,6 +49,25 @@ pub struct AdcDiff<'a,'b> {
     _gate: ClockGate
 }
 
+pub enum Resolution {
+    Bits8_9 = 0,
+    Bits10_11 = 2,
+    Bits12_13 = 1,
+    Bits16 = 3,
+}
+
+pub enum Divisor {
+    Div1 = 0,
+    Div2 = 1,
+    Div4 = 2,
+    Div8 = 3,
+}
+
+pub enum VoltageRef {
+    Default = 0,
+    Alternative = 1,
+}
+
 enum AdcMux {
     A,
     B,
@@ -63,35 +82,43 @@ impl AdcMux {
     }
 }
 
-// 1.2 V VREF connected to V_ALTH/V_ALTL
-
+/// V_REFH and V_REFL are broken out as external pins 48-pin and higher devices.
+/// V_REFH and V_REFL are connected to VDDA and VSSA respectively on 32-pin
+/// devices.
+///
+/// V_ALTH and V_ALTL are connected to VDDA and VSSA respectively.
 impl<'a> Adc<'a> {
     pub unsafe fn new(id: u8,
                       ch: u8,
-                      mode: u8,
-                      clkdiv: u8,
+                      resolution: Resolution,
+                      clkdiv: Divisor,
+                      vref: VoltageRef,
                       pin: Option<AdcPin<'a>>,
                       gate: ClockGate)
                       -> Result<Adc<'a>, ()> {
         let pin_info = pin.as_ref().map(|p| (p.port_name(), p.pin()));
         let mux = match (id, ch, pin_info) {
             // ADC0
-            (0, 0,  Some((PortName::E, 20))) => AdcMux::A, //  9-e20:0-S0,0
-            (0, 3,  Some((PortName::E, 22))) => AdcMux::A, // 11-e22:0-S0,3
-            (0, 4,  Some((PortName::E, 21))) => AdcMux::A, // 10-e21:0-S0,4a
-            (0, 4,  Some((PortName::E, 29))) => AdcMux::B, // 17-e29:0-S0,4b
-            (0, 5,  Some((PortName::D, 1)))  => AdcMux::B, // 58-d1:0-S0,5b
-            (0, 6,  Some((PortName::D, 5)))  => AdcMux::B, // 62-d5:0-S0,6b
-            (0, 7,  Some((PortName::E, 23))) => AdcMux::A, // 12-e23:0-S0,7a
-            (0, 7,  Some((PortName::D, 6)))  => AdcMux::B, // 58-d6:0-S0,7b
-            (0, 8,  Some((PortName::B, 0)))  => AdcMux::A, // 35-b0:0-S0,8
-            (0, 9,  Some((PortName::B, 1)))  => AdcMux::A, // 36-b1:0-S0,9
-            (0, 11, Some((PortName::C, 2)))  => AdcMux::A, // 45-c2:0-S0,11
-            (0, 12, Some((PortName::B, 2)))  => AdcMux::A, // 37-b2:0-S0,12
-            (0, 13, Some((PortName::B, 3)))  => AdcMux::A, // 38-b3:0-S0,13
-            (0, 14, Some((PortName::C, 0)))  => AdcMux::A, // 43-c0:0-S0,14
-            (0, 15, Some((PortName::C, 1)))  => AdcMux::A, // 44-c1:0-S0,15
-            (0, 23, Some((PortName::E, 30))) => AdcMux::A, // 18-e30:0-S0,23
+            (0, 0,  Some((PortName::E, 20))) => AdcMux::A, // e20:0-S0,0
+            (0, 1,  Some((PortName::E, 16))) => AdcMux::A, // e16:0-S0,1
+            (0, 2,  Some((PortName::E, 18))) => AdcMux::A, // e18:0-S0,2
+            (0, 3,  Some((PortName::E, 22))) => AdcMux::A, // e22:0-S0,3
+            (0, 4,  Some((PortName::E, 21))) => AdcMux::A, // e21:0-S0,4a
+            (0, 4,  Some((PortName::E, 29))) => AdcMux::B, // e29:0-S0,4b
+            (0, 5,  Some((PortName::E, 17))) => AdcMux::A, // e17:0-S0,5a
+            (0, 5,  Some((PortName::D, 1)))  => AdcMux::B, // d1:0-S0,5b
+            (0, 6,  Some((PortName::E, 19))) => AdcMux::A, // e19:0-S0,6a
+            (0, 6,  Some((PortName::D, 5)))  => AdcMux::B, // d5:0-S0,6b
+            (0, 7,  Some((PortName::E, 23))) => AdcMux::A, // e23:0-S0,7a
+            (0, 7,  Some((PortName::D, 6)))  => AdcMux::B, // d6:0-S0,7b
+            (0, 8,  Some((PortName::B, 0)))  => AdcMux::A, // b0:0-S0,8
+            (0, 9,  Some((PortName::B, 1)))  => AdcMux::A, // b1:0-S0,9
+            (0, 11, Some((PortName::C, 2)))  => AdcMux::A, // c2:0-S0,11
+            (0, 12, Some((PortName::B, 2)))  => AdcMux::A, // b2:0-S0,12
+            (0, 13, Some((PortName::B, 3)))  => AdcMux::A, // b3:0-S0,13
+            (0, 14, Some((PortName::C, 0)))  => AdcMux::A, // c0:0-S0,14
+            (0, 15, Some((PortName::C, 1)))  => AdcMux::A, // c1:0-S0,15
+            (0, 23, Some((PortName::E, 30))) => AdcMux::A, // e30:0-S0,23
 
             (_, 26, None) => AdcMux::A, // Single-ended Temp Sensor
             (_, 27, None) => AdcMux::A, // Single-ended Bandgap
@@ -102,37 +129,25 @@ impl<'a> Adc<'a> {
             (_, _, _) => return Err(()),
         };
 
-        let mode = match mode {
-            8 => 0,
-            12 => 1,
-            10 => 2,
-            16 => 3,
-            _ => return Err(()),
-        };
-
-        let clkdiv = match clkdiv {
-            1 => 0,
-            2 => 1,
-            4 => 2,
-            8 => 3,
-            _ => return Err(()),
-        };
-
         let reg = match id {
             0 => &mut *(0x4003B000 as *mut AdcRegs),
-            1 => &mut *(0x400BB000 as *mut AdcRegs),
             _ => return Err(())
         };
 
         reg.cfg1.modify(|mut cfg1| {
-            cfg1.set_bits(5..7, clkdiv);
-            cfg1.set_bits(2..4, mode);
+            cfg1.set_bits(5..7, clkdiv as u32);
+            cfg1.set_bits(2..4, resolution as u32);
             cfg1
         });
 
         reg.cfg2.modify(|mut cfg2| {
             cfg2.set_bit(4, mux.value());
             cfg2
+        });
+
+        reg.sc2.modify(|mut sc2| {
+            sc2.set_bits(0..1, vref as u32);
+            sc2
         });
 
         reg.sc1a.modify(|mut sc1a| {
@@ -192,8 +207,9 @@ impl<'a> Adc<'a> {
 impl<'a,'b> AdcDiff<'a,'b> {
     pub unsafe fn new(id: u8,
                       ch: u8,
-                      mode: u8,
-                      clkdiv: u8,
+                      resolution: Resolution,
+                      clkdiv: Divisor,
+                      vref: VoltageRef,
                       pos: Option<AdcDiffPPin<'a>>,
                       neg: Option<AdcDiffMPin<'b>>,
                       gate: ClockGate)
@@ -202,11 +218,17 @@ impl<'a,'b> AdcDiff<'a,'b> {
         let neg_info = neg.as_ref().map(|p| (p.port_name(), p.pin()));
         match (id, ch, pos_info, neg_info) {
             // ADC0
-            //  9-e20:0-D0,0P
-            // 10-e21:0-D0,0M
+            // e20:0-D0,0P
+            // e21:0-D0,0M
             (0, 0, Some((PortName::E, 20)), Some((PortName::E, 21))) |
-            // 11-e22:0-D0,3P
-            // 12-e23:0-D0,3M
+            // e16:0-D0,1P
+            // e17:0-D0,1M
+            (0, 1, Some((PortName::E, 16)), Some((PortName::E, 17))) |
+            // e18:0-D0,1P
+            // e19:0-D0,1M
+            (0, 2, Some((PortName::E, 18)), Some((PortName::E, 19))) |
+            // e22:0-D0,3P
+            // e23:0-D0,3M
             (0, 3, Some((PortName::E, 22)), Some((PortName::E, 23))) |
 
             // Differential Temp Sensor
@@ -215,36 +237,25 @@ impl<'a,'b> AdcDiff<'a,'b> {
             (_, 27, None, None) |
             // Differential V_REFSH
             (_, 29, None, None) => {}
+            //(_, 31, None) => AdcMux::A, // Disabled
 
             (_, _, _, _) => return Err(())
         }
 
-        let mode = match mode {
-            9 => 0,
-            13 => 1,
-            11 => 2,
-            16 => 3,
-            _ => return Err(()),
-        };
-
-        let clkdiv = match clkdiv {
-            1 => 0,
-            2 => 1,
-            4 => 2,
-            8 => 3,
-            _ => return Err(()),
-        };
-
         let reg = match id {
             0 => &mut *(0x4003B000 as *mut AdcRegs),
-            1 => &mut *(0x400BB000 as *mut AdcRegs),
             _ => return Err(())
         };
 
         reg.cfg1.modify(|mut cfg1| {
-            cfg1.set_bits(5..7, clkdiv);
-            cfg1.set_bits(2..4, mode);
+            cfg1.set_bits(5..7, clkdiv as u32);
+            cfg1.set_bits(2..4, resolution as u32);
             cfg1
+        });
+
+        reg.sc2.modify(|mut sc2| {
+            sc2.set_bits(0..1, vref as u32);
+            sc2
         });
 
         reg.sc1a.modify(|mut sc1a| {

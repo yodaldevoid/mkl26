@@ -158,37 +158,45 @@ impl<'a> Pin<'a> {
 
     pub fn to_adc(mut self) -> Result<AdcPin<'a>, ()> {
         match (self.port.name(), self.pin) {
-            //  9-e20:0-S0,0
+            // e16:0-S0,1
+            (PortName::E, 16) |
+            // e17:0-S0,5a
+            (PortName::E, 17) |
+            // e18:0-S0,2
+            (PortName::E, 18) |
+            // e19:0-S0,6a
+            (PortName::E, 19) |
+            // e20:0-S0,0
             (PortName::E, 20) |
-            // 10-e21:0-S0,4a
+            // e21:0-S0,4a
             (PortName::E, 21) |
-            // 11-e22:0-S0,3
+            // e22:0-S0,3
             (PortName::E, 22) |
-            // 12-e23:0-S0,7a
+            // e23:0-S0,7a
             (PortName::E, 23) |
-            // 17-e29:0-S0,4b
+            // e29:0-S0,4b
             (PortName::E, 29) |
-            // 18-e30:0-S0,23
+            // e30:0-S0,23
             (PortName::E, 30) |
-            // 35-b0:0-S0,8
+            // b0:0-S0,8
             (PortName::B, 0) |
-            // 36-b1:0-S0,9
+            // b1:0-S0,9
             (PortName::B, 1) |
-            // 37-b2:0-S0,12
+            // b2:0-S0,12
             (PortName::B, 2) |
-            // 38-b3:0-S0,13
+            // b3:0-S0,13
             (PortName::B, 3) |
-            // 43-c0:0-S0,14
+            // c0:0-S0,14
             (PortName::C, 0) |
-            // 44-c1:0-S0,15
+            // c1:0-S0,15
             (PortName::C, 1) |
-            // 45-c2:0-S0,11
+            // c2:0-S0,11
             (PortName::C, 2) |
-            // 58-d1:0-S0,5b
+            // d1:0-S0,5b
             (PortName::D, 1) |
-            // 62-d5:0-S0,6b
+            // d5:0-S0,6b
             (PortName::D, 5) |
-            // 58-d6:0-S0,7b
+            // d6:0-S0,7b
             (PortName::D, 6) => {
                 self.set_mode(0);
                 Ok(AdcPin { _pin: self })
@@ -199,6 +207,10 @@ impl<'a> Pin<'a> {
 
     pub fn to_adc_diff_p(mut self) -> Result<AdcDiffPPin<'a>, ()> {
         match (self.port.name(), self.pin) {
+            // e16:0-D0,1P
+            (PortName::E, 16) |
+            // e18:0-D0,1P
+            (PortName::E, 18) |
             //  9-e20:0-D0,0P
             (PortName::E, 20) |
             // 11-e22:0-D0,3P
@@ -212,6 +224,10 @@ impl<'a> Pin<'a> {
 
     pub fn to_adc_diff_m(mut self) -> Result<AdcDiffMPin<'a>, ()> {
         match (self.port.name(), self.pin) {
+            // e17:0-D0,1M
+            (PortName::E, 17) |
+            // e19:0-D0,1M
+            (PortName::E, 19) |
             // 10-e21:0-D0,0M
             (PortName::E, 21) |
             // 12-e23:0-D0,3M

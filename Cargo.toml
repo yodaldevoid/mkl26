@@ -42,6 +42,9 @@ uart-isr = []
 uart-dma = ["uart-isr"]
 
 [[example]]
+name = "adc"
+
+[[example]]
 name = "blink"
 
 [[example]]
