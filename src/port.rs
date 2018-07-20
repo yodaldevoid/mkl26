@@ -1,6 +1,7 @@
 use core::cell::UnsafeCell;
 
 use bit_field::BitField;
+use embedded_hal::digital::{InputPin, OutputPin, ToggleableOutputPin};
 use volatile_register::{RO,RW,WO};
 
 use atomic::InterruptAtomic;
@@ -752,6 +753,32 @@ impl<'a> Gpio<'a> {
         unsafe {
             (&mut (*self.gpio)).ptor.write(1 << self.pin.pin);
         }
+    }
+}
+
+impl<'a> InputPin for Gpio<'a> {
+    fn is_high(&self) -> bool {
+        self.read()
+    }
+
+    fn is_low(&self) -> bool {
+        !self.read()
+    }
+}
+
+impl<'a> OutputPin for Gpio<'a> {
+    fn set_high(&mut self) {
+        self.high()
+    }
+
+    fn set_low(&mut self) {
+        self.low()
+    }
+}
+
+impl<'a> ToggleableOutputPin for Gpio<'a> {
+    fn toggle(&mut self) {
+        self.toggle()
     }
 }
 
