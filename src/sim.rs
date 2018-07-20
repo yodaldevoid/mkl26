@@ -176,7 +176,11 @@ impl Sim {
         }
     }
 
-    pub fn uart_loopback<'a, 'b>(&mut self, uart: u8, clkdiv: u16) -> Result<Uart<'a, 'b, u8>, ()> {
+    pub fn uart_loopback<'a, 'b>(
+        &mut self,
+        uart: u8,
+        clkdiv: u16
+    ) -> Result<Uart<'a, 'b, u8>, ()> {
         let mut gate = match uart {
             0 => ClockGate::new(4, 10),
             1 => ClockGate::new(4, 11),
@@ -199,13 +203,14 @@ impl Sim {
         });
     }
 
-    pub fn i2c_master<'a, 'b>(&mut self,
-                              scl: I2cScl<'a>,
-                              sda: I2cSda<'b>,
-                              nvic: &mut NVIC,
-                              clkdiv: (u8, u8),
-                              op_mode: i2c::OpMode)
-                              -> Result<I2cMaster<'a, 'b>, ()> {
+    pub fn i2c_master<'a, 'b>(
+        &mut self,
+        scl: I2cScl<'a>,
+        sda: I2cSda<'b>,
+        nvic: &mut NVIC,
+        clkdiv: (u8, u8),
+        op_mode: i2c::OpMode
+    ) -> Result<I2cMaster<'a, 'b>, ()> {
         if scl.bus() != sda.bus() {
             return Err(());
         }
@@ -225,13 +230,14 @@ impl Sim {
     }
 
     #[cfg(feature = "i2c-slave")]
-    pub fn i2c_slave<'a, 'b>(&mut self,
-                             scl: I2cScl<'a>,
-                             sda: I2cSda<'b>,
-                             nvic: &mut NVIC,
-                             addr: Address,
-                             general_call: bool)
-                             -> Result<I2cSlave<'a, 'b>, ()> {
+    pub fn i2c_slave<'a, 'b>(
+        &mut self,
+        scl: I2cScl<'a>,
+        sda: I2cSda<'b>,
+        nvic: &mut NVIC,
+        addr: Address,
+        general_call: bool
+    ) -> Result<I2cSlave<'a, 'b>, ()> {
         let mut gate = match scl.bus() {
             0 => ClockGate::new(4, 6),
             1 => ClockGate::new(4, 7),

@@ -1,5 +1,5 @@
 #![feature(lang_items)]
-#![feature(used)]
+#![no_main]
 #![no_std]
 #![no_builtins]
 
@@ -23,11 +23,15 @@ pub static _FLASHCONFIG: [u8; 16] = [
     0xFF, 0xFF, 0xFF, 0xFF, 0xDE, 0xF9, 0xFF, 0xFF
 ];
 
-init_array!(disable_wdog, {
-    unsafe { Cop::new().init(None); }
-});
+pre_init!(disable_wdog);
 
-fn main() {
+unsafe fn disable_wdog() {
+    Cop::new().init(None);
+}
+
+entry!(main);
+
+fn main() -> ! {
     // Enable the crystal oscillator with 10pf of capacitance
     let osc_token = Osc::new().enable(10);
 
@@ -59,7 +63,7 @@ fn main() {
 
     loop {
         led.toggle();
-        for _ in 0..3_000_000 { asm::nop() }
+        asm::delay(3_000_000);
     }
 }
 
@@ -77,5 +81,14 @@ pub extern fn rust_begin_panic(_info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
-#[lang = "eh_personality"]
-pub extern fn eh_personality() {}
+// the hard fault handler
+exception!(HardFault, hard_fault);
+
+fn hard_fault(_ef: &cortex_m_rt::ExceptionFrame) -> ! {
+    loop {}
+}
+
+// the default exception handler
+exception!(*, default_handler);
+
+fn default_handler(_irqn: i16) {}

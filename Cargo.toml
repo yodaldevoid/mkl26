@@ -5,15 +5,15 @@ authors = ["Gabriel Smith <ga29smith@gmail.com>"]
 
 [dependencies]
 arraydeque = { version = "^0.4", default-features = false }
-bare-metal = "^0.1"
-bitflags = "1.0"
+bitflags = "^1.0"
 bit_field = "^0.8"
-cortex-m = "^0.4"
-cortex-m-rt = { version = "0.4.0", features = ["init_array"] }
-embedded-hal = "0.1.2"
+cortex-m = { version = "^0.5", features = ["const-fn", "inline-asm"] }
+embedded-hal = { version = "0.2.1", features = ["unproven"] }
 nb = "0.1.1"
-ux = { version = "^0.1", default-features = false }
 volatile-register = "^0.2"
+
+[dev_dependencies]
+cortex-m-rt = { version = "^0.5", features = ["device", "pre_init"] }
 
 [features]
 default = [ # default to everything on for docs
@@ -54,4 +54,5 @@ name = "uart"
 name = "spi_master"
 
 [patch.crates-io]
-cortex-m-rt = { git = "https://github.com/yodaldevoid/cortex-m-rt.git", branch = "init_array" }
+cortex-m-rt = { git = "https://github.com/yodaldevoid/cortex-m-rt.git", branch = "pre_init" }
+bare-metal = { git = "https://github.com/yodaldevoid/bare-metal.git", branch = "borrow_mut" }

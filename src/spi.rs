@@ -7,7 +7,7 @@ use embedded_hal::spi::{FullDuplex, Phase, Polarity};
 use nb::{self, Error};
 use volatile_register::{RO, RW};
 
-use port::{Gpio, SpiMosi, SpiMiso, SpiSck, SpiCs};
+use port::{SpiMosi, SpiMiso, SpiSck, SpiCs};
 use sim::ClockGate;
 
 #[repr(C,packed)]

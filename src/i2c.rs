@@ -1,9 +1,6 @@
-use core::cell::RefCell;
-
 use arraydeque::ArrayDeque;
-use bare_metal::Mutex;
 use bit_field::BitField;
-use cortex_m::interrupt;
+use cortex_m::interrupt::{self, Mutex};
 use cortex_m::peripheral::NVIC;
 use volatile_register::RW;
 
@@ -125,8 +122,8 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
         // init ram vars
         interrupt::free(|cs| {
             match bus {
-                0 => *I2C0_STATE.borrow(cs).borrow_mut() = Some(IsrState::new()),
-                1 => *I2C1_STATE.borrow(cs).borrow_mut() = Some(IsrState::new()),
+                0 => *I2C0_STATE.borrow_mut(cs) = Some(IsrState::new()),
+                1 => *I2C1_STATE.borrow_mut(cs) = Some(IsrState::new()),
                 _ => unreachable!(),
             };
         });
@@ -238,9 +235,9 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
     /// Initializes TX buffer with slave address.
     pub fn begin_transmission<'c>(&'c mut self, addr: Address) -> Transmission<'a, 'b, 'c> {
         interrupt::free(|cs| {
-            let mut state = match self.bus {
-                0 => I2C0_STATE.borrow(cs).borrow_mut(),
-                1 => I2C1_STATE.borrow(cs).borrow_mut(),
+            let state = match self.bus {
+                0 => I2C0_STATE.borrow_mut(cs),
+                1 => I2C1_STATE.borrow_mut(cs),
                 _ => unreachable!(),
             };
             // TODO: format! does not exist,find another way
@@ -285,9 +282,9 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
     /// determine completion and status() to determine success/fail.
     fn send_transmission(&mut self, stop: Stop) -> Result<(), Error> {
         interrupt::free(|cs| {
-            let mut state = match self.bus {
-                0 => I2C0_STATE.borrow(cs).borrow_mut(),
-                1 => I2C1_STATE.borrow(cs).borrow_mut(),
+            let state = match self.bus {
+                0 => I2C0_STATE.borrow_mut(cs),
+                1 => I2C1_STATE.borrow_mut(cs),
                 _ => unreachable!(),
             };
             // TODO: format! does not exist,find another way
@@ -382,9 +379,9 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
     /// Use done() determine completion or finish() to wait for completion.
     fn send_request(&mut self, len: usize, stop: Stop) -> Result<(), Error> {
         interrupt::free(|cs| {
-            let mut state = match self.bus {
-                0 => I2C0_STATE.borrow(cs).borrow_mut(),
-                1 => I2C1_STATE.borrow(cs).borrow_mut(),
+            let state = match self.bus {
+                0 => I2C0_STATE.borrow_mut(cs),
+                1 => I2C1_STATE.borrow_mut(cs),
                 _ => unreachable!(),
             };
             // TODO: format! does not exist,find another way
@@ -536,8 +533,8 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
     pub fn done(&self) -> Result<bool, Error> {
         interrupt::free(|cs| {
             let state = match self.bus {
-                0 => I2C0_STATE.borrow(cs).borrow(),
-                1 => I2C1_STATE.borrow(cs).borrow(),
+                0 => I2C0_STATE.borrow(cs),
+                1 => I2C1_STATE.borrow(cs),
                 _ => unreachable!(),
             };
             // TODO: format! does not exist,find another way
@@ -604,9 +601,9 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
     // TODO: maybe rename to `pop_byte`
     pub fn read_byte(&self) -> Result<u8, ()> {
         interrupt::free(|cs| {
-            let mut state = match self.bus {
-                0 => I2C0_STATE.borrow(cs).borrow_mut(),
-                1 => I2C1_STATE.borrow(cs).borrow_mut(),
+            let state = match self.bus {
+                0 => I2C0_STATE.borrow_mut(cs),
+                1 => I2C1_STATE.borrow_mut(cs),
                 _ => unreachable!(),
             };
             // TODO: format! does not exist,find another way
@@ -621,9 +618,9 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
     /// Returns `Ok` if the write was successful, `Err` if the buffer was full.
     fn write_byte(&mut self, b: u8) -> Result<(), ()> {
         interrupt::free(|cs| {
-            let mut state = match self.bus {
-                0 => I2C0_STATE.borrow(cs).borrow_mut(),
-                1 => I2C1_STATE.borrow(cs).borrow_mut(),
+            let state = match self.bus {
+                0 => I2C0_STATE.borrow_mut(cs),
+                1 => I2C1_STATE.borrow_mut(cs),
                 _ => unreachable!(),
             };
             // TODO: format! does not exist,find another way
@@ -677,8 +674,8 @@ impl<'a, 'b> I2cSlave<'a, 'b> {
         // init ram vars
         interrupt::free(|cs| {
             match bus {
-                0 => *I2C0_STATE.borrow(cs).borrow_mut() = Some(IsrState::new()),
-                1 => *I2C1_STATE.borrow(cs).borrow_mut() = Some(IsrState::new()),
+                0 => *I2C0_STATE.borrow_mut(cs) = Some(IsrState::new()),
+                1 => *I2C1_STATE.borrow_mut(cs) = Some(IsrState::new()),
                 _ => unreachable!(),
             };
         });
@@ -800,8 +797,8 @@ pub enum Stop {
     No
 }
 
-static I2C0_STATE: Mutex<RefCell<Option<IsrState>>> = Mutex::new(RefCell::new(None));
-static I2C1_STATE: Mutex<RefCell<Option<IsrState>>> = Mutex::new(RefCell::new(None));
+static I2C0_STATE: Mutex<Option<IsrState>> = Mutex::new(None);
+static I2C1_STATE: Mutex<Option<IsrState>> = Mutex::new(None);
 
 #[cfg(feature = "i2c-isr")]
 interrupt!(I2C0, isr0);
@@ -813,7 +810,7 @@ fn isr0() {
     unsafe {
         interrupt::free(|cs| {
             let reg = &mut *(0x40066000 as *mut I2cRegs);
-            let mut state = I2C0_STATE.borrow(cs).borrow_mut();
+            let state = I2C0_STATE.borrow_mut(cs);
             let state = state.as_mut().expect("I2C0_STATE uninitialized");
 
             isr(reg, state);
@@ -826,7 +823,7 @@ fn isr1() {
     unsafe {
         interrupt::free(|cs| {
             let reg = &mut *(0x40067000 as *mut I2cRegs);
-            let mut state = I2C1_STATE.borrow(cs).borrow_mut();
+            let state = I2C1_STATE.borrow_mut(cs);
             let state = state.as_mut().expect("I2C1_STATE uninitialized");
 
             isr(reg, state);
