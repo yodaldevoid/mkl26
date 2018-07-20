@@ -7,4 +7,5 @@ rustflags = [
     "-C", "link-arg=-Tlink.x",
     "-C", "link-arg=-nostartfiles",
     "-Z", "thinlto=no",
+    "-C", "panic=abort",
 ]

@@ -1,0 +1,18 @@
+[env]
+OUTDIR = "target/thumbv6m-none-eabi/release/examples"
+
+[tasks.default]
+alias = "build"
+
+[tasks.flash]
+condition = { env_set = ["BIN"] }
+script = [
+    "teensy_loader_cli -w -v --mcu=mkl26z64 ${OUTDIR}/${BIN}.ihex"
+]
+dependencies = ["ihex"]
+
+[tasks.ihex]
+condition = { env_set = ["BIN"] }
+script = [
+    "arm-none-eabi-objcopy -O ihex ${OUTDIR}/${BIN} ${OUTDIR}/${BIN}.ihex"
+]
