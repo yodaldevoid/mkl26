@@ -7,6 +7,10 @@ use bit_field::BitField;
 use port::{UartRx, UartTx};
 use sim::ClockGate;
 
+const UART0_ADDR: usize = 0x4006_A000;
+const UART1_ADDR: usize = 0x4006_B000;
+const UART2_ADDR: usize = 0x4006_C000;
+
 #[repr(C,packed)]
 struct UartRegs {
     bdh:    RW<u8>,
@@ -93,9 +97,9 @@ impl<'a, 'b> Uart<'a, 'b, u8> {
         }
 
         let reg = match bus {
-            0 => &mut *(0x4006A000 as *mut UartRegs),
-            1 => &mut *(0x4006B000 as *mut UartRegs),
-            2 => &mut *(0x4006C000 as *mut UartRegs),
+            0 => &mut *(UART0_ADDR as *mut UartRegs),
+            1 => &mut *(UART1_ADDR as *mut UartRegs),
+            2 => &mut *(UART2_ADDR as *mut UartRegs),
             _ => unreachable!()
         };
 
@@ -216,6 +220,62 @@ impl<'a, 'b, B> Drop for Uart<'a, 'b, B> {
                 c2.set_bits(2..4, 0);
                 c2
             });
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn uart0_test() {
+        unsafe {
+            let reg = & *(UART0_ADDR as *const UartRegs);
+            assert_eq!(0x4006_A000 as *const RW<u8>, &reg.bdh   as *const RW<u8>, "bdh");
+            assert_eq!(0x4006_A001 as *const RW<u8>, &reg.bdl   as *const RW<u8>, "bdl");
+            assert_eq!(0x4006_A002 as *const RW<u8>, &reg.c1    as *const RW<u8>, "c1");
+            assert_eq!(0x4006_A003 as *const RW<u8>, &reg.c2    as *const RW<u8>, "c2");
+            assert_eq!(0x4006_A004 as *const RO<u8>, &reg.s1    as *const RO<u8>, "s1");
+            assert_eq!(0x4006_A005 as *const RW<u8>, &reg.s2    as *const RW<u8>, "s2");
+            assert_eq!(0x4006_A006 as *const RW<u8>, &reg.c3    as *const RW<u8>, "c3");
+            assert_eq!(0x4006_A007 as *const RW<u8>, &reg.d     as *const RW<u8>, "d");
+            assert_eq!(0x4006_A008 as *const RW<u8>, &reg.diff.u0.ma1   as *const RW<u8>, "ma1");
+            assert_eq!(0x4006_A009 as *const RW<u8>, &reg.diff.u0.ma2   as *const RW<u8>, "ma2");
+            assert_eq!(0x4006_A00A as *const RW<u8>, &reg.diff.u0.c4    as *const RW<u8>, "c4");
+            assert_eq!(0x4006_A00B as *const RW<u8>, &reg.diff.u0.c5    as *const RW<u8>, "c5");
+        }
+    }
+
+    #[test]
+    fn uart1_test() {
+        unsafe {
+            let reg = & *(UART1_ADDR as *const UartRegs);
+            assert_eq!(0x4006_B000 as *const RW<u8>, &reg.bdh   as *const RW<u8>, "bdh");
+            assert_eq!(0x4006_B001 as *const RW<u8>, &reg.bdl   as *const RW<u8>, "bdl");
+            assert_eq!(0x4006_B002 as *const RW<u8>, &reg.c1    as *const RW<u8>, "c1");
+            assert_eq!(0x4006_B003 as *const RW<u8>, &reg.c2    as *const RW<u8>, "c2");
+            assert_eq!(0x4006_B004 as *const RO<u8>, &reg.s1    as *const RO<u8>, "s1");
+            assert_eq!(0x4006_B005 as *const RW<u8>, &reg.s2    as *const RW<u8>, "s2");
+            assert_eq!(0x4006_B006 as *const RW<u8>, &reg.c3    as *const RW<u8>, "c3");
+            assert_eq!(0x4006_B007 as *const RW<u8>, &reg.d     as *const RW<u8>, "d");
+            assert_eq!(0x4006_B008 as *const RW<u8>, &reg.diff.u1.c4    as *const RW<u8>, "c4");
+        }
+    }
+
+    #[test]
+    fn uart2_test() {
+        unsafe {
+            let reg = & *(UART2_ADDR as *const UartRegs);
+            assert_eq!(0x4006_C000 as *const RW<u8>, &reg.bdh   as *const RW<u8>, "bdh");
+            assert_eq!(0x4006_C001 as *const RW<u8>, &reg.bdl   as *const RW<u8>, "bdl");
+            assert_eq!(0x4006_C002 as *const RW<u8>, &reg.c1    as *const RW<u8>, "c1");
+            assert_eq!(0x4006_C003 as *const RW<u8>, &reg.c2    as *const RW<u8>, "c2");
+            assert_eq!(0x4006_C004 as *const RO<u8>, &reg.s1    as *const RO<u8>, "s1");
+            assert_eq!(0x4006_C005 as *const RW<u8>, &reg.s2    as *const RW<u8>, "s2");
+            assert_eq!(0x4006_C006 as *const RW<u8>, &reg.c3    as *const RW<u8>, "c3");
+            assert_eq!(0x4006_C007 as *const RW<u8>, &reg.d     as *const RW<u8>, "d");
+            assert_eq!(0x4006_C008 as *const RW<u8>, &reg.diff.u1.c4    as *const RW<u8>, "c4");
         }
     }
 }

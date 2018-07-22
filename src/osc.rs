@@ -3,6 +3,8 @@ use volatile_register::RW;
 
 use atomic::InterruptAtomic;
 
+const OSC_ADDR: usize = 0x4006_5000;
+
 #[repr(C,packed)]
 struct OscRegs {
     cr: RW<u8>
@@ -24,7 +26,7 @@ impl Osc {
         if was_init {
             panic!("Cannot initialize OSC: It's already active");
         }
-        let reg = unsafe { &mut *(0x40065000 as *mut OscRegs) };
+        let reg = unsafe { &mut *(OSC_ADDR as *mut OscRegs) };
         Osc { reg: reg }
     }
 
@@ -66,5 +68,18 @@ impl Drop for Osc {
 impl OscToken {
     pub(crate) fn new() -> OscToken {
         OscToken { _private: () }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn osc_regs() {
+        unsafe {
+            let reg = & *(OSC_ADDR as *const OscRegs);
+            assert_eq!(0x4006_5000 as *const RW<u8>, &reg.cr as *const RW<u8>, "cr");
+        }
     }
 }

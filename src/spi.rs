@@ -10,6 +10,9 @@ use volatile_register::{RO, RW};
 use port::{SpiMosi, SpiMiso, SpiSck, SpiCs};
 use sim::ClockGate;
 
+const SPI0_ADDR: usize = 0x4007_6000;
+const SPI1_ADDR: usize = 0x4007_7000;
+
 #[repr(C,packed)]
 struct SpiRegs {
     s:  RO<u8>,
@@ -147,8 +150,8 @@ impl<'a, 'b, 'c, 'd, W: Word> SpiMaster<'a, 'b, 'c, 'd, W> {
         }
 
         let reg = match bus {
-            0 => &mut *(0x4007_6000 as *mut SpiRegs),
-            1 => &mut *(0x4007_7000 as *mut SpiRegs),
+            0 => &mut *(SPI0_ADDR as *mut SpiRegs),
+            1 => &mut *(SPI1_ADDR as *mut SpiRegs),
             _ => unreachable!()
         };
 
@@ -267,6 +270,45 @@ impl<'a, 'b, 'c, 'd> FullDuplex<u16> for SpiMaster<'a, 'b, 'c, 'd, u16> {
             }
         } else {
             unimplemented!()
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn spi0_regs() {
+        unsafe {
+            let reg = & *(SPI0_ADDR as *const SpiRegs);
+            assert_eq!(0x4007_6000 as *const RO<u8>, &reg.s     as *const RO<u8>, "s");
+            assert_eq!(0x4007_6001 as *const RW<u8>, &reg.br    as *const RW<u8>, "br");
+            assert_eq!(0x4007_6002 as *const RW<u8>, &reg.c2    as *const RW<u8>, "c2");
+            assert_eq!(0x4007_6003 as *const RW<u8>, &reg.c1    as *const RW<u8>, "c1");
+            assert_eq!(0x4007_6004 as *const RW<u8>, &reg.ml    as *const RW<u8>, "ml");
+            assert_eq!(0x4007_6005 as *const RW<u8>, &reg.mh    as *const RW<u8>, "mh");
+            assert_eq!(0x4007_6006 as *const RW<u8>, &reg.dl    as *const RW<u8>, "dl");
+            assert_eq!(0x4007_6007 as *const RW<u8>, &reg.dh    as *const RW<u8>, "dh");
+            assert_eq!(0x4007_600A as *const RW<u8>, &reg.ci    as *const RW<u8>, "ci");
+            assert_eq!(0x4007_600B as *const RW<u8>, &reg.c3    as *const RW<u8>, "c3");
+        }
+    }
+
+    #[test]
+    fn spi1_regs() {
+        unsafe {
+            let reg = & *(SPI1_ADDR as *const SpiRegs);
+            assert_eq!(0x4007_7000 as *const RO<u8>, &reg.s     as *const RO<u8>, "s");
+            assert_eq!(0x4007_7001 as *const RW<u8>, &reg.br    as *const RW<u8>, "br");
+            assert_eq!(0x4007_7002 as *const RW<u8>, &reg.c2    as *const RW<u8>, "c2");
+            assert_eq!(0x4007_7003 as *const RW<u8>, &reg.c1    as *const RW<u8>, "c1");
+            assert_eq!(0x4007_7004 as *const RW<u8>, &reg.ml    as *const RW<u8>, "ml");
+            assert_eq!(0x4007_7005 as *const RW<u8>, &reg.mh    as *const RW<u8>, "mh");
+            assert_eq!(0x4007_7006 as *const RW<u8>, &reg.dl    as *const RW<u8>, "dl");
+            assert_eq!(0x4007_7007 as *const RW<u8>, &reg.dh    as *const RW<u8>, "dh");
+            assert_eq!(0x4007_700A as *const RW<u8>, &reg.ci    as *const RW<u8>, "ci");
+            assert_eq!(0x4007_700B as *const RW<u8>, &reg.c3    as *const RW<u8>, "c3");
         }
     }
 }

@@ -4,6 +4,8 @@ use bit_field::BitField;
 use port::{AdcPin,AdcDiffPPin,AdcDiffMPin,PortName};
 use sim::ClockGate;
 
+const ADC0_ADDR: usize = 0x4003_B000;
+
 #[repr(C,packed)]
 struct AdcRegs {
     sc1a:   RW<u32>,
@@ -26,7 +28,9 @@ struct AdcRegs {
     clp2:   RW<u32>,
     clp1:   RW<u32>,
     clp0:   RW<u32>,
-    pga:    RW<u32>,
+
+    _pad0: u32,
+
     clmd:   RW<u32>,
     clms:   RW<u32>,
     clm4:   RW<u32>,
@@ -130,7 +134,7 @@ impl<'a> Adc<'a> {
         };
 
         let reg = match id {
-            0 => &mut *(0x4003B000 as *mut AdcRegs),
+            0 => &mut *(ADC0_ADDR as *mut AdcRegs),
             _ => return Err(())
         };
 
@@ -243,7 +247,7 @@ impl<'a,'b> AdcDiff<'a,'b> {
         }
 
         let reg = match id {
-            0 => &mut *(0x4003B000 as *mut AdcRegs),
+            0 => &mut *(ADC0_ADDR as *mut AdcRegs),
             _ => return Err(())
         };
 
@@ -321,5 +325,44 @@ impl<'a,'b> AdcDiff<'a,'b> {
 
     pub fn read(&mut self) -> i32 {
         unsafe { self.reg.ra.read() as i32 }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn adc0_test() {
+        unsafe {
+            let reg = & *(ADC0_ADDR as *const AdcRegs);
+            assert_eq!(0x4003_B000 as *const RW<u32>, &reg.sc1a as *const RW<u32>, "sc1a");
+            assert_eq!(0x4003_B004 as *const RW<u32>, &reg.sc1b as *const RW<u32>, "sc1b");
+            assert_eq!(0x4003_B008 as *const RW<u32>, &reg.cfg1 as *const RW<u32>, "cfg1");
+            assert_eq!(0x4003_B00C as *const RW<u32>, &reg.cfg2 as *const RW<u32>, "cfg2");
+            assert_eq!(0x4003_B010 as *const RO<u32>, &reg.ra   as *const RO<u32>, "ra");
+            assert_eq!(0x4003_B014 as *const RO<u32>, &reg.rb   as *const RO<u32>, "rb");
+            assert_eq!(0x4003_B018 as *const RW<u32>, &reg.cv1  as *const RW<u32>, "cv1");
+            assert_eq!(0x4003_B01C as *const RW<u32>, &reg.cv2  as *const RW<u32>, "cv2");
+            assert_eq!(0x4003_B020 as *const RW<u32>, &reg.sc2  as *const RW<u32>, "sc2");
+            assert_eq!(0x4003_B024 as *const RW<u32>, &reg.sc3  as *const RW<u32>, "sc3");
+            assert_eq!(0x4003_B028 as *const RW<u32>, &reg.ofs  as *const RW<u32>, "ofs");
+            assert_eq!(0x4003_B02C as *const RW<u32>, &reg.pg   as *const RW<u32>, "pg");
+            assert_eq!(0x4003_B030 as *const RW<u32>, &reg.mg   as *const RW<u32>, "mg");
+            assert_eq!(0x4003_B034 as *const RW<u32>, &reg.clpd as *const RW<u32>, "clpd");
+            assert_eq!(0x4003_B038 as *const RW<u32>, &reg.clps as *const RW<u32>, "clps");
+            assert_eq!(0x4003_B03C as *const RW<u32>, &reg.clp4 as *const RW<u32>, "clp4");
+            assert_eq!(0x4003_B040 as *const RW<u32>, &reg.clp3 as *const RW<u32>, "clp3");
+            assert_eq!(0x4003_B044 as *const RW<u32>, &reg.clp2 as *const RW<u32>, "clp2");
+            assert_eq!(0x4003_B048 as *const RW<u32>, &reg.clp1 as *const RW<u32>, "clp1");
+            assert_eq!(0x4003_B04C as *const RW<u32>, &reg.clp0 as *const RW<u32>, "clp0");
+            assert_eq!(0x4003_B054 as *const RW<u32>, &reg.clmd as *const RW<u32>, "clmd");
+            assert_eq!(0x4003_B058 as *const RW<u32>, &reg.clms as *const RW<u32>, "clms");
+            assert_eq!(0x4003_B05C as *const RW<u32>, &reg.clm4 as *const RW<u32>, "clm4");
+            assert_eq!(0x4003_B060 as *const RW<u32>, &reg.clm3 as *const RW<u32>, "clm3");
+            assert_eq!(0x4003_B064 as *const RW<u32>, &reg.clm2 as *const RW<u32>, "clm2");
+            assert_eq!(0x4003_B068 as *const RW<u32>, &reg.clm1 as *const RW<u32>, "clm1");
+            assert_eq!(0x4003_B06C as *const RW<u32>, &reg.clm0 as *const RW<u32>, "clm0");
+        }
     }
 }

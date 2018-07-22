@@ -1,5 +1,4 @@
 #![feature(const_fn)]
-#![feature(global_asm)]
 #![feature(untagged_unions)]
 #![no_std]
 

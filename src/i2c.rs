@@ -8,6 +8,9 @@ use interrupts::Interrupt;
 use port::{I2cScl, I2cSda};
 use sim::ClockGate;
 
+const I2C0_ADDR: usize = 0x4006_6000;
+const I2C1_ADDR: usize = 0x4006_7000;
+
 #[repr(C,packed)]
 struct I2cRegs {
     a1:     RW<u8>,
@@ -92,13 +95,14 @@ pub enum Error {
 // TODO: maybe rework to use a builder
 // TODO: support higher bus numbers for other chips
 impl<'a, 'b> I2cMaster<'a, 'b> {
-    pub unsafe fn new(scl: I2cScl<'a>,
-                      sda: I2cSda<'b>,
-                      nvic: &mut NVIC,
-                      (mul, clkdiv): (u8, u8),
-                      op_mode: OpMode,
-                      gate: ClockGate)
-                      -> Result<I2cMaster<'a, 'b>, ()> {
+    pub unsafe fn new(
+        scl: I2cScl<'a>,
+        sda: I2cSda<'b>,
+        nvic: &mut NVIC,
+        (mul, clkdiv): (u8, u8),
+        op_mode: OpMode,
+        gate: ClockGate
+    )-> Result<I2cMaster<'a, 'b>, ()> {
         if scl.bus() != sda.bus() {
             return Err(());
         }
@@ -113,8 +117,8 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
         let bus = sda.bus();
 
         let reg = match bus {
-            0 => &mut *(0x40066000 as *mut I2cRegs),
-            1 => &mut *(0x40067000 as *mut I2cRegs),
+            0 => &mut *(I2C0_ADDR as *mut I2cRegs),
+            1 => &mut *(I2C1_ADDR as *mut I2cRegs),
             _ => unimplemented!()
         };
 
@@ -651,13 +655,14 @@ impl<'a, 'b, 'c> Transmission<'a, 'b, 'c> {
 
 #[cfg(feature = "i2c-slave")]
 impl<'a, 'b> I2cSlave<'a, 'b> {
-    pub unsafe fn new(scl: I2cScl<'a>,
-                      sda: I2cSda<'b>,
-                      nvic: &mut NVIC,
-                      addr: Address,
-                      general_call: bool,
-                      gate: ClockGate)
-                      -> Result<I2cSlave<'a, 'b>, ()> {
+    pub unsafe fn new(
+        scl: I2cScl<'a>,
+        sda: I2cSda<'b>,
+        nvic: &mut NVIC,
+        addr: Address,
+        general_call: bool,
+        gate: ClockGate
+    ) -> Result<I2cSlave<'a, 'b>, ()> {
         if scl.bus() != sda.bus() {
             return Err(());
         }
@@ -665,8 +670,8 @@ impl<'a, 'b> I2cSlave<'a, 'b> {
         let bus = sda.bus();
 
         let reg = match bus {
-            0 => &mut *(0x40066000 as *mut I2cRegs),
-            1 => &mut *(0x40067000 as *mut I2cRegs),
+            0 => &mut *(I2C0_ADDR as *mut I2cRegs),
+            1 => &mut *(I2C1_ADDR as *mut I2cRegs),
             _ => unimplemented!()
         };
 
@@ -809,7 +814,7 @@ interrupt!(I2C1, isr1);
 fn isr0() {
     unsafe {
         interrupt::free(|cs| {
-            let reg = &mut *(0x40066000 as *mut I2cRegs);
+            let reg = &mut *(I2C0_ADDR as *mut I2cRegs);
             let state = I2C0_STATE.borrow_mut(cs);
             let state = state.as_mut().expect("I2C0_STATE uninitialized");
 
@@ -822,7 +827,7 @@ fn isr0() {
 fn isr1() {
     unsafe {
         interrupt::free(|cs| {
-            let reg = &mut *(0x40067000 as *mut I2cRegs);
+            let reg = &mut *(I2C1_ADDR as *mut I2cRegs);
             let state = I2C1_STATE.borrow_mut(cs);
             let state = state.as_mut().expect("I2C1_STATE uninitialized");
 
@@ -1069,6 +1074,49 @@ unsafe fn isr(reg: &mut I2cRegs, state: &mut IsrState) {
                     let _ = state.rx_buf.push_back(reg.d.read());
                 }
             }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn i2c0_regs() {
+        unsafe {
+            let reg = & *(I2C0_ADDR as *const I2cRegs);
+            assert_eq!(0x4006_6000 as *const RW<u8>, &reg.a1    as *const RW<u8>, "a1");
+            assert_eq!(0x4006_6001 as *const RW<u8>, &reg.f     as *const RW<u8>, "f");
+            assert_eq!(0x4006_6002 as *const RW<u8>, &reg.c1    as *const RW<u8>, "c1");
+            assert_eq!(0x4006_6003 as *const RW<u8>, &reg.s     as *const RW<u8>, "s");
+            assert_eq!(0x4006_6004 as *const RW<u8>, &reg.d     as *const RW<u8>, "d");
+            assert_eq!(0x4006_6005 as *const RW<u8>, &reg.c2    as *const RW<u8>, "c2");
+            assert_eq!(0x4006_6006 as *const RW<u8>, &reg.flt   as *const RW<u8>, "flt");
+            assert_eq!(0x4006_6007 as *const RW<u8>, &reg.ra    as *const RW<u8>, "ra");
+            assert_eq!(0x4006_6008 as *const RW<u8>, &reg.smb   as *const RW<u8>, "smb");
+            assert_eq!(0x4006_6009 as *const RW<u8>, &reg.a2    as *const RW<u8>, "a2");
+            assert_eq!(0x4006_600A as *const RW<u8>, &reg.slth  as *const RW<u8>, "slth");
+            assert_eq!(0x4006_600B as *const RW<u8>, &reg.sltl  as *const RW<u8>, "sltl");
+        }
+    }
+
+    #[test]
+    fn i2c1_regs() {
+        unsafe {
+            let reg = & *(I2C1_ADDR as *const I2cRegs);
+            assert_eq!(0x4006_7000 as *const RW<u8>, &reg.a1    as *const RW<u8>, "a1");
+            assert_eq!(0x4006_7001 as *const RW<u8>, &reg.f     as *const RW<u8>, "f");
+            assert_eq!(0x4006_7002 as *const RW<u8>, &reg.c1    as *const RW<u8>, "c1");
+            assert_eq!(0x4006_7003 as *const RW<u8>, &reg.s     as *const RW<u8>, "s");
+            assert_eq!(0x4006_7004 as *const RW<u8>, &reg.d     as *const RW<u8>, "d");
+            assert_eq!(0x4006_7005 as *const RW<u8>, &reg.c2    as *const RW<u8>, "c2");
+            assert_eq!(0x4006_7006 as *const RW<u8>, &reg.flt   as *const RW<u8>, "flt");
+            assert_eq!(0x4006_7007 as *const RW<u8>, &reg.ra    as *const RW<u8>, "ra");
+            assert_eq!(0x4006_7008 as *const RW<u8>, &reg.smb   as *const RW<u8>, "smb");
+            assert_eq!(0x4006_7009 as *const RW<u8>, &reg.a2    as *const RW<u8>, "a2");
+            assert_eq!(0x4006_700A as *const RW<u8>, &reg.slth  as *const RW<u8>, "slth");
+            assert_eq!(0x4006_700B as *const RW<u8>, &reg.sltl  as *const RW<u8>, "sltl");
         }
     }
 }

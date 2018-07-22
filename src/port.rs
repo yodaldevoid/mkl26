@@ -21,8 +21,14 @@ struct PortRegs {
     gpclr:      WO<u32>,
     gpchr:      WO<u32>,
     reserved_0: [u8; 24],
-    isfr:       RW<u32>
+    isfr:       RW<u32>,
 }
+
+const PORT_A_ADDR: usize = 0x4004_9000;
+const PORT_B_ADDR: usize = 0x4004_A000;
+const PORT_C_ADDR: usize = 0x4004_B000;
+const PORT_D_ADDR: usize = 0x4004_C000;
+const PORT_E_ADDR: usize = 0x4004_D000;
 
 pub struct Port {
     reg: UnsafeCell<&'static mut PortRegs>,
@@ -33,24 +39,24 @@ pub struct Port {
 impl Port {
     pub unsafe fn new(name: PortName, gate: ClockGate) -> Port {
         let reg = &mut * match name {
-            PortName::A => 0x40049000 as *mut PortRegs,
-            PortName::B => 0x4004A000 as *mut PortRegs,
-            PortName::C => 0x4004B000 as *mut PortRegs,
-            PortName::D => 0x4004C000 as *mut PortRegs,
-            PortName::E => 0x4004D000 as *mut PortRegs
+            PortName::A => PORT_A_ADDR as *mut PortRegs,
+            PortName::B => PORT_B_ADDR as *mut PortRegs,
+            PortName::C => PORT_C_ADDR as *mut PortRegs,
+            PortName::D => PORT_D_ADDR as *mut PortRegs,
+            PortName::E => PORT_E_ADDR as *mut PortRegs
         };
 
         Port { reg: UnsafeCell::new(reg), locks: Default::default(), _gate: gate }
     }
 
     pub fn name(&self) -> PortName {
-        let addr = (self.reg() as *const PortRegs) as u32;
+        let addr = (self.reg() as *const PortRegs) as usize;
         match addr {
-            0x40049000 => PortName::A,
-            0x4004A000 => PortName::B,
-            0x4004B000 => PortName::C,
-            0x4004C000 => PortName::D,
-            0x4004D000 => PortName::E,
+            PORT_A_ADDR => PortName::A,
+            PORT_B_ADDR => PortName::B,
+            PORT_C_ADDR => PortName::C,
+            PORT_D_ADDR => PortName::D,
+            PORT_E_ADDR => PortName::E,
             _ => unreachable!()
         }
     }
@@ -665,20 +671,40 @@ impl <'a> Drop for Pin<'a> {
     }
 }
 
+#[allow(dead_code)]
+const GPIO_A_ADDR: usize = 0x400F_F000;
+#[allow(dead_code)]
+const GPIO_B_ADDR: usize = 0x400F_F040;
+#[allow(dead_code)]
+const GPIO_C_ADDR: usize = 0x400F_F080;
+#[allow(dead_code)]
+const GPIO_D_ADDR: usize = 0x400F_F0C0;
+#[allow(dead_code)]
+const GPIO_E_ADDR: usize = 0x400F_F100;
+#[allow(dead_code)]
+const FGPIO_A_ADDR: usize = 0xF800_0000;
+#[allow(dead_code)]
+const FGPIO_B_ADDR: usize = 0xF800_0040;
+#[allow(dead_code)]
+const FGPIO_C_ADDR: usize = 0xF800_0080;
+#[allow(dead_code)]
+const FGPIO_D_ADDR: usize = 0xF800_00C0;
+#[allow(dead_code)]
+const FGPIO_E_ADDR: usize = 0xF800_0100;
+
 #[repr(C,packed)]
-struct GpioReg {
+struct GpioRegs {
     pdor: RW<u32>,
     psor: WO<u32>,
     pcor: WO<u32>,
     ptor: WO<u32>,
     pdir: RO<u32>,
-    pddr: RW<u32>
+    pddr: RW<u32>,
 }
-
 
 // TODO: maybe split into input and output
 pub struct Gpio<'a> {
-    gpio: *mut GpioReg,
+    gpio: *mut GpioRegs,
     pin: Pin<'a>
 }
 
@@ -688,26 +714,26 @@ impl<'a> Gpio<'a> {
         let gpio = match port {
             // GPIO
             #[cfg(not(feature = "fgpio"))]
-            PortName::A => 0x400FF000 as *mut GpioReg,
+            PortName::A => GPIO_A_ADDR as *mut GpioRegs,
             #[cfg(not(feature = "fgpio"))]
-            PortName::B => 0x400FF040 as *mut GpioReg,
+            PortName::B => GPIO_B_ADDR as *mut GpioRegs,
             #[cfg(not(feature = "fgpio"))]
-            PortName::C => 0x400FF080 as *mut GpioReg,
+            PortName::C => GPIO_C_ADDR as *mut GpioRegs,
             #[cfg(not(feature = "fgpio"))]
-            PortName::D => 0x400FF0C0 as *mut GpioReg,
+            PortName::D => GPIO_D_ADDR as *mut GpioRegs,
             #[cfg(not(feature = "fgpio"))]
-            PortName::E => 0x400FF100 as *mut GpioReg,
+            PortName::E => GPIO_E_ADDR as *mut GpioRegs,
             // FGPIO
             #[cfg(feature = "fgpio")]
-            PortName::A => 0xF8000000 as *mut GpioReg,
+            PortName::A => FGPIO_A_ADDR as *mut GpioRegs,
             #[cfg(feature = "fgpio")]
-            PortName::B => 0xF8000040 as *mut GpioReg,
+            PortName::B => FGPIO_B_ADDR as *mut GpioRegs,
             #[cfg(feature = "fgpio")]
-            PortName::C => 0xF8000080 as *mut GpioReg,
+            PortName::C => FGPIO_C_ADDR as *mut GpioRegs,
             #[cfg(feature = "fgpio")]
-            PortName::D => 0xF80000C0 as *mut GpioReg,
+            PortName::D => FGPIO_D_ADDR as *mut GpioRegs,
             #[cfg(feature = "fgpio")]
-            PortName::E => 0xF8000100 as *mut GpioReg,
+            PortName::E => FGPIO_E_ADDR as *mut GpioRegs,
         };
 
         Gpio { gpio: gpio, pin: pin }
@@ -909,5 +935,195 @@ impl<'a> UartRx<'a> {
 impl<'a> UartTx<'a> {
     pub fn bus(&self) -> u8 {
         self.uart
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn port_a_regs() {
+        unsafe {
+            let reg = & *(PORT_A_ADDR as *const PortRegs);
+            assert_eq!(0x4004_9000 as *const RW<u32>, &reg.pcr      as *const RW<u32>, "pcr");
+            assert_eq!(0x4004_9080 as *const WO<u32>, &reg.gpclr    as *const WO<u32>, "gpclr");
+            assert_eq!(0x4004_9084 as *const WO<u32>, &reg.gpchr    as *const WO<u32>, "gpchr");
+            assert_eq!(0x4004_90A0 as *const RW<u32>, &reg.isfr     as *const RW<u32>, "isfr");
+        }
+    }
+
+    #[test]
+    fn port_b_regs() {
+        unsafe {
+            let reg = & *(PORT_B_ADDR as *const PortRegs);
+            assert_eq!(0x4004_A000 as *const RW<u32>, &reg.pcr      as *const RW<u32>, "pcr");
+            assert_eq!(0x4004_A080 as *const WO<u32>, &reg.gpclr    as *const WO<u32>, "gpclr");
+            assert_eq!(0x4004_A084 as *const WO<u32>, &reg.gpchr    as *const WO<u32>, "gpchr");
+            assert_eq!(0x4004_A0A0 as *const RW<u32>, &reg.isfr     as *const RW<u32>, "isfr");
+        }
+    }
+
+    #[test]
+    fn port_c_regs() {
+        unsafe {
+            let reg = & *(PORT_C_ADDR as *const PortRegs);
+            assert_eq!(0x4004_B000 as *const RW<u32>, &reg.pcr      as *const RW<u32>, "pcr");
+            assert_eq!(0x4004_B080 as *const WO<u32>, &reg.gpclr    as *const WO<u32>, "gpclr");
+            assert_eq!(0x4004_B084 as *const WO<u32>, &reg.gpchr    as *const WO<u32>, "gpchr");
+            assert_eq!(0x4004_B0A0 as *const RW<u32>, &reg.isfr     as *const RW<u32>, "isfr");
+        }
+    }
+
+    #[test]
+    fn port_d_regs() {
+        unsafe {
+            let reg = & *(PORT_D_ADDR as *const PortRegs);
+            assert_eq!(0x4004_C000 as *const RW<u32>, &reg.pcr      as *const RW<u32>, "pcr");
+            assert_eq!(0x4004_C080 as *const WO<u32>, &reg.gpclr    as *const WO<u32>, "gpclr");
+            assert_eq!(0x4004_C084 as *const WO<u32>, &reg.gpchr    as *const WO<u32>, "gpchr");
+            assert_eq!(0x4004_C0A0 as *const RW<u32>, &reg.isfr     as *const RW<u32>, "isfr");
+        }
+    }
+
+    #[test]
+    fn port_e_regs() {
+        unsafe {
+            let reg = & *(PORT_E_ADDR as *const PortRegs);
+            assert_eq!(0x4004_D000 as *const RW<u32>, &reg.pcr      as *const RW<u32>, "pcr");
+            assert_eq!(0x4004_D080 as *const WO<u32>, &reg.gpclr    as *const WO<u32>, "gpclr");
+            assert_eq!(0x4004_D084 as *const WO<u32>, &reg.gpchr    as *const WO<u32>, "gpchr");
+            assert_eq!(0x4004_D0A0 as *const RW<u32>, &reg.isfr     as *const RW<u32>, "isfr");
+        }
+    }
+
+    #[test]
+    fn gpio_a_regs() {
+        unsafe {
+            let reg = & *(GPIO_A_ADDR as *const GpioRegs);
+            assert_eq!(0x400F_F000 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
+            assert_eq!(0x400F_F004 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
+            assert_eq!(0x400F_F008 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
+            assert_eq!(0x400F_F00C as *const WO<u32>, &reg.ptor as *const WO<u32>, "ptor");
+            assert_eq!(0x400F_F010 as *const RO<u32>, &reg.pdir as *const RO<u32>, "pdir");
+            assert_eq!(0x400F_F014 as *const RW<u32>, &reg.pddr as *const RW<u32>, "pddr");
+        }
+    }
+
+    #[test]
+    fn gpio_b_regs() {
+        unsafe {
+            let reg = & *(GPIO_B_ADDR as *const GpioRegs);
+            assert_eq!(0x400F_F040 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
+            assert_eq!(0x400F_F044 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
+            assert_eq!(0x400F_F048 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
+            assert_eq!(0x400F_F04C as *const WO<u32>, &reg.ptor as *const WO<u32>, "ptor");
+            assert_eq!(0x400F_F050 as *const RO<u32>, &reg.pdir as *const RO<u32>, "pdir");
+            assert_eq!(0x400F_F054 as *const RW<u32>, &reg.pddr as *const RW<u32>, "pddr");
+        }
+    }
+
+    #[test]
+    fn gpio_c_regs() {
+        unsafe {
+            let reg = & *(GPIO_C_ADDR as *const GpioRegs);
+            assert_eq!(0x400F_F080 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
+            assert_eq!(0x400F_F084 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
+            assert_eq!(0x400F_F088 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
+            assert_eq!(0x400F_F08C as *const WO<u32>, &reg.ptor as *const WO<u32>, "ptor");
+            assert_eq!(0x400F_F090 as *const RO<u32>, &reg.pdir as *const RO<u32>, "pdir");
+            assert_eq!(0x400F_F094 as *const RW<u32>, &reg.pddr as *const RW<u32>, "pddr");
+        }
+    }
+
+    #[test]
+    fn gpio_d_regs() {
+        unsafe {
+            let reg = & *(GPIO_D_ADDR as *const GpioRegs);
+            assert_eq!(0x400F_F0C0 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
+            assert_eq!(0x400F_F0C4 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
+            assert_eq!(0x400F_F0C8 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
+            assert_eq!(0x400F_F0CC as *const WO<u32>, &reg.ptor as *const WO<u32>, "ptor");
+            assert_eq!(0x400F_F0D0 as *const RO<u32>, &reg.pdir as *const RO<u32>, "pdir");
+            assert_eq!(0x400F_F0D4 as *const RW<u32>, &reg.pddr as *const RW<u32>, "pddr");
+        }
+    }
+
+    #[test]
+    fn gpio_e_regs() {
+        unsafe {
+            let reg = & *(GPIO_E_ADDR as *const GpioRegs);
+            assert_eq!(0x400F_F100 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
+            assert_eq!(0x400F_F104 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
+            assert_eq!(0x400F_F108 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
+            assert_eq!(0x400F_F10C as *const WO<u32>, &reg.ptor as *const WO<u32>, "ptor");
+            assert_eq!(0x400F_F110 as *const RO<u32>, &reg.pdir as *const RO<u32>, "pdir");
+            assert_eq!(0x400F_F114 as *const RW<u32>, &reg.pddr as *const RW<u32>, "pddr");
+        }
+    }
+
+    #[test]
+    fn fgpio_a_regs() {
+        unsafe {
+            let reg = & *(FGPIO_A_ADDR as *const GpioRegs);
+            assert_eq!(0xF800_0000 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
+            assert_eq!(0xF800_0004 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
+            assert_eq!(0xF800_0008 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
+            assert_eq!(0xF800_000C as *const WO<u32>, &reg.ptor as *const WO<u32>, "ptor");
+            assert_eq!(0xF800_0010 as *const RO<u32>, &reg.pdir as *const RO<u32>, "pdir");
+            assert_eq!(0xF800_0014 as *const RW<u32>, &reg.pddr as *const RW<u32>, "pddr");
+        }
+    }
+
+    #[test]
+    fn fgpio_b_regs() {
+        unsafe {
+            let reg = & *(FGPIO_B_ADDR as *const GpioRegs);
+            assert_eq!(0xF800_0040 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
+            assert_eq!(0xF800_0044 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
+            assert_eq!(0xF800_0048 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
+            assert_eq!(0xF800_004C as *const WO<u32>, &reg.ptor as *const WO<u32>, "ptor");
+            assert_eq!(0xF800_0050 as *const RO<u32>, &reg.pdir as *const RO<u32>, "pdir");
+            assert_eq!(0xF800_0054 as *const RW<u32>, &reg.pddr as *const RW<u32>, "pddr");
+        }
+    }
+
+    #[test]
+    fn fgpio_c_regs() {
+        unsafe {
+            let reg = & *(FGPIO_C_ADDR as *const GpioRegs);
+            assert_eq!(0xF800_0080 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
+            assert_eq!(0xF800_0084 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
+            assert_eq!(0xF800_0088 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
+            assert_eq!(0xF800_008C as *const WO<u32>, &reg.ptor as *const WO<u32>, "ptor");
+            assert_eq!(0xF800_0090 as *const RO<u32>, &reg.pdir as *const RO<u32>, "pdir");
+            assert_eq!(0xF800_0094 as *const RW<u32>, &reg.pddr as *const RW<u32>, "pddr");
+        }
+    }
+
+    #[test]
+    fn fgpio_d_regs() {
+        unsafe {
+            let reg = & *(FGPIO_D_ADDR as *const GpioRegs);
+            assert_eq!(0xF800_00C0 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
+            assert_eq!(0xF800_00C4 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
+            assert_eq!(0xF800_00C8 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
+            assert_eq!(0xF800_00CC as *const WO<u32>, &reg.ptor as *const WO<u32>, "ptor");
+            assert_eq!(0xF800_00D0 as *const RO<u32>, &reg.pdir as *const RO<u32>, "pdir");
+            assert_eq!(0xF800_00D4 as *const RW<u32>, &reg.pddr as *const RW<u32>, "pddr");
+        }
+    }
+
+    #[test]
+    fn fgpio_e_regs() {
+        unsafe {
+            let reg = & *(FGPIO_E_ADDR as *const GpioRegs);
+            assert_eq!(0xF800_0100 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
+            assert_eq!(0xF800_0104 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
+            assert_eq!(0xF800_0108 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
+            assert_eq!(0xF800_010C as *const WO<u32>, &reg.ptor as *const WO<u32>, "ptor");
+            assert_eq!(0xF800_0110 as *const RO<u32>, &reg.pdir as *const RO<u32>, "pdir");
+            assert_eq!(0xF800_0114 as *const RW<u32>, &reg.pddr as *const RW<u32>, "pddr");
+        }
     }
 }

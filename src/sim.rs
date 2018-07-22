@@ -76,29 +76,31 @@ pub enum Uart0ClkSrc {
     McgIR = 3
 }
 
+const SIM_ADDR: usize = 0x4004_7000;
+
 #[repr(C,packed)]
 struct SimRegs {
     sopt1:      RW<u32>,
     sopt1_cfg:  RW<u32>,
-    _pad0:      [u32; 1023],
+    _pad0: [u32; 1023],
     sopt2:      RW<u32>,
-    _pad1:      u32,
+    _pad1: u32,
     sopt4:      RW<u32>,
     sopt5:      RW<u32>,
-    _pad2:      u32,
+    _pad2: u32,
     sopt7:      RW<u32>,
-    _pad3:      [u32; 2],
+    _pad3: [u32; 2],
     sdid:       RO<u32>,
-    _pad4:      [u32; 3],
+    _pad4: [u32; 3],
     scgc4:      RW<u32>,
     scgc5:      RW<u32>,
     scgc6:      RW<u32>,
     scgc7:      RW<u32>,
     clkdiv1:    RW<u32>,
-    _pad5:      u32,
-    fcfg1:      RO<u32>,
+    _pad5: u32,
+    fcfg1:      RW<u32>,
     fcfg2:      RO<u32>,
-    _pad6:      u32,
+    _pad6: u32,
     uidmh:      RO<u32>,
     uidml:      RO<u32>,
     uidl:       RO<u32>,
@@ -116,7 +118,7 @@ impl Sim {
         if was_init {
             panic!("Cannot initialize SIM: It's already active");
         }
-        let reg = unsafe { &mut *(0x40047000 as *mut SimRegs) };
+        let reg = unsafe { &mut *(SIM_ADDR as *mut SimRegs) };
         Sim { reg: reg }
     }
 
@@ -137,11 +139,11 @@ impl Sim {
 
     pub fn port(&mut self, port: PortName) -> Port {
         let mut gate = match port {
-            PortName::A => ClockGate::new(5,9),
-            PortName::B => ClockGate::new(5,10),
-            PortName::C => ClockGate::new(5,11),
-            PortName::D => ClockGate::new(5,12),
-            PortName::E => ClockGate::new(5,13),
+            PortName::A => ClockGate::new(5, 9),
+            PortName::B => ClockGate::new(5, 10),
+            PortName::C => ClockGate::new(5, 11),
+            PortName::D => ClockGate::new(5, 12),
+            PortName::E => ClockGate::new(5, 13),
         };
         if gate.is_enabled() {
             panic!("Cannot create Port instance; it is already in use");
@@ -376,9 +378,11 @@ pub mod cop {
         Windowed = 1
     }
 
+    const COP_ADDR: usize = 0x4004_8100;
+
     struct CopRegs {
         copc:   RW<u32>,
-        srvcop: WO<u32>
+        srvcop: WO<u32>,
     }
 
     pub struct Cop {
@@ -387,7 +391,7 @@ pub mod cop {
 
     impl Cop {
         pub fn new() -> Cop {
-            let reg = unsafe { &mut *(0x4004_8100 as *mut CopRegs) };
+            let reg = unsafe { &mut *(COP_ADDR as *mut CopRegs) };
             Cop { reg }
         }
 
@@ -416,6 +420,49 @@ pub mod cop {
         pub unsafe fn reset(&mut self) {
             self.reg.srvcop.write(0x55);
             self.reg.srvcop.write(0xAA);
+        }
+    }
+
+    #[cfg(test)]
+    mod tests {
+        use super::*;
+
+        #[test]
+        fn cop_test() {
+            unsafe {
+                let reg = & *(COP_ADDR as *const CopRegs);
+                assert_eq!(0x4004_8100 as *const RW<u32>, &reg.copc     as *const RW<u32>, "copc");
+                assert_eq!(0x4004_8104 as *const WO<u32>, &reg.srvcop   as *const WO<u32>, "srvcop");
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn sim_test() {
+        unsafe {
+            let reg = & *(SIM_ADDR as *const SimRegs);
+            assert_eq!(0x4004_7000 as *const RW<u32>, &reg.sopt1        as *const RW<u32>, "sopt1");
+            assert_eq!(0x4004_7004 as *const RW<u32>, &reg.sopt1_cfg    as *const RW<u32>, "sopt1_cfg");
+            assert_eq!(0x4004_8004 as *const RW<u32>, &reg.sopt2        as *const RW<u32>, "sopt2");
+            assert_eq!(0x4004_800C as *const RW<u32>, &reg.sopt4        as *const RW<u32>, "sopt4");
+            assert_eq!(0x4004_8010 as *const RW<u32>, &reg.sopt5        as *const RW<u32>, "sopt5");
+            assert_eq!(0x4004_8018 as *const RW<u32>, &reg.sopt7        as *const RW<u32>, "sopt7");
+            assert_eq!(0x4004_8024 as *const RO<u32>, &reg.sdid         as *const RO<u32>, "sdid");
+            assert_eq!(0x4004_8034 as *const RW<u32>, &reg.scgc4        as *const RW<u32>, "scgc4");
+            assert_eq!(0x4004_8038 as *const RW<u32>, &reg.scgc5        as *const RW<u32>, "scgc5");
+            assert_eq!(0x4004_803C as *const RW<u32>, &reg.scgc6        as *const RW<u32>, "scgc6");
+            assert_eq!(0x4004_8040 as *const RW<u32>, &reg.scgc7        as *const RW<u32>, "scgc7");
+            assert_eq!(0x4004_8044 as *const RW<u32>, &reg.clkdiv1      as *const RW<u32>, "clkdiv1");
+            assert_eq!(0x4004_804C as *const RW<u32>, &reg.fcfg1        as *const RW<u32>, "fcfg1");
+            assert_eq!(0x4004_8050 as *const RO<u32>, &reg.fcfg2        as *const RO<u32>, "fcfg2");
+            assert_eq!(0x4004_8058 as *const RO<u32>, &reg.uidmh        as *const RO<u32>, "uidmh");
+            assert_eq!(0x4004_805C as *const RO<u32>, &reg.uidml        as *const RO<u32>, "uidml");
+            assert_eq!(0x4004_8060 as *const RO<u32>, &reg.uidl         as *const RO<u32>, "uidl");
         }
     }
 }

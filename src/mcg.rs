@@ -7,6 +7,8 @@ use atomic::InterruptAtomic;
 use osc::OscToken;
 use sim::{PllFllSel, Sim};
 
+const MCG_ADDR: usize = 0x4006_4000;
+
 #[repr(C,packed)]
 struct McgRegs {
     c1:     RW<u8>,
@@ -23,6 +25,8 @@ struct McgRegs {
     atcvl:  RW<u8>,
     c7:     RW<u8>,
     c8:     RW<u8>,
+    c9:     RW<u8>,
+    c10:    RW<u8>,
 }
 
 pub struct Mcg {
@@ -61,7 +65,7 @@ impl Mcg {
         if was_init {
             panic!("Cannot initialize MCG: It's already active");
         }
-        let reg = unsafe { &mut *(0x40064000 as *mut McgRegs) };
+        let reg = unsafe { &mut *(MCG_ADDR as *mut McgRegs) };
         Mcg { reg: reg }
     }
 
@@ -706,5 +710,31 @@ impl Blpe {
         unsafe { sim.select_pll_fll(PllFllSel::PllDiv2); }
 
         Pbe { mcg: self.mcg }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn mcg_regs() {
+        unsafe {
+            let reg = & *(MCG_ADDR as *const McgRegs);
+            assert_eq!(0x4006_4000 as *const RW<u8>, &reg.c1    as *const RW<u8>, "c1");
+            assert_eq!(0x4006_4001 as *const RW<u8>, &reg.c2    as *const RW<u8>, "c2");
+            assert_eq!(0x4006_4002 as *const RW<u8>, &reg.c3    as *const RW<u8>, "c3");
+            assert_eq!(0x4006_4003 as *const RW<u8>, &reg.c4    as *const RW<u8>, "c4");
+            assert_eq!(0x4006_4004 as *const RW<u8>, &reg.c5    as *const RW<u8>, "c5");
+            assert_eq!(0x4006_4005 as *const RW<u8>, &reg.c6    as *const RW<u8>, "c6");
+            assert_eq!(0x4006_4006 as *const RO<u8>, &reg.s     as *const RO<u8>, "s");
+            assert_eq!(0x4006_4008 as *const RW<u8>, &reg.sc    as *const RW<u8>, "sc");
+            assert_eq!(0x4006_400A as *const RW<u8>, &reg.atcvh as *const RW<u8>, "atcvh");
+            assert_eq!(0x4006_400B as *const RW<u8>, &reg.atcvl as *const RW<u8>, "atcvl");
+            assert_eq!(0x4006_400C as *const RW<u8>, &reg.c7    as *const RW<u8>, "c7");
+            assert_eq!(0x4006_400D as *const RW<u8>, &reg.c8    as *const RW<u8>, "c8");
+            assert_eq!(0x4006_400E as *const RW<u8>, &reg.c9    as *const RW<u8>, "c9");
+            assert_eq!(0x4006_400F as *const RW<u8>, &reg.c10   as *const RW<u8>, "c10");
+        }
     }
 }
