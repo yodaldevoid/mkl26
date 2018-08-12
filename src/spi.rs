@@ -1,5 +1,6 @@
 //! FIFO is 8 bytes big on SPI1. No FIFO on SPI0.
 
+use core::cell::RefCell;
 use core::marker::PhantomData;
 
 use bit_field::BitField;
