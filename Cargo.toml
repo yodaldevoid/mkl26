@@ -13,7 +13,7 @@ nb = "0.1.1"
 volatile-register = "^0.2"
 
 [dev_dependencies]
-cortex-m-rt = { version = "^0.5", features = ["device", "pre_init"] }
+cortex-m-rt = { version = "^0.5", features = ["device"] }
 
 [features]
 default = [ # default to everything on for docs
