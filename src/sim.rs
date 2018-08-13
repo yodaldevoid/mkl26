@@ -69,6 +69,16 @@ pub enum PllFllSel {
     PllDiv2 = 1,
 }
 
+/// USB clock source
+///
+/// Selects the clock source for the USB 48 MHz clock.
+pub enum UsbSrc {
+    /// External bypass clock
+    UsbClkIn = 0,
+    /// MCG FLL output or MCG PLL output divided by 2. Which determined by PLLFLLSEL.
+    McgXLL = 1
+}
+
 /// UART0 transmit and receive clock source
 pub enum Uart0ClkSrc {
     /// Transmit and receive clock disabled
@@ -140,6 +150,13 @@ impl Sim {
     pub unsafe fn select_pll_fll(&mut self, sel: PllFllSel) {
         self.reg.sopt2.modify(|mut sopt2| {
             sopt2.set_bit(16, sel as u8 == 1);
+            sopt2
+        });
+    }
+
+    pub unsafe fn select_usb_source(&mut self, sel: UsbSrc) {
+        self.reg.sopt2.modify(|mut sopt2| {
+            sopt2.set_bit(18, sel as u8 == 1);
             sopt2
         });
     }
