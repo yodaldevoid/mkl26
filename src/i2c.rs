@@ -797,11 +797,31 @@ impl<'a, 'b> I2cSlave<'a, 'b> {
     }
 
     pub fn set_rx_callback(&mut self, callback: Option<fn(u8, &ArrayDeque<[u8; 64]>)>) {
-        unimplemented!()
+        interrupt::free(|cs| {
+            let mut state = match self.bus {
+                0 => I2C0_STATE.borrow(cs).borrow_mut(),
+                1 => I2C1_STATE.borrow(cs).borrow_mut(),
+                _ => unreachable!(),
+            };
+            // TODO: format! does not exist,find another way
+            let state = state.as_mut().expect("I2CX_STATE uninitialized");
+
+            state.slave_rx_callback = callback;
+        });
     }
 
     pub fn set_tx_callback(&mut self, callback: Option<fn(u8, &mut ArrayDeque<[u8; 64]>)>) {
-        unimplemented!()
+        interrupt::free(|cs| {
+            let mut state = match self.bus {
+                0 => I2C0_STATE.borrow(cs).borrow_mut(),
+                1 => I2C1_STATE.borrow(cs).borrow_mut(),
+                _ => unreachable!(),
+            };
+            // TODO: format! does not exist,find another way
+            let state = state.as_mut().expect("I2CX_STATE uninitialized");
+
+            state.slave_tx_callback = callback;
+        });
     }
 }
 
