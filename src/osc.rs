@@ -27,7 +27,7 @@ impl Osc {
             panic!("Cannot initialize OSC: It's already active");
         }
         let reg = unsafe { &mut *(OSC_ADDR as *mut OscRegs) };
-        Osc { reg: reg }
+        Osc { reg }
     }
 
     pub fn enable(&mut self, capacitance: u8) -> OscToken {

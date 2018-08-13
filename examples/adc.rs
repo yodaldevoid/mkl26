@@ -34,24 +34,23 @@ unsafe fn disable_wdog() {
 entry!(main);
 
 fn main() -> ! {
-    // Enable the crystal oscillator with 10pf of capacitance
+    // Enable the crystal oscillator with 10 pf of capacitance
     let osc_token = Osc::new().enable(10);
 
     // Set our clocks:
-    // core/system: 48Mhz
-    // bus: 24MHz
-    // flash: 24MHz
+    // core/system: 48 Mhz
+    // bus: 24 MHz
+    // flash: 24 MHz
     let mut sim = Sim::new();
     sim.set_dividers(1, 2);
-    // We would also set the USB divider here if we wanted to use it.
     let mcg = Mcg::new();
     if let Clock::Fei(mut fei) = mcg.clock() {
-        // Our 16MHz xtal is "very fast", and needs to be divided
+        // Our 16 MHz xtal is "very fast", and needs to be divided
         // by 512 to be in the acceptable FLL range.
         let ext_token = fei.enable_xtal(OscRange::VeryHigh, osc_token);
         let fbe = fei.use_external_bypass(512, ext_token);
 
-        // PLL is 24/8 * xtal == 48MHz
+        // PLL is 24/8 * xtal == 48 MHz
         let pbe = fbe.enable_pll(24, 8, &mut sim);
         pbe.use_pll();
     } else {

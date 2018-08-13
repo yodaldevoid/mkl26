@@ -156,11 +156,11 @@ impl<'a> Adc<'a> {
 
         reg.sc1a.modify(|mut sc1a| {
             sc1a.set_bit(5, false);
-            sc1a.set_bits(0..5, ch as u32);
+            sc1a.set_bits(0..5, u32::from(ch));
             sc1a
         });
 
-        Ok(Adc {reg: reg, _pin: pin, _gate: gate})
+        Ok(Adc { reg, _pin: pin, _gate: gate })
     }
 
     pub fn calibrate(&mut self) -> Result<u32, ()> {
@@ -264,11 +264,11 @@ impl<'a,'b> AdcDiff<'a,'b> {
 
         reg.sc1a.modify(|mut sc1a| {
             sc1a.set_bit(5, true);
-            sc1a.set_bits(0..5, ch as u32);
+            sc1a.set_bits(0..5, u32::from(ch));
             sc1a
         });
 
-        Ok(AdcDiff {reg: reg, _pos: pos, _neg: neg, _gate: gate})
+        Ok(AdcDiff { reg, _pos: pos, _neg: neg, _gate: gate })
     }
 
     pub fn calibrate(&mut self) -> Result<(u32, u32), ()> {

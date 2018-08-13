@@ -33,6 +33,7 @@ pub struct Mcg {
     reg: &'static mut McgRegs
 }
 
+#[derive(Clone, Copy)]
 pub enum OscRange {
     Low = 0,
     High = 1,
@@ -66,7 +67,7 @@ impl Mcg {
             panic!("Cannot initialize MCG: It's already active");
         }
         let reg = unsafe { &mut *(MCG_ADDR as *mut McgRegs) };
-        Mcg { reg: reg }
+        Mcg { reg }
     }
 
     //TODO: Stop

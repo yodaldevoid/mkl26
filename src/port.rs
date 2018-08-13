@@ -7,6 +7,7 @@ use volatile_register::{RO,RW,WO};
 use atomic::InterruptAtomic;
 use sim::ClockGate;
 
+#[derive(Clone, Copy)]
 pub enum PortName {
     A,
     B,
@@ -92,18 +93,19 @@ pub struct Pin<'a> {
     pin: usize
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum DriveStrength {
     Low = 0,
     High = 1,
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum SlewRate {
     Fast = 0,
     Slow = 1,
 }
 
+#[derive(Clone, Copy)]
 pub enum Pull {
     Disable = 0,
     Down = 2,
@@ -736,12 +738,12 @@ impl<'a> Gpio<'a> {
             PortName::E => FGPIO_E_ADDR as *mut GpioRegs,
         };
 
-        Gpio { gpio: gpio, pin: pin }
+        Gpio { gpio, pin }
     }
 
     pub fn input(&mut self) {
         unsafe {
-            (&mut (*self.gpio)).pddr.modify(|mut pddr| {
+            (*self.gpio).pddr.modify(|mut pddr| {
                 pddr &= !(1 << self.pin.pin);
                 pddr
             });
@@ -750,13 +752,13 @@ impl<'a> Gpio<'a> {
 
     pub fn read(&self) -> bool {
         unsafe {
-            (&mut (*self.gpio)).pdir.read().get_bit(self.pin.pin as u8)
+            (*self.gpio).pdir.read().get_bit(self.pin.pin as u8)
         }
     }
 
     pub fn output(&mut self) {
         unsafe {
-            (&mut (*self.gpio)).pddr.modify(|mut pddr| {
+            (*self.gpio).pddr.modify(|mut pddr| {
                 pddr |= 1 << self.pin.pin;
                 pddr
             });
@@ -765,19 +767,19 @@ impl<'a> Gpio<'a> {
 
     pub fn high(&mut self) {
         unsafe {
-            (&mut (*self.gpio)).psor.write(1 << self.pin.pin);
+            (*self.gpio).psor.write(1 << self.pin.pin);
         }
     }
 
     pub fn low(&mut self) {
         unsafe {
-            (&mut (*self.gpio)).pcor.write(1 << self.pin.pin);
+            (*self.gpio).pcor.write(1 << self.pin.pin);
         }
     }
 
     pub fn toggle(&mut self) {
         unsafe {
-            (&mut (*self.gpio)).ptor.write(1 << self.pin.pin);
+            (*self.gpio).ptor.write(1 << self.pin.pin);
         }
     }
 }

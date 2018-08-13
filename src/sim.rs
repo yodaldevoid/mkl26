@@ -25,7 +25,7 @@ impl ClockGate {
     fn new(reg: usize, bit: usize) -> ClockGate {
         assert!(reg <= 7);
         assert!(bit <= 31);
-        let base: usize = 0x40048028;
+        let base: usize = 0x4004_8028;
         let reg_offset = 4 * (reg - 1);
         let ptr = (base + reg_offset) as *mut BmeAtomic<u32>;
         unsafe {
@@ -57,6 +57,8 @@ impl Drop for ClockGate {
 }
 
 /// MCGPLLCLK/MCGFLLCLK clock source
+///
+/// Selects the MCGPLLCLK or MCGFLLCLK clock for various peripheral clocking options.
 pub enum PllFllSel {
     /// FLL
     Fll = 0,
@@ -119,7 +121,7 @@ impl Sim {
             panic!("Cannot initialize SIM: It's already active");
         }
         let reg = unsafe { &mut *(SIM_ADDR as *mut SimRegs) };
-        Sim { reg: reg }
+        Sim { reg }
     }
 
     pub fn set_dividers(&mut self, core: u32, bus_flash: u32) {

@@ -47,6 +47,7 @@ pub struct I2cSlave<'a, 'b> {
     bus: u8,
 }
 
+#[derive(Clone, Copy)]
 pub enum Address {
     Bits7(u8),
     Bits10(u16)
@@ -104,7 +105,7 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
         (mul, clkdiv): (u8, u8),
         op_mode: OpMode,
         gate: ClockGate
-    )-> Result<I2cMaster<'a, 'b>, ()> {
+    ) -> Result<I2cMaster<'a, 'b>, ()> {
         if scl.bus() != sda.bus() {
             return Err(());
         }
@@ -168,7 +169,7 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
 
         reg.c1.write(0x80); // enable module
 
-        Ok(I2cMaster { reg: reg, _scl: scl, _sda: sda, _gate: gate, bus: bus, op_mode: op_mode })
+        Ok(I2cMaster { reg, _scl: scl, _sda: sda, _gate: gate, bus, op_mode })
     }
 
     pub fn wait_for_interrupt(&mut self) {
@@ -433,12 +434,12 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
                     // change to Rx mode, intr disabled
                     // (does this send STOP if ARBL flagged?)
                     unsafe { self.reg.c1.write(0x80); } // Only module enabled
-                    return Err(Error::ArbLost);
+                    Err(Error::ArbLost)
                 } else if status.get_bit(0) { // check if slave acked
                     // TODO: separate out data and addr so we can give different errors
                     state.status = Status::Nak;
                     unsafe { self.reg.c1.write(0x80); } // Only module enabled
-                    return Err(Error::Nak);
+                    Err(Error::Nak)
                 } else {
                     state.status = Status::Receive;
                     // switch to rx mode
@@ -569,12 +570,7 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
 
     // TODO: add timeout
     pub fn finish(&mut self) -> Result<(), Error> {
-        loop {
-            match self.done() {
-                Ok(false) => {},
-                _ => break,
-            }
-        }
+        while let Ok(false) = self.done() {}
 
         // TODO: timeout when using DMA
 
@@ -840,6 +836,7 @@ fn isr1() {
 
 // TODO: support SMBus
 // TODO: support DMA
+// TODO: split into smaller functions
 #[cfg(feature = "i2c-isr")]
 unsafe fn isr(reg: &mut I2cRegs, state: &mut IsrState) {
     let status = reg.s.read();

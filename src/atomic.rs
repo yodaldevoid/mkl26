@@ -25,7 +25,7 @@ impl<T> BmeAtomic<T> where T: Copy {
     #[inline]
     pub unsafe fn and(&mut self, val: T) {
         const BME_AND_FLAG: u32 = 1 << 26;
-        const BME_AND_ADDR_MASK: u32 = 0xE00FFFFF;
+        const BME_AND_ADDR_MASK: u32 = 0xE00F_FFFF;
 
         let tmp = &mut *(((self as *mut Self as u32) & BME_AND_ADDR_MASK | BME_AND_FLAG) as *mut WO<T>);
         tmp.write(val);
@@ -72,7 +72,7 @@ impl<T> BmeAtomic<T> where T: Copy {
     /// Loads a bit from memory and then clears it in memory.
     #[inline]
     pub unsafe fn lac1(&mut self, offset: usize) -> T {
-        const BME_LAC1_ADDR_MASK: u32 = 0x0E00F_FFFF;
+        const BME_LAC1_ADDR_MASK: u32 = 0xE00F_FFFF;
 
         /// bit must be less than 32
         const fn bme_lac1_flags(bit: usize) -> u32 {

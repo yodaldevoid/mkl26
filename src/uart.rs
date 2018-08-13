@@ -56,6 +56,7 @@ pub struct Uart<'a, 'b, B> {
     _char: PhantomData<B>,
 }
 
+#[derive(Clone, Copy)]
 pub(crate) enum ConnMode {
     TwoWire,
     Loop,
@@ -135,7 +136,7 @@ impl<'a, 'b> Uart<'a, 'b, u8> {
             c2
         });
 
-        Ok(Uart { reg: reg, _tx: tx, _rx: rx, _gate: gate, _bus: bus, _char: PhantomData })
+        Ok(Uart { reg, _tx: tx, _rx: rx, _gate: gate, _bus: bus, _char: PhantomData })
     }
 
     /// Read is non-blocking
@@ -161,7 +162,7 @@ impl<'a, 'b> Uart<'a, 'b, u8> {
 
     // TODO: add timeout
     pub fn read(&mut self, buf: &mut [u8]) -> Result<usize, ()> {
-        if buf.len() == 0 {
+        if buf.is_empty() {
             return Ok(0);
         }
 
@@ -179,7 +180,7 @@ impl<'a, 'b> Uart<'a, 'b, u8> {
 
     // TODO: add timeout
     pub fn write(&mut self, buf: &[u8]) -> Result<usize, ()> {
-        if buf.len() == 0 {
+        if buf.is_empty() {
             return Ok(0);
         }
 
