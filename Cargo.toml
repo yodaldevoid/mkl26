@@ -5,6 +5,7 @@ authors = ["Gabriel Smith <ga29smith@gmail.com>"]
 
 [dependencies]
 arraydeque = { version = "^0.4", default-features = false }
+bitflags = { version = "^1.0", optional = true}
 bit_field = "^0.8"
 cortex-m = { version = "^0.5", features = ["const-fn", "inline-asm"] }
 embedded-hal = { version = "0.2.1", features = ["unproven"] }
@@ -33,7 +34,7 @@ i2c-isr = []
 i2c-slave = ["i2c-isr"]
 i2c-dma = ["i2c-isr"]
 
-spi-isr = []
+spi-isr = ["bitflags"]
 spi-slave = ["spi-isr"]
 spi-dma = ["spi-isr"]
 
@@ -51,4 +52,3 @@ name = "uart"
 
 [[example]]
 name = "spi_master"
-

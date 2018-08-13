@@ -1,5 +1,7 @@
 //! FIFO is 8 bytes big on SPI1. No FIFO on SPI0.
 
+#[cfg(feature = "spi-isr")]
+use core::cell::RefCell;
 use core::marker::PhantomData;
 
 use bit_field::BitField;
@@ -9,6 +11,11 @@ use volatile_register::{RO, RW};
 
 use port::{SpiCs, SpiMiso, SpiMosi, SpiSck};
 use sim::ClockGate;
+
+#[cfg(feature = "spi-isr")]
+use arraydeque::ArrayDeque;
+#[cfg(feature = "spi-isr")]
+use cortex_m::interrupt::{self, Mutex};
 
 const SPI0_ADDR: usize = 0x4007_6000;
 const SPI1_ADDR: usize = 0x4007_7000;
@@ -41,7 +48,7 @@ pub struct SpiMaster<'a, 'b, 'c, 'd, W: Word> {
 
 #[cfg(feature = "spi-slave")]
 pub struct SpiSlave<'a, 'b, 'c, 'd, W: Word> {
-    _reg:   &'static mut SpiRegs,
+    _reg:  &'static mut SpiRegs,
     _mosi: Option<SpiMosi<'a>>,
     _miso: Option<SpiMiso<'b>>,
     _sck:  SpiSck<'c>,
@@ -272,6 +279,202 @@ impl<'a, 'b, 'c, 'd> FullDuplex<u16> for SpiMaster<'a, 'b, 'c, 'd, u16> {
             unimplemented!()
         }
     }
+}
+
+// TODO: single wire mode
+// TODO: low power mode
+// TODO: DMA Rx
+// TODO: DMA Tx
+// TODO: MSb/LSb
+// TODO: hardware match
+// TODO: mode fault feature
+#[cfg(feature = "spi-slave")]
+impl<'a, 'b, 'c, 'd, W: Word> SpiSlave<'a, 'b, 'c, 'd, W> {
+    pub(crate) unsafe fn new(
+        mosi: Option<SpiMosi<'a>>,
+        miso: Option<SpiMiso<'b>>,
+        sck: SpiSck<'c>,
+        cs: SpiCs<'d>,
+        clkdiv: (Prescale, Divisor),
+        polarity: Polarity,
+        phase: Phase,
+        fifo: bool,
+        gate: ClockGate,
+    ) -> Result<SpiSlave<'a, 'b, 'c, 'd, W>, ()> {
+        let bus = sck.bus();
+
+        if let Some(mosi) = mosi.as_ref() {
+            if mosi.bus() != bus {
+                return Err(());
+            }
+        }
+        if let Some(miso) = miso.as_ref() {
+            if miso.bus() != bus {
+                return Err(());
+            }
+        }
+        if cs.bus() != bus {
+            return Err(());
+        }
+
+        let reg = match bus {
+            0 => &mut *(SPI0_ADDR as *mut SpiRegs),
+            1 => &mut *(SPI1_ADDR as *mut SpiRegs),
+            _ => unreachable!(),
+        };
+
+        let mut c1 = 0;
+        c1.set_bit(7, true); // SPRF and MODF *or* Rx FIFO Full interrupt enable
+        c1.set_bit(6, true); // SPI enable
+        c1.set_bit(5, true); // SPTEF or Tx FIFO empty interrupt enable
+        c1.set_bit(4, false); // slave/master :: 0/1
+        c1.set_bit(3, polarity == Polarity::IdleHigh); // clock polarity idle low/high :: 0/1
+        c1.set_bit(2, phase == Phase::CaptureOnFirstTransition); // clock phase middle/start :: 0/1
+        c1.set_bit(1, false); // Slave Select Output Enable
+        c1.set_bit(0, false); // most/least significant bit :: 0/1
+        reg.c1.write(c1);
+
+        let mut c2 = 0;
+        c2.set_bit(7, false); // match enable
+        c2.set_bit(6, W::size() == 16); // 8/16 bits :: 0/1
+        #[cfg(feature = "spi-dma")]
+        c2.set_bit(5, false); // Tx DMA enable
+        c2.set_bit(4, false); // Master Mode-Fault enable
+        c2.set_bit(3, false); // Bidirectional mode input/output select
+        #[cfg(feature = "spi-dma")]
+        c2.set_bit(2, false); // Rx DMA enable
+        c2.set_bit(1, false); // SPI stop in wait mode
+        c2.set_bit(0, false); // SPI Bidirectional (single wire) mode enable
+        reg.c2.write(c2);
+
+        let mut c3 = 0;
+        c3.set_bit(5, true); // Tx FIFO watermark 16/32 :: 0/1
+        c3.set_bit(4, true); // Rx FIFO watermark 48/32 :: 0/1
+        c3.set_bit(3, true); // FIFO interrpt flag clearing method
+        c3.set_bit(2, fifo); // Tx FIFO nearly empty interrupt enable
+        c3.set_bit(1, fifo); // Rx FIFO nearly full interrupt enable
+        c3.set_bit(0, fifo); // FIFO mode enable
+        reg.c3.write(c3);
+
+        // BR
+        let mut br: u8 = 0;
+        br.set_bits(4..7, clkdiv.0 as u8);
+        br.set_bits(0..4, clkdiv.1 as u8);
+        reg.br.write(br);
+
+        // MH/ML
+        // set if hardware match enabled
+
+        Ok(SpiSlave {
+            _reg:  reg,
+            _mosi: mosi,
+            _miso: miso,
+            _sck:  sck,
+            _cs:   cs,
+            _gate: gate,
+            _char: PhantomData,
+        })
+    }
+}
+
+#[cfg(feature = "spi-isr")]
+struct IsrState {
+    tx_buf: ArrayDeque<[u8; 64]>,
+    rx_buf: ArrayDeque<[u8; 64]>,
+
+    #[cfg(feature = "spi-slave")]
+    slave_rx_callback: Option<fn(u8, &ArrayDeque<[u8; 64]>)>,
+    #[cfg(feature = "spi-slave")]
+    slave_tx_callback: Option<fn(u8, &mut ArrayDeque<[u8; 64]>)>,
+}
+
+#[cfg(feature = "spi-isr")]
+impl IsrState {
+    fn new() -> Self {
+        IsrState {
+            tx_buf: ArrayDeque::new(),
+            rx_buf: ArrayDeque::new(),
+
+            #[cfg(feature = "spi-slave")]
+            slave_rx_callback: None,
+            #[cfg(feature = "spi-slave")]
+            slave_tx_callback: None,
+        }
+    }
+}
+
+#[cfg(feature = "spi-isr")]
+bitflags! {
+    pub struct InterruptFlags: u8 {
+        const MODE_FAULT = 0x01;
+        const RX_BUF_FULL = 0x02;
+        const TX_BUF_EMPTY = 0x04;
+        const ADDR_MATCH = 0x08;
+        const RX_FIFO_NEARLY_FULL = 0x10;
+        const TX_FIFO_NEARLY_EMPTY = 0x20;
+        const RX_FIFO_EMPTY = 0x40;
+        const TX_FIFO_FULL = 0x80;
+        // TODO: fifo errors?
+    }
+}
+
+#[cfg(feature = "spi-isr")]
+static SPI0_STATE: Mutex<RefCell<Option<IsrState>>> = Mutex::new(RefCell::new(None));
+#[cfg(feature = "spi-isr")]
+static SPI1_STATE: Mutex<RefCell<Option<IsrState>>> = Mutex::new(RefCell::new(None));
+
+#[cfg(feature = "spi-isr")]
+interrupt!(SPI0, isr0);
+#[cfg(feature = "spi-isr")]
+interrupt!(SPI1, isr1);
+
+#[cfg(feature = "spi-isr")]
+fn isr0() {
+    unsafe {
+        interrupt::free(|cs| {
+            let reg = &mut *(SPI0_ADDR as *mut SpiRegs);
+            let mut state = SPI0_STATE.borrow(cs).borrow_mut();
+            let state = state.as_mut().expect("SPI0_STATE uninitialized");
+            let flags = parse_flags(reg);
+
+            isr(reg, flags, state);
+        });
+    }
+}
+
+#[cfg(feature = "spi-isr")]
+fn isr1() {
+    unsafe {
+        interrupt::free(|cs| {
+            let reg = &mut *(SPI1_ADDR as *mut SpiRegs);
+            let mut state = SPI1_STATE.borrow(cs).borrow_mut();
+            let state = state.as_mut().expect("SPI1_STATE uninitialized");
+            let flags = parse_flags(reg);
+
+            isr(reg, flags, state);
+        });
+    }
+}
+
+// TODO: maybe clear flags as well
+#[cfg(feature = "spi-isr")]
+unsafe fn parse_flags(reg: &mut SpiRegs) -> InterruptFlags {
+    let mut flags = InterruptFlags::empty();
+    let s = reg.s.read();
+    flags.set(InterruptFlags::MODE_FAULT, s.get_bit(4));
+    flags.set(InterruptFlags::RX_BUF_FULL, s.get_bit(7));
+    flags.set(InterruptFlags::TX_BUF_EMPTY, s.get_bit(5));
+    flags.set(InterruptFlags::ADDR_MATCH, s.get_bit(6));
+    flags.set(InterruptFlags::RX_FIFO_NEARLY_FULL, s.get_bit(3));
+    flags.set(InterruptFlags::TX_FIFO_NEARLY_EMPTY, s.get_bit(2));
+    flags.set(InterruptFlags::RX_FIFO_EMPTY, s.get_bit(0));
+    flags.set(InterruptFlags::TX_FIFO_FULL, s.get_bit(1));
+    flags
+}
+
+#[cfg(feature = "spi-isr")]
+unsafe fn isr(_reg: &mut SpiRegs, _flags: InterruptFlags, _state: &mut IsrState) {
+    unimplemented!()
 }
 
 #[cfg(test)]

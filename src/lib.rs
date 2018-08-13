@@ -4,6 +4,9 @@
 
 extern crate arraydeque;
 extern crate bit_field;
+#[cfg_attr(feature = "spi-isr", macro_use)]
+#[cfg(feature = "spi-isr")]
+extern crate bitflags;
 extern crate cortex_m;
 extern crate embedded_hal;
 extern crate nb;
