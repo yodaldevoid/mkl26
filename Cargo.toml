@@ -54,4 +54,4 @@ name = "uart"
 name = "spi_master"
 
 [patch.crates-io]
-cortex-m-rt = { git = "https://github.com/yodaldevoid/cortex-m-rt.git", branch = "pre_init" }
+cortex-m-rt = { git = "https://github.com/rust-embedded/cortex-m-rt.git", branch = "master" }
