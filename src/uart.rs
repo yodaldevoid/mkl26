@@ -59,6 +59,7 @@ pub struct Uart<'a, 'b, B> {
 #[derive(Clone, Copy)]
 pub(crate) enum ConnMode {
     TwoWire,
+    OneWire,
     Loop,
 }
 
@@ -115,6 +116,10 @@ impl<'a, 'b> Uart<'a, 'b, u8> {
                 ConnMode::TwoWire => {
                     c1.set_bit(7, false);
                 }
+                ConnMode::OneWire => {
+                    c1.set_bit(7, true);
+                    c1.set_bit(5, true);
+                }
                 ConnMode::Loop => {
                     c1.set_bit(7, true);
                     c1.set_bit(5, false);
@@ -129,7 +134,7 @@ impl<'a, 'b> Uart<'a, 'b, u8> {
                     c2.set_bit(2, rx.is_some());
                     c2.set_bit(3, tx.is_some());
                 }
-                ConnMode::Loop => {
+                ConnMode::OneWire | ConnMode::Loop => {
                     c2.set_bits(2..4, 0x3);
                 }
             }
@@ -161,7 +166,18 @@ impl<'a, 'b> Uart<'a, 'b, u8> {
         // wait for tx buffer to not be full
         if self.reg.s1.read().get_bit(7) {
             unsafe {
+                // TODO: maybe add BME here?
+                // TODO: Should we always do these writes that are required for
+                // one-wire? They don't interfere with normal operation.
+                self.reg.c3.modify(|mut c3| {
+                    c3.set_bit(5, true);
+                    c3
+                });
                 self.reg.d.write(b);
+                self.reg.c3.modify(|mut c3| {
+                    c3.set_bit(5, false);
+                    c3
+                });
             }
             Ok(())
         } else {

@@ -179,6 +179,25 @@ impl Sim {
         unsafe { Uart::new(uart, rx.into(), tx.into(), clkdiv, ConnMode::TwoWire, gate) }
     }
 
+    pub fn uart_single_wire<'a, 'b>(
+        &mut self,
+        uart: u8,
+        tx: UartTx<'b>,
+        clkdiv: u16,
+    ) -> Result<Uart<'a, 'b, u8>, ()> {
+        let mut gate = match uart {
+            0 => ClockGate::new(4, 10),
+            1 => ClockGate::new(4, 11),
+            2 => ClockGate::new(4, 12),
+            _ => return Err(()),
+        };
+        if gate.is_enabled() {
+            return Err(());
+        }
+        gate.enable();
+        unsafe { Uart::new(uart, None, Some(tx), clkdiv, ConnMode::OneWire, gate) }
+    }
+
     pub fn uart_loopback<'a, 'b>(&mut self, uart: u8, clkdiv: u16) -> Result<Uart<'a, 'b, u8>, ()> {
         let mut gate = match uart {
             0 => ClockGate::new(4, 10),
