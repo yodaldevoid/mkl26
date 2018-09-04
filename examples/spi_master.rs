@@ -72,7 +72,7 @@ fn main() -> ! {
     let tx = port_b.pin(17).to_uart_tx().ok();
     unsafe { sim.set_uart0_clksrc(Uart0ClkSrc::McgXLL); }
     let mut uart = sim.uart(0, rx, tx, uart::calc_clkdiv(115200, 24_000_000)).unwrap();
-    
+
     let mosi = port_c.pin(6).to_spi_mosi().ok();
     let miso = port_c.pin(7).to_spi_miso().ok();
     let sck = port_d.pin(1).to_spi_sck().unwrap();

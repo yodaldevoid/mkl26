@@ -315,7 +315,7 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
                     unsafe { self.reg.d.write(d); }
                     self.wait_for_interrupt();
                     let status = self.reg.s.read();
-                    
+
                     // TODO: find some way to test this
                     // This is not called out in the Master mode branch in the
                     // in the flowchart in the TRM, but the Teensy folks do it
@@ -419,7 +419,7 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
                 unsafe { self.reg.d.write(state.tx_buf.pop_front().expect("Failed to pop address byte") | 0x01); }
                 self.wait_for_interrupt();
                 let status = self.reg.s.read();
-                
+
                 // TODO: find some way to test this
                 // This is not called out in the Master mode branch in the
                 // in the flowchart in the TRM, but the Teensy folks do it
@@ -965,7 +965,7 @@ unsafe fn isr(reg: &mut I2cRegs, state: &mut IsrState) {
                         c1
                     });
                 }
-                
+
                 // TODO: error condition
                 let _ = state.rx_buf.push_back(reg.d.read()); // read in data
             } else {
