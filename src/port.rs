@@ -944,10 +944,11 @@ impl<'a> UartTx<'a> {
 mod tests {
     use super::*;
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn port_a_regs() {
         unsafe {
-            let reg = & *(PORT_A_ADDR as *const PortRegs);
+            let reg = &*(PORT_A_ADDR as *const PortRegs);
             assert_eq!(0x4004_9000 as *const RW<u32>, &reg.pcr      as *const RW<u32>, "pcr");
             assert_eq!(0x4004_9080 as *const WO<u32>, &reg.gpclr    as *const WO<u32>, "gpclr");
             assert_eq!(0x4004_9084 as *const WO<u32>, &reg.gpchr    as *const WO<u32>, "gpchr");
@@ -955,10 +956,11 @@ mod tests {
         }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn port_b_regs() {
         unsafe {
-            let reg = & *(PORT_B_ADDR as *const PortRegs);
+            let reg = &*(PORT_B_ADDR as *const PortRegs);
             assert_eq!(0x4004_A000 as *const RW<u32>, &reg.pcr      as *const RW<u32>, "pcr");
             assert_eq!(0x4004_A080 as *const WO<u32>, &reg.gpclr    as *const WO<u32>, "gpclr");
             assert_eq!(0x4004_A084 as *const WO<u32>, &reg.gpchr    as *const WO<u32>, "gpchr");
@@ -966,10 +968,11 @@ mod tests {
         }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn port_c_regs() {
         unsafe {
-            let reg = & *(PORT_C_ADDR as *const PortRegs);
+            let reg = &*(PORT_C_ADDR as *const PortRegs);
             assert_eq!(0x4004_B000 as *const RW<u32>, &reg.pcr      as *const RW<u32>, "pcr");
             assert_eq!(0x4004_B080 as *const WO<u32>, &reg.gpclr    as *const WO<u32>, "gpclr");
             assert_eq!(0x4004_B084 as *const WO<u32>, &reg.gpchr    as *const WO<u32>, "gpchr");
@@ -977,10 +980,11 @@ mod tests {
         }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn port_d_regs() {
         unsafe {
-            let reg = & *(PORT_D_ADDR as *const PortRegs);
+            let reg = &*(PORT_D_ADDR as *const PortRegs);
             assert_eq!(0x4004_C000 as *const RW<u32>, &reg.pcr      as *const RW<u32>, "pcr");
             assert_eq!(0x4004_C080 as *const WO<u32>, &reg.gpclr    as *const WO<u32>, "gpclr");
             assert_eq!(0x4004_C084 as *const WO<u32>, &reg.gpchr    as *const WO<u32>, "gpchr");
@@ -988,10 +992,11 @@ mod tests {
         }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn port_e_regs() {
         unsafe {
-            let reg = & *(PORT_E_ADDR as *const PortRegs);
+            let reg = &*(PORT_E_ADDR as *const PortRegs);
             assert_eq!(0x4004_D000 as *const RW<u32>, &reg.pcr      as *const RW<u32>, "pcr");
             assert_eq!(0x4004_D080 as *const WO<u32>, &reg.gpclr    as *const WO<u32>, "gpclr");
             assert_eq!(0x4004_D084 as *const WO<u32>, &reg.gpchr    as *const WO<u32>, "gpchr");
@@ -999,10 +1004,11 @@ mod tests {
         }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn gpio_a_regs() {
         unsafe {
-            let reg = & *(GPIO_A_ADDR as *const GpioRegs);
+            let reg = &*(GPIO_A_ADDR as *const GpioRegs);
             assert_eq!(0x400F_F000 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
             assert_eq!(0x400F_F004 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
             assert_eq!(0x400F_F008 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
@@ -1012,10 +1018,11 @@ mod tests {
         }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn gpio_b_regs() {
         unsafe {
-            let reg = & *(GPIO_B_ADDR as *const GpioRegs);
+            let reg = &*(GPIO_B_ADDR as *const GpioRegs);
             assert_eq!(0x400F_F040 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
             assert_eq!(0x400F_F044 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
             assert_eq!(0x400F_F048 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
@@ -1025,10 +1032,11 @@ mod tests {
         }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn gpio_c_regs() {
         unsafe {
-            let reg = & *(GPIO_C_ADDR as *const GpioRegs);
+            let reg = &*(GPIO_C_ADDR as *const GpioRegs);
             assert_eq!(0x400F_F080 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
             assert_eq!(0x400F_F084 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
             assert_eq!(0x400F_F088 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
@@ -1038,10 +1046,11 @@ mod tests {
         }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn gpio_d_regs() {
         unsafe {
-            let reg = & *(GPIO_D_ADDR as *const GpioRegs);
+            let reg = &*(GPIO_D_ADDR as *const GpioRegs);
             assert_eq!(0x400F_F0C0 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
             assert_eq!(0x400F_F0C4 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
             assert_eq!(0x400F_F0C8 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
@@ -1051,10 +1060,11 @@ mod tests {
         }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn gpio_e_regs() {
         unsafe {
-            let reg = & *(GPIO_E_ADDR as *const GpioRegs);
+            let reg = &*(GPIO_E_ADDR as *const GpioRegs);
             assert_eq!(0x400F_F100 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
             assert_eq!(0x400F_F104 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
             assert_eq!(0x400F_F108 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
@@ -1064,10 +1074,11 @@ mod tests {
         }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn fgpio_a_regs() {
         unsafe {
-            let reg = & *(FGPIO_A_ADDR as *const GpioRegs);
+            let reg = &*(FGPIO_A_ADDR as *const GpioRegs);
             assert_eq!(0xF800_0000 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
             assert_eq!(0xF800_0004 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
             assert_eq!(0xF800_0008 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
@@ -1077,10 +1088,11 @@ mod tests {
         }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn fgpio_b_regs() {
         unsafe {
-            let reg = & *(FGPIO_B_ADDR as *const GpioRegs);
+            let reg = &*(FGPIO_B_ADDR as *const GpioRegs);
             assert_eq!(0xF800_0040 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
             assert_eq!(0xF800_0044 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
             assert_eq!(0xF800_0048 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
@@ -1090,10 +1102,11 @@ mod tests {
         }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn fgpio_c_regs() {
         unsafe {
-            let reg = & *(FGPIO_C_ADDR as *const GpioRegs);
+            let reg = &*(FGPIO_C_ADDR as *const GpioRegs);
             assert_eq!(0xF800_0080 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
             assert_eq!(0xF800_0084 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
             assert_eq!(0xF800_0088 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
@@ -1103,10 +1116,11 @@ mod tests {
         }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn fgpio_d_regs() {
         unsafe {
-            let reg = & *(FGPIO_D_ADDR as *const GpioRegs);
+            let reg = &*(FGPIO_D_ADDR as *const GpioRegs);
             assert_eq!(0xF800_00C0 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
             assert_eq!(0xF800_00C4 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
             assert_eq!(0xF800_00C8 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");
@@ -1116,10 +1130,11 @@ mod tests {
         }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn fgpio_e_regs() {
         unsafe {
-            let reg = & *(FGPIO_E_ADDR as *const GpioRegs);
+            let reg = &*(FGPIO_E_ADDR as *const GpioRegs);
             assert_eq!(0xF800_0100 as *const RW<u32>, &reg.pdor as *const RW<u32>, "pdor");
             assert_eq!(0xF800_0104 as *const WO<u32>, &reg.psor as *const WO<u32>, "psor");
             assert_eq!(0xF800_0108 as *const WO<u32>, &reg.pcor as *const WO<u32>, "pcor");

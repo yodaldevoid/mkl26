@@ -718,10 +718,11 @@ impl Blpe {
 mod tests {
     use super::*;
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn mcg_regs() {
         unsafe {
-            let reg = & *(MCG_ADDR as *const McgRegs);
+            let reg = &*(MCG_ADDR as *const McgRegs);
             assert_eq!(0x4006_4000 as *const RW<u8>, &reg.c1    as *const RW<u8>, "c1");
             assert_eq!(0x4006_4001 as *const RW<u8>, &reg.c2    as *const RW<u8>, "c2");
             assert_eq!(0x4006_4002 as *const RW<u8>, &reg.c3    as *const RW<u8>, "c3");

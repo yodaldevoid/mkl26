@@ -429,10 +429,11 @@ pub mod cop {
     mod tests {
         use super::*;
 
+        #[cfg_attr(rustfmt, rustfmt_skip)]
         #[test]
         fn cop_test() {
             unsafe {
-                let reg = & *(COP_ADDR as *const CopRegs);
+                let reg = &*(COP_ADDR as *const CopRegs);
                 assert_eq!(0x4004_8100 as *const RW<u32>, &reg.copc     as *const RW<u32>, "copc");
                 assert_eq!(0x4004_8104 as *const WO<u32>, &reg.srvcop   as *const WO<u32>, "srvcop");
             }
@@ -444,10 +445,11 @@ pub mod cop {
 mod tests {
     use super::*;
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn sim_test() {
         unsafe {
-            let reg = & *(SIM_ADDR as *const SimRegs);
+            let reg = &*(SIM_ADDR as *const SimRegs);
             assert_eq!(0x4004_7000 as *const RW<u32>, &reg.sopt1        as *const RW<u32>, "sopt1");
             assert_eq!(0x4004_7004 as *const RW<u32>, &reg.sopt1_cfg    as *const RW<u32>, "sopt1_cfg");
             assert_eq!(0x4004_8004 as *const RW<u32>, &reg.sopt2        as *const RW<u32>, "sopt2");

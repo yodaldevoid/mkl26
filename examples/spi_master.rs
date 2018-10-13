@@ -22,6 +22,7 @@ use mkl26::sim::cop::Cop;
 use mkl26::spi::{Divisor, Prescale, OpMode, SpiMaster};
 use mkl26::uart;
 
+#[cfg_attr(rustfmt, rustfmt_skip)]
 #[link_section = ".flashconfig"]
 #[no_mangle]
 pub static _FLASHCONFIG: [u8; 16] = [

@@ -1,4 +1,6 @@
 //! Interrupts
+#![cfg_attr(rustfmt, rustfmt_skip)]
+
 use cortex_m::interrupt::Nr;
 
 #[allow(non_camel_case_types)]

@@ -229,10 +229,11 @@ impl<'a, 'b, B> Drop for Uart<'a, 'b, B> {
 mod tests {
     use super::*;
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn uart0_test() {
         unsafe {
-            let reg = & *(UART0_ADDR as *const UartRegs);
+            let reg = &*(UART0_ADDR as *const UartRegs);
             assert_eq!(0x4006_A000 as *const RW<u8>, &reg.bdh   as *const RW<u8>, "bdh");
             assert_eq!(0x4006_A001 as *const RW<u8>, &reg.bdl   as *const RW<u8>, "bdl");
             assert_eq!(0x4006_A002 as *const RW<u8>, &reg.c1    as *const RW<u8>, "c1");
@@ -248,10 +249,11 @@ mod tests {
         }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn uart1_test() {
         unsafe {
-            let reg = & *(UART1_ADDR as *const UartRegs);
+            let reg = &*(UART1_ADDR as *const UartRegs);
             assert_eq!(0x4006_B000 as *const RW<u8>, &reg.bdh   as *const RW<u8>, "bdh");
             assert_eq!(0x4006_B001 as *const RW<u8>, &reg.bdl   as *const RW<u8>, "bdl");
             assert_eq!(0x4006_B002 as *const RW<u8>, &reg.c1    as *const RW<u8>, "c1");
@@ -264,10 +266,11 @@ mod tests {
         }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn uart2_test() {
         unsafe {
-            let reg = & *(UART2_ADDR as *const UartRegs);
+            let reg = &*(UART2_ADDR as *const UartRegs);
             assert_eq!(0x4006_C000 as *const RW<u8>, &reg.bdh   as *const RW<u8>, "bdh");
             assert_eq!(0x4006_C001 as *const RW<u8>, &reg.bdl   as *const RW<u8>, "bdl");
             assert_eq!(0x4006_C002 as *const RW<u8>, &reg.c1    as *const RW<u8>, "c1");

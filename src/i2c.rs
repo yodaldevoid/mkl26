@@ -1081,10 +1081,11 @@ unsafe fn isr(reg: &mut I2cRegs, state: &mut IsrState) {
 mod tests {
     use super::*;
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn i2c0_regs() {
         unsafe {
-            let reg = & *(I2C0_ADDR as *const I2cRegs);
+            let reg = &*(I2C0_ADDR as *const I2cRegs);
             assert_eq!(0x4006_6000 as *const RW<u8>, &reg.a1    as *const RW<u8>, "a1");
             assert_eq!(0x4006_6001 as *const RW<u8>, &reg.f     as *const RW<u8>, "f");
             assert_eq!(0x4006_6002 as *const RW<u8>, &reg.c1    as *const RW<u8>, "c1");
@@ -1100,10 +1101,11 @@ mod tests {
         }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn i2c1_regs() {
         unsafe {
-            let reg = & *(I2C1_ADDR as *const I2cRegs);
+            let reg = &*(I2C1_ADDR as *const I2cRegs);
             assert_eq!(0x4006_7000 as *const RW<u8>, &reg.a1    as *const RW<u8>, "a1");
             assert_eq!(0x4006_7001 as *const RW<u8>, &reg.f     as *const RW<u8>, "f");
             assert_eq!(0x4006_7002 as *const RW<u8>, &reg.c1    as *const RW<u8>, "c1");

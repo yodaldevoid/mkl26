@@ -332,10 +332,11 @@ impl<'a,'b> AdcDiff<'a,'b> {
 mod tests {
     use super::*;
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn adc0_test() {
         unsafe {
-            let reg = & *(ADC0_ADDR as *const AdcRegs);
+            let reg = &*(ADC0_ADDR as *const AdcRegs);
             assert_eq!(0x4003_B000 as *const RW<u32>, &reg.sc1a as *const RW<u32>, "sc1a");
             assert_eq!(0x4003_B004 as *const RW<u32>, &reg.sc1b as *const RW<u32>, "sc1b");
             assert_eq!(0x4003_B008 as *const RW<u32>, &reg.cfg1 as *const RW<u32>, "cfg1");

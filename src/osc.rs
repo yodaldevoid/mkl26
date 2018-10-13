@@ -75,10 +75,11 @@ impl OscToken {
 mod tests {
     use super::*;
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn osc_regs() {
         unsafe {
-            let reg = & *(OSC_ADDR as *const OscRegs);
+            let reg = &*(OSC_ADDR as *const OscRegs);
             assert_eq!(0x4006_5000 as *const RW<u8>, &reg.cr as *const RW<u8>, "cr");
         }
     }

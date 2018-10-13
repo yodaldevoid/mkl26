@@ -279,10 +279,11 @@ impl<'a, 'b, 'c, 'd> FullDuplex<u16> for SpiMaster<'a, 'b, 'c, 'd, u16> {
 mod tests {
     use super::*;
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn spi0_regs() {
         unsafe {
-            let reg = & *(SPI0_ADDR as *const SpiRegs);
+            let reg = &*(SPI0_ADDR as *const SpiRegs);
             assert_eq!(0x4007_6000 as *const RO<u8>, &reg.s     as *const RO<u8>, "s");
             assert_eq!(0x4007_6001 as *const RW<u8>, &reg.br    as *const RW<u8>, "br");
             assert_eq!(0x4007_6002 as *const RW<u8>, &reg.c2    as *const RW<u8>, "c2");
@@ -296,10 +297,11 @@ mod tests {
         }
     }
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn spi1_regs() {
         unsafe {
-            let reg = & *(SPI1_ADDR as *const SpiRegs);
+            let reg = &*(SPI1_ADDR as *const SpiRegs);
             assert_eq!(0x4007_7000 as *const RO<u8>, &reg.s     as *const RO<u8>, "s");
             assert_eq!(0x4007_7001 as *const RW<u8>, &reg.br    as *const RW<u8>, "br");
             assert_eq!(0x4007_7002 as *const RW<u8>, &reg.c2    as *const RW<u8>, "c2");

@@ -16,6 +16,7 @@ use mkl26::port::PortName;
 use mkl26::sim::Sim;
 use mkl26::sim::cop::Cop;
 
+#[cfg_attr(rustfmt, rustfmt_skip)]
 #[link_section = ".flashconfig"]
 #[no_mangle]
 pub static _FLASHCONFIG: [u8; 16] = [
