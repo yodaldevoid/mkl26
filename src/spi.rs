@@ -1,6 +1,5 @@
 //! FIFO is 8 bytes big on SPI1. No FIFO on SPI0.
 
-use core::cell::RefCell;
 use core::marker::PhantomData;
 
 use bit_field::BitField;
@@ -42,7 +41,7 @@ pub struct SpiMaster<'a, 'b, 'c, 'd, W: Word> {
 
 #[cfg(feature = "spi-slave")]
 pub struct SpiSlave<'a, 'b, 'c, 'd, W: Word> {
-    reg:   &'static mut SpiRegs,
+    _reg:   &'static mut SpiRegs,
     _mosi: Option<SpiMosi<'a>>,
     _miso: Option<SpiMiso<'b>>,
     _sck:  SpiSck<'c>,
