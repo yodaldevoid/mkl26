@@ -3,9 +3,6 @@
 #![no_std]
 
 extern crate arraydeque;
-#[cfg(feature = "spi-isr")]
-#[macro_use]
-extern crate bitflags;
 extern crate bit_field;
 extern crate cortex_m;
 extern crate embedded_hal;
