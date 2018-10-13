@@ -5,17 +5,17 @@ use atomic::InterruptAtomic;
 
 const OSC_ADDR: usize = 0x4006_5000;
 
-#[repr(C,packed)]
+#[repr(C, packed)]
 struct OscRegs {
-    cr: RW<u8>
+    cr: RW<u8>,
 }
 
 pub struct Osc {
-    reg: &'static mut OscRegs
+    reg: &'static mut OscRegs,
 }
 
 pub struct OscToken {
-    _private: ()
+    _private: (),
 }
 
 static OSC_INIT: InterruptAtomic<bool> = InterruptAtomic::new(false);
@@ -44,7 +44,9 @@ impl Osc {
         // enable the crystal oscillator
         cr.set_bit(7, true);
 
-        unsafe { self.reg.cr.write(cr); }
+        unsafe {
+            self.reg.cr.write(cr);
+        }
 
         OscToken::new()
     }

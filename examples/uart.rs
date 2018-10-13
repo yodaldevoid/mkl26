@@ -10,11 +10,11 @@ extern crate mkl26;
 
 use core::fmt::Write;
 
-use mkl26::mcg::{Clock,Mcg,OscRange};
+use mkl26::mcg::{Clock, Mcg, OscRange};
 use mkl26::osc::Osc;
 use mkl26::port::PortName;
-use mkl26::sim::{Sim, Uart0ClkSrc};
 use mkl26::sim::cop::Cop;
+use mkl26::sim::{Sim, Uart0ClkSrc};
 use mkl26::uart;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -64,8 +64,12 @@ fn main() -> ! {
     let port_b = sim.port(PortName::B);
     let rx = port_b.pin(16).to_uart_rx().ok();
     let tx = port_b.pin(17).to_uart_tx().ok();
-    unsafe { sim.set_uart0_clksrc(Uart0ClkSrc::McgXLL); }
-    let mut uart = sim.uart(0, rx, tx, uart::calc_clkdiv(115200, 24_000_000)).unwrap();
+    unsafe {
+        sim.set_uart0_clksrc(Uart0ClkSrc::McgXLL);
+    }
+    let mut uart = sim
+        .uart(0, rx, tx, uart::calc_clkdiv(115200, 24_000_000))
+        .unwrap();
     //unsafe { sim.set_uart0_clksrc(Uart0ClkSrc::OscER); }
     //let mut uart = sim.uart(0, rx, tx, uart::calc_clkdiv(115200, 16_000_000)).unwrap();
 
@@ -84,7 +88,7 @@ fn main() -> ! {
                     while let Err(_) = uart.write_byte(b'\r') {}
                     while let Err(_) = uart.write_byte(b'\n') {}
                 }
-                _ => while let Err(_) = uart.write_byte(b) {}
+                _ => while let Err(_) = uart.write_byte(b) {},
             }
         }
     }
@@ -93,7 +97,7 @@ fn main() -> ! {
 //TODO: change to use USB_Listen for the panic messages
 #[lang = "panic_impl"]
 #[no_mangle]
-pub extern fn rust_begin_panic(_info: &core::panic::PanicInfo) -> ! {
+pub extern "C" fn rust_begin_panic(_info: &core::panic::PanicInfo) -> ! {
     // Reset the MCU after we've printed our panic.
     /*
     let aircr = unsafe {

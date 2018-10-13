@@ -1,8 +1,8 @@
 use core::cell::UnsafeCell;
-use core::ops::{Add,Sub,BitAnd,BitOr,BitXor};
+use core::ops::{Add, BitAnd, BitOr, BitXor, Sub};
 
 use cortex_m::interrupt;
-use volatile_register::{RO,WO};
+use volatile_register::{RO, WO};
 
 /// Generates atomic operations using the Bit Manipulation Engine (BME).
 ///
@@ -16,18 +16,25 @@ use volatile_register::{RO,WO};
 ///
 /// The BME only makes operations targeted at the peripheral address space atomic. Operations are
 /// two cycle atomic (inseparable) operations.
-pub struct BmeAtomic<T> where T: Copy {
-    _reg: T
+pub struct BmeAtomic<T>
+where
+    T: Copy,
+{
+    _reg: T,
 }
 
-impl<T> BmeAtomic<T> where T: Copy {
+impl<T> BmeAtomic<T>
+where
+    T: Copy,
+{
     /// Performs a logical AND of the atomic and `val`, storing the result in the atomic.
     #[inline]
     pub unsafe fn and(&mut self, val: T) {
         const BME_AND_FLAG: u32 = 1 << 26;
         const BME_AND_ADDR_MASK: u32 = 0xE00F_FFFF;
 
-        let tmp = &mut *(((self as *mut Self as u32) & BME_AND_ADDR_MASK | BME_AND_FLAG) as *mut WO<T>);
+        let tmp =
+            &mut *(((self as *mut Self as u32) & BME_AND_ADDR_MASK | BME_AND_FLAG) as *mut WO<T>);
         tmp.write(val);
     }
 
@@ -37,7 +44,8 @@ impl<T> BmeAtomic<T> where T: Copy {
         const BME_OR_FLAG: u32 = 2 << 26;
         const BME_OR_ADDR_MASK: u32 = 0xE00F_FFFF;
 
-        let tmp = &mut *(((self as *mut Self as u32) & BME_OR_ADDR_MASK | BME_OR_FLAG) as *mut WO<T>);
+        let tmp =
+            &mut *(((self as *mut Self as u32) & BME_OR_ADDR_MASK | BME_OR_FLAG) as *mut WO<T>);
         tmp.write(val);
     }
 
@@ -47,7 +55,8 @@ impl<T> BmeAtomic<T> where T: Copy {
         const BME_XOR_FLAG: u32 = 3 << 26;
         const BME_XOR_ADDR_MASK: u32 = 0xE00F_FFFF;
 
-        let tmp = &mut *(((self as *mut Self as u32) & BME_XOR_ADDR_MASK | BME_XOR_FLAG) as *mut WO<T>);
+        let tmp =
+            &mut *(((self as *mut Self as u32) & BME_XOR_ADDR_MASK | BME_XOR_FLAG) as *mut WO<T>);
         tmp.write(val);
     }
 
@@ -65,7 +74,8 @@ impl<T> BmeAtomic<T> where T: Copy {
             ((1 << 28) | (bit << 23) | ((width - 1) << 19)) as u32
         }
 
-        let tmp = &mut *(((self as *mut Self as u32) & BME_BFI_ADDR_MASK | bme_bfi_flags(offset, width)) as *mut WO<T>);
+        let tmp = &mut *(((self as *mut Self as u32) & BME_BFI_ADDR_MASK
+            | bme_bfi_flags(offset, width)) as *mut WO<T>);
         tmp.write(val);
     }
 
@@ -79,7 +89,8 @@ impl<T> BmeAtomic<T> where T: Copy {
             ((2 << 26) | (bit << 21)) as u32
         }
 
-        let tmp = &mut *(((self as *mut Self as u32) & BME_LAC1_ADDR_MASK | bme_lac1_flags(offset)) as *mut RO<T>);
+        let tmp = &mut *(((self as *mut Self as u32) & BME_LAC1_ADDR_MASK | bme_lac1_flags(offset))
+            as *mut RO<T>);
         tmp.read()
     }
 
@@ -93,7 +104,8 @@ impl<T> BmeAtomic<T> where T: Copy {
             ((3 << 26) | (bit << 21)) as u32
         }
 
-        let tmp = &mut *(((self as *mut Self as u32) & BME_LAS1_ADDR_MASK | bme_las1_flags(offset)) as *mut RO<T>);
+        let tmp = &mut *(((self as *mut Self as u32) & BME_LAS1_ADDR_MASK | bme_las1_flags(offset))
+            as *mut RO<T>);
         tmp.read()
     }
 
@@ -111,7 +123,8 @@ impl<T> BmeAtomic<T> where T: Copy {
             ((1 << 28) | (bit << 23) | ((width - 1) << 19)) as u32
         }
 
-        let tmp = &*(((self as *const Self as u32) & BME_UBFX_ADDR_MASK | bme_ubfx_flags(offset, width)) as *const RO<T>);
+        let tmp = &*(((self as *const Self as u32) & BME_UBFX_ADDR_MASK
+            | bme_ubfx_flags(offset, width)) as *const RO<T>);
         tmp.read()
     }
 
@@ -132,7 +145,7 @@ impl<T> BmeAtomic<T> where T: Copy {
 /// [core::sync::atomic]: https://doc.rust-lang.org/std/sync/atomic/index.html
 // TODO: Debug, maybe
 pub struct InterruptAtomic<T> {
-    inner: UnsafeCell<T>
+    inner: UnsafeCell<T>,
 }
 
 // TODO: somehow support core::sync::Ordering
@@ -148,7 +161,9 @@ impl<T> InterruptAtomic<T> {
     /// ```
     #[inline]
     pub const fn new(val: T) -> InterruptAtomic<T> {
-        InterruptAtomic { inner: UnsafeCell::new(val) }
+        InterruptAtomic {
+            inner: UnsafeCell::new(val),
+        }
     }
 
     /// Returns a mutable reference to the underlying data.
@@ -168,7 +183,7 @@ impl<T> InterruptAtomic<T> {
     /// ```
     #[inline]
     pub fn get_mut(&mut self) -> &mut T {
-        unsafe { &mut *self.inner.get()  }
+        unsafe { &mut *self.inner.get() }
     }
 
     /// Consumes the atomic and returns the contained value.
@@ -201,10 +216,11 @@ impl<T> InterruptAtomic<T> {
     /// assert_eq!(some_isize.load(), 5);
     /// ```
     #[inline]
-    pub fn load(&self) -> T where T: Copy {
-        interrupt::free(|_| {
-            unsafe { *self.inner.get() }
-        })
+    pub fn load(&self) -> T
+    where
+        T: Copy,
+    {
+        interrupt::free(|_| unsafe { *self.inner.get() })
     }
 
     /// Stores a value into the atomic.
@@ -221,8 +237,8 @@ impl<T> InterruptAtomic<T> {
     /// ```
     #[inline]
     pub fn store(&self, val: T) {
-        interrupt::free(|_| {
-            unsafe { *self.inner.get() = val; }
+        interrupt::free(|_| unsafe {
+            *self.inner.get() = val;
         })
     }
 
@@ -239,13 +255,14 @@ impl<T> InterruptAtomic<T> {
     /// assert_eq!(some_isize.load(), 10);
     /// ```
     #[inline]
-    pub fn swap(&self, val: T) -> T where T: Copy {
-        interrupt::free(|_| {
-            unsafe {
-                let tmp = *self.inner.get();
-                *self.inner.get() = val;
-                tmp
-            }
+    pub fn swap(&self, val: T) -> T
+    where
+        T: Copy,
+    {
+        interrupt::free(|_| unsafe {
+            let tmp = *self.inner.get();
+            *self.inner.get() = val;
+            tmp
         })
     }
 
@@ -268,19 +285,16 @@ impl<T> InterruptAtomic<T> {
     /// assert_eq!(some_isize.load(), 10);
     /// ```
     #[inline]
-    pub fn compare_and_swap(
-        &self,
-        current: T,
-        new: T
-    ) -> T where T: Copy + PartialEq {
-        interrupt::free(|_| {
-            unsafe {
-                let tmp = *self.inner.get();
-                if tmp == current {
-                    *self.inner.get() = new;
-                }
-                tmp
+    pub fn compare_and_swap(&self, current: T, new: T) -> T
+    where
+        T: Copy + PartialEq,
+    {
+        interrupt::free(|_| unsafe {
+            let tmp = *self.inner.get();
+            if tmp == current {
+                *self.inner.get() = new;
             }
+            tmp
         })
     }
 
@@ -303,20 +317,17 @@ impl<T> InterruptAtomic<T> {
     /// assert_eq!(some_isize.load(), 10);
     /// ```
     #[inline]
-    pub fn compare_and_exchange(
-        &self,
-        current: T,
-        new: T
-    ) -> Result<T, T> where T: Copy + PartialEq {
-        interrupt::free(|_| {
-            unsafe {
-                let tmp = *self.inner.get();
-                if tmp == current {
-                    *self.inner.get() = new;
-                    Ok(tmp)
-                } else {
-                    Err(tmp)
-                }
+    pub fn compare_and_exchange(&self, current: T, new: T) -> Result<T, T>
+    where
+        T: Copy + PartialEq,
+    {
+        interrupt::free(|_| unsafe {
+            let tmp = *self.inner.get();
+            if tmp == current {
+                *self.inner.get() = new;
+                Ok(tmp)
+            } else {
+                Err(tmp)
             }
         })
     }
@@ -381,14 +392,14 @@ impl<T> InterruptAtomic<T> {
     /// assert_eq!(foo.load(), 10);
     /// ```
     #[inline]
-    pub fn fetch_add(&self, val: T) -> T where
-        T: Copy + Add<Output=T> {
-        interrupt::free(|_| {
-            unsafe {
-                let tmp = *self.inner.get();
-                *self.inner.get() = tmp + val;
-                tmp
-            }
+    pub fn fetch_add(&self, val: T) -> T
+    where
+        T: Copy + Add<Output = T>,
+    {
+        interrupt::free(|_| unsafe {
+            let tmp = *self.inner.get();
+            *self.inner.get() = tmp + val;
+            tmp
         })
     }
 
@@ -406,14 +417,14 @@ impl<T> InterruptAtomic<T> {
     /// assert_eq!(foo.load(), -10);
     /// ```
     #[inline]
-    pub fn fetch_sub(&self, val: T) -> T where
-        T: Copy + Sub<Output=T> {
-        interrupt::free(|_| {
-            unsafe {
-                let tmp = *self.inner.get();
-                *self.inner.get() = tmp - val;
-                tmp
-            }
+    pub fn fetch_sub(&self, val: T) -> T
+    where
+        T: Copy + Sub<Output = T>,
+    {
+        interrupt::free(|_| unsafe {
+            let tmp = *self.inner.get();
+            *self.inner.get() = tmp - val;
+            tmp
         })
     }
 
@@ -434,14 +445,14 @@ impl<T> InterruptAtomic<T> {
     /// assert_eq!(foo.load(), 0b100001);
     /// ```
     #[inline]
-    pub fn fetch_and(&self, val: T) -> T where
-        T: Copy + BitAnd<Output=T> {
-        interrupt::free(|_| {
-            unsafe {
-                let tmp = *self.inner.get();
-                *self.inner.get() = tmp & val;
-                tmp
-            }
+    pub fn fetch_and(&self, val: T) -> T
+    where
+        T: Copy + BitAnd<Output = T>,
+    {
+        interrupt::free(|_| unsafe {
+            let tmp = *self.inner.get();
+            *self.inner.get() = tmp & val;
+            tmp
         })
     }
 
@@ -462,14 +473,14 @@ impl<T> InterruptAtomic<T> {
     /// assert_eq!(foo.load(), 0b111111);
     /// ```
     #[inline]
-    pub fn fetch_or(&self, val: T) -> T where
-        T: Copy + BitOr<Output=T> {
-        interrupt::free(|_| {
-            unsafe {
-                let tmp = *self.inner.get();
-                *self.inner.get() = tmp | val;
-                tmp
-            }
+    pub fn fetch_or(&self, val: T) -> T
+    where
+        T: Copy + BitOr<Output = T>,
+    {
+        interrupt::free(|_| unsafe {
+            let tmp = *self.inner.get();
+            *self.inner.get() = tmp | val;
+            tmp
         })
     }
 
@@ -490,21 +501,24 @@ impl<T> InterruptAtomic<T> {
     /// assert_eq!(foo.load(), 0b011110);
     /// ```
     #[inline]
-    pub fn fetch_xor(&self, val: T) -> T where
-        T: Copy + BitXor<Output=T> {
-        interrupt::free(|_| {
-            unsafe {
-                let tmp = *self.inner.get();
-                *self.inner.get() = tmp ^ val;
-                tmp
-            }
+    pub fn fetch_xor(&self, val: T) -> T
+    where
+        T: Copy + BitXor<Output = T>,
+    {
+        interrupt::free(|_| unsafe {
+            let tmp = *self.inner.get();
+            *self.inner.get() = tmp ^ val;
+            tmp
         })
     }
 }
 
 unsafe impl<T> Sync for InterruptAtomic<T> where T: Sync {}
 
-impl<T> Default for InterruptAtomic<T> where T: Default {
+impl<T> Default for InterruptAtomic<T>
+where
+    T: Default,
+{
     fn default() -> Self {
         Self::new(T::default())
     }

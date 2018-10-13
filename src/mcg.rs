@@ -1,7 +1,7 @@
 use core::mem;
 
 use bit_field::BitField;
-use volatile_register::{RO,RW};
+use volatile_register::{RO, RW};
 
 use atomic::InterruptAtomic;
 use osc::OscToken;
@@ -9,41 +9,41 @@ use sim::{PllFllSel, Sim};
 
 const MCG_ADDR: usize = 0x4006_4000;
 
-#[repr(C,packed)]
+#[repr(C, packed)]
 struct McgRegs {
-    c1:     RW<u8>,
-    c2:     RW<u8>,
-    c3:     RW<u8>,
-    c4:     RW<u8>,
-    c5:     RW<u8>,
-    c6:     RW<u8>,
-    s:      RO<u8>,
-    _pad0:  u8,
-    sc:     RW<u8>,
-    _pad1:  u8,
-    atcvh:  RW<u8>,
-    atcvl:  RW<u8>,
-    c7:     RW<u8>,
-    c8:     RW<u8>,
-    c9:     RW<u8>,
-    c10:    RW<u8>,
+    c1:    RW<u8>,
+    c2:    RW<u8>,
+    c3:    RW<u8>,
+    c4:    RW<u8>,
+    c5:    RW<u8>,
+    c6:    RW<u8>,
+    s:     RO<u8>,
+    _pad0: u8,
+    sc:    RW<u8>,
+    _pad1: u8,
+    atcvh: RW<u8>,
+    atcvl: RW<u8>,
+    c7:    RW<u8>,
+    c8:    RW<u8>,
+    c9:    RW<u8>,
+    c10:   RW<u8>,
 }
 
 pub struct Mcg {
-    reg: &'static mut McgRegs
+    reg: &'static mut McgRegs,
 }
 
 #[derive(Clone, Copy)]
 pub enum OscRange {
     Low = 0,
     High = 1,
-    VeryHigh = 2
+    VeryHigh = 2,
 }
 
 enum OscSource {
     LockedLoop = 0,
     Internal = 1,
-    External = 2
+    External = 2,
 }
 
 pub enum Clock {
@@ -55,7 +55,7 @@ pub enum Clock {
     Pbe(Pbe),
     Blpi(Blpi),
     Blpe(Blpe),
-    Stop(Stop)
+    Stop(Stop),
 }
 
 static MCG_INIT: InterruptAtomic<bool> = InterruptAtomic::new(false);
@@ -72,9 +72,7 @@ impl Mcg {
 
     //TODO: Stop
     pub fn clock(self) -> Clock {
-        let source: OscSource = unsafe {
-            mem::transmute(self.reg.c1.read().get_bits(6..8))
-        };
+        let source: OscSource = unsafe { mem::transmute(self.reg.c1.read().get_bits(6..8)) };
         let fll_internal = self.reg.c1.read().get_bit(2);
         let pll_enabled = self.reg.c6.read().get_bit(6);
         let low_power = self.reg.c2.read().get_bit(1);
@@ -88,7 +86,7 @@ impl Mcg {
             (OscSource::External, false, true, false) => Clock::Pbe(Pbe { mcg: self }),
             (OscSource::Internal, true, false, true) => Clock::Blpi(Blpi { mcg: self }),
             (OscSource::External, false, _, true) => Clock::Blpe(Blpe { mcg: self }),
-            _ => panic!("The current clock mode cannot be represented as a known struct")
+            _ => panic!("The current clock mode cannot be represented as a known struct"),
         }
     }
 }
@@ -100,43 +98,43 @@ impl Drop for Mcg {
 }
 
 pub struct Fei {
-    mcg: Mcg
+    mcg: Mcg,
 }
 
 pub struct Fee {
-    mcg: Mcg
+    mcg: Mcg,
 }
 
 pub struct Fbi {
-    mcg: Mcg
+    mcg: Mcg,
 }
 
 pub struct Fbe {
-    mcg: Mcg
+    mcg: Mcg,
 }
 
 pub struct Pbe {
-    mcg: Mcg
+    mcg: Mcg,
 }
 
 pub struct Pee {
-    mcg: Mcg
+    mcg: Mcg,
 }
 
 pub struct Blpi {
-    mcg: Mcg
+    mcg: Mcg,
 }
 
 pub struct Blpe {
-    mcg: Mcg
+    mcg: Mcg,
 }
 
 pub struct Stop {
-    _mcg: Mcg
+    _mcg: Mcg,
 }
 
 pub struct ExtToken {
-    _private: ()
+    _private: (),
 }
 
 impl ExtToken {
@@ -184,7 +182,7 @@ impl Fei {
                 32 => 5,
                 64 => 6,
                 128 => 7,
-                _ => panic!("Invalid external clock divider: {}", divide)
+                _ => panic!("Invalid external clock divider: {}", divide),
             }
         } else {
             match divide {
@@ -196,7 +194,7 @@ impl Fei {
                 1024 => 5,
                 1280 => 6,
                 1536 => 7,
-                _ => panic!("Invalid external clock divider: {}", divide)
+                _ => panic!("Invalid external clock divider: {}", divide),
             }
         };
 
@@ -244,7 +242,7 @@ impl Fei {
                 32 => 5,
                 64 => 6,
                 128 => 7,
-                _ => panic!("Invalid external clock divider: {}", divide)
+                _ => panic!("Invalid external clock divider: {}", divide),
             }
         } else {
             match divide {
@@ -256,7 +254,7 @@ impl Fei {
                 1024 => 5,
                 1280 => 6,
                 1536 => 7,
-                _ => panic!("Invalid external clock divider: {}", divide)
+                _ => panic!("Invalid external clock divider: {}", divide),
             }
         };
 
@@ -372,7 +370,7 @@ impl Fbi {
                 32 => 5,
                 64 => 6,
                 128 => 7,
-                _ => panic!("Invalid external clock divider: {}", divide)
+                _ => panic!("Invalid external clock divider: {}", divide),
             }
         } else {
             match divide {
@@ -384,7 +382,7 @@ impl Fbi {
                 1024 => 5,
                 1280 => 6,
                 1536 => 7,
-                _ => panic!("Invalid external clock divider: {}", divide)
+                _ => panic!("Invalid external clock divider: {}", divide),
             }
         };
 
@@ -432,7 +430,7 @@ impl Fbi {
                 32 => 5,
                 64 => 6,
                 128 => 7,
-                _ => panic!("Invalid external clock divider: {}", divide)
+                _ => panic!("Invalid external clock divider: {}", divide),
             }
         } else {
             match divide {
@@ -444,7 +442,7 @@ impl Fbi {
                 1024 => 5,
                 1280 => 6,
                 1536 => 7,
-                _ => panic!("Invalid external clock divider: {}", divide)
+                _ => panic!("Invalid external clock divider: {}", divide),
             }
         };
 
@@ -558,7 +556,9 @@ impl Fbe {
         // Wait for the PLL to be "locked" and stable
         while !self.mcg.reg.s.read().get_bit(6) {}
 
-        unsafe { sim.select_pll_fll(PllFllSel::PllDiv2); }
+        unsafe {
+            sim.select_pll_fll(PllFllSel::PllDiv2);
+        }
 
         Pbe { mcg: self.mcg }
     }
@@ -606,7 +606,9 @@ impl Pbe {
         // Wait for FLL to be enabled
         while self.mcg.reg.s.read().get_bit(5) {}
 
-        unsafe { sim.select_pll_fll(PllFllSel::Fll); }
+        unsafe {
+            sim.select_pll_fll(PllFllSel::Fll);
+        }
 
         Fbe { mcg: self.mcg }
     }
@@ -671,7 +673,9 @@ impl Blpe {
         // Wait for FLL to be enabled
         while self.mcg.reg.s.read().get_bit(5) {}
 
-        unsafe { sim.select_pll_fll(PllFllSel::Fll); }
+        unsafe {
+            sim.select_pll_fll(PllFllSel::Fll);
+        }
 
         Fbe { mcg: self.mcg }
     }
@@ -708,7 +712,9 @@ impl Blpe {
         // Wait for the PLL to be "locked" and stable
         while !self.mcg.reg.s.read().get_bit(6) {}
 
-        unsafe { sim.select_pll_fll(PllFllSel::PllDiv2); }
+        unsafe {
+            sim.select_pll_fll(PllFllSel::PllDiv2);
+        }
 
         Pbe { mcg: self.mcg }
     }

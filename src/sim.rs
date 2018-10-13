@@ -1,24 +1,24 @@
 use bit_field::BitField;
 use cortex_m::peripheral::NVIC;
 use embedded_hal::spi::Mode;
-use volatile_register::{RO,RW};
+use volatile_register::{RO, RW};
 
 use adc::{self, Adc, AdcDiff};
-use atomic::{BmeAtomic,InterruptAtomic};
-use i2c::{self,I2cMaster};
+use atomic::{BmeAtomic, InterruptAtomic};
+use i2c::{self, I2cMaster};
 #[cfg(feature = "i2c-slave")]
-use i2c::{Address,I2cSlave};
-use port::{AdcPin, AdcDiffPPin, AdcDiffMPin};
-use port::{I2cSda, I2cScl};
+use i2c::{Address, I2cSlave};
+use port::{AdcDiffMPin, AdcDiffPPin, AdcPin};
+use port::{I2cScl, I2cSda};
 use port::{Port, PortName};
 use port::{SpiCs, SpiMiso, SpiMosi, SpiSck};
 use port::{UartRx, UartTx};
 use spi::{self, Divisor, Prescale, SpiMaster};
-use uart::{Uart,ConnMode};
+use uart::{ConnMode, Uart};
 
 pub struct ClockGate {
     gate: &'static mut BmeAtomic<u32>,
-    bit: u8 // TODO: replace with a const generic when that comes around?
+    bit:  u8, // TODO: replace with a const generic when that comes around?
 }
 
 impl ClockGate {
@@ -29,7 +29,10 @@ impl ClockGate {
         let reg_offset = 4 * (reg - 1);
         let ptr = (base + reg_offset) as *mut BmeAtomic<u32>;
         unsafe {
-            ClockGate { gate: &mut *ptr, bit: bit as u8 }
+            ClockGate {
+                gate: &mut *ptr,
+                bit:  bit as u8,
+            }
         }
     }
 
@@ -63,7 +66,7 @@ pub enum PllFllSel {
     /// FLL
     Fll = 0,
     /// PLL divided by 2
-    PllDiv2 = 1
+    PllDiv2 = 1,
 }
 
 /// UART0 transmit and receive clock source
@@ -75,41 +78,41 @@ pub enum Uart0ClkSrc {
     /// System oscillator from OSCCLK
     OscER = 2,
     /// MCG internal reference clock
-    McgIR = 3
+    McgIR = 3,
 }
 
 const SIM_ADDR: usize = 0x4004_7000;
 
-#[repr(C,packed)]
+#[repr(C, packed)]
 struct SimRegs {
-    sopt1:      RW<u32>,
-    sopt1_cfg:  RW<u32>,
+    sopt1: RW<u32>,
+    sopt1_cfg: RW<u32>,
     _pad0: [u32; 1023],
-    sopt2:      RW<u32>,
+    sopt2: RW<u32>,
     _pad1: u32,
-    sopt4:      RW<u32>,
-    sopt5:      RW<u32>,
+    sopt4: RW<u32>,
+    sopt5: RW<u32>,
     _pad2: u32,
-    sopt7:      RW<u32>,
+    sopt7: RW<u32>,
     _pad3: [u32; 2],
-    sdid:       RO<u32>,
+    sdid: RO<u32>,
     _pad4: [u32; 3],
-    scgc4:      RW<u32>,
-    scgc5:      RW<u32>,
-    scgc6:      RW<u32>,
-    scgc7:      RW<u32>,
-    clkdiv1:    RW<u32>,
+    scgc4: RW<u32>,
+    scgc5: RW<u32>,
+    scgc6: RW<u32>,
+    scgc7: RW<u32>,
+    clkdiv1: RW<u32>,
     _pad5: u32,
-    fcfg1:      RW<u32>,
-    fcfg2:      RO<u32>,
+    fcfg1: RW<u32>,
+    fcfg2: RO<u32>,
     _pad6: u32,
-    uidmh:      RO<u32>,
-    uidml:      RO<u32>,
-    uidl:       RO<u32>,
+    uidmh: RO<u32>,
+    uidml: RO<u32>,
+    uidl: RO<u32>,
 }
 
 pub struct Sim {
-    reg: &'static mut SimRegs
+    reg: &'static mut SimRegs,
 }
 
 static SIM_INIT: InterruptAtomic<bool> = InterruptAtomic::new(false);
@@ -128,7 +131,9 @@ impl Sim {
         let mut clkdiv: u32 = 0;
         clkdiv.set_bits(28..32, core - 1);
         clkdiv.set_bits(16..18, bus_flash - 1);
-        unsafe { self.reg.clkdiv1.write(clkdiv); }
+        unsafe {
+            self.reg.clkdiv1.write(clkdiv);
+        }
     }
 
     /// Select which clock is output on the MCGPLLCLK/MCGFLLCLK clock source
@@ -151,53 +156,41 @@ impl Sim {
             panic!("Cannot create Port instance; it is already in use");
         }
         gate.enable();
-        unsafe {
-            Port::new(port, gate)
-        }
+        unsafe { Port::new(port, gate) }
     }
 
-    pub fn uart<'a, 'b,
-                R: Into<Option<UartRx<'a>>>,
-                T: Into<Option<UartTx<'b>>>>(
+    pub fn uart<'a, 'b, R: Into<Option<UartRx<'a>>>, T: Into<Option<UartTx<'b>>>>(
         &mut self,
         uart: u8,
         rx: R,
         tx: T,
-        clkdiv: u16
+        clkdiv: u16,
     ) -> Result<Uart<'a, 'b, u8>, ()> {
         let mut gate = match uart {
             0 => ClockGate::new(4, 10),
             1 => ClockGate::new(4, 11),
             2 => ClockGate::new(4, 12),
-            _ => return Err(())
+            _ => return Err(()),
         };
         if gate.is_enabled() {
-            return Err(())
+            return Err(());
         }
         gate.enable();
-        unsafe {
-            Uart::new(uart, rx.into(), tx.into(), clkdiv, ConnMode::TwoWire, gate)
-        }
+        unsafe { Uart::new(uart, rx.into(), tx.into(), clkdiv, ConnMode::TwoWire, gate) }
     }
 
-    pub fn uart_loopback<'a, 'b>(
-        &mut self,
-        uart: u8,
-        clkdiv: u16
-    ) -> Result<Uart<'a, 'b, u8>, ()> {
+    pub fn uart_loopback<'a, 'b>(&mut self, uart: u8, clkdiv: u16) -> Result<Uart<'a, 'b, u8>, ()> {
         let mut gate = match uart {
             0 => ClockGate::new(4, 10),
             1 => ClockGate::new(4, 11),
             2 => ClockGate::new(4, 12),
-            _ => return Err(())
+            _ => return Err(()),
         };
         if gate.is_enabled() {
-            return Err(())
+            return Err(());
         }
         gate.enable();
-        unsafe {
-            Uart::new(uart, None, None, clkdiv, ConnMode::Loop, gate)
-        }
+        unsafe { Uart::new(uart, None, None, clkdiv, ConnMode::Loop, gate) }
     }
 
     pub unsafe fn set_uart0_clksrc(&mut self, clksrc: Uart0ClkSrc) {
@@ -213,7 +206,7 @@ impl Sim {
         sda: I2cSda<'b>,
         nvic: &mut NVIC,
         clkdiv: (u8, u8),
-        op_mode: i2c::OpMode
+        op_mode: i2c::OpMode,
     ) -> Result<I2cMaster<'a, 'b>, ()> {
         if scl.bus() != sda.bus() {
             return Err(());
@@ -222,15 +215,13 @@ impl Sim {
         let mut gate = match scl.bus() {
             0 => ClockGate::new(4, 6),
             1 => ClockGate::new(4, 7),
-            _ => return Err(())
+            _ => return Err(()),
         };
         if gate.is_enabled() {
-            return Err(())
+            return Err(());
         }
         gate.enable();
-        unsafe {
-            I2cMaster::new(scl, sda, nvic, clkdiv, op_mode, gate)
-        }
+        unsafe { I2cMaster::new(scl, sda, nvic, clkdiv, op_mode, gate) }
     }
 
     #[cfg(feature = "i2c-slave")]
@@ -240,20 +231,18 @@ impl Sim {
         sda: I2cSda<'b>,
         nvic: &mut NVIC,
         addr: Address,
-        general_call: bool
+        general_call: bool,
     ) -> Result<I2cSlave<'a, 'b>, ()> {
         let mut gate = match scl.bus() {
             0 => ClockGate::new(4, 6),
             1 => ClockGate::new(4, 7),
-            _ => return Err(())
+            _ => return Err(()),
         };
         if gate.is_enabled() {
-            return Err(())
+            return Err(());
         }
         gate.enable();
-        unsafe {
-            I2cSlave::new(scl, sda, nvic, addr, general_call, gate)
-        }
+        unsafe { I2cSlave::new(scl, sda, nvic, addr, general_call, gate) }
     }
 
     pub fn spi_master<'a, 'b, 'c, 'd, O, I, S, W>(
@@ -276,10 +265,10 @@ impl Sim {
         let mut gate = match sck.bus() {
             0 => ClockGate::new(4, 22),
             1 => ClockGate::new(4, 23),
-            _ => return Err(())
+            _ => return Err(()),
         };
         if gate.is_enabled() {
-            return Err(())
+            return Err(());
         }
         gate.enable();
 
@@ -306,19 +295,17 @@ impl Sim {
         resolution: adc::Resolution,
         clkdiv: adc::Divisor,
         vref: adc::VoltageRef,
-        pin: P
+        pin: P,
     ) -> Result<Adc<'a>, ()> {
         let mut gate = match adc {
             0 => ClockGate::new(6, 27),
-            _ => return Err(())
+            _ => return Err(()),
         };
         if gate.is_enabled() {
-            return Err(())
+            return Err(());
         }
         gate.enable();
-        unsafe {
-            Adc::new(adc, ch, resolution, clkdiv, vref, pin.into(), gate)
-        }
+        unsafe { Adc::new(adc, ch, resolution, clkdiv, vref, pin.into(), gate) }
     }
 
     pub fn adc_diff<'a, 'b, P, N>(
@@ -329,7 +316,7 @@ impl Sim {
         clkdiv: adc::Divisor,
         vref: adc::VoltageRef,
         pos: P,
-        neg: N
+        neg: N,
     ) -> Result<AdcDiff<'a, 'b>, ()>
     where
         P: Into<Option<AdcDiffPPin<'a>>>,
@@ -337,14 +324,23 @@ impl Sim {
     {
         let mut gate = match adc {
             0 => ClockGate::new(6, 27),
-            _ => return Err(())
+            _ => return Err(()),
         };
         if gate.is_enabled() {
-            return Err(())
+            return Err(());
         }
         gate.enable();
         unsafe {
-            AdcDiff::new(adc, ch, resolution, clkdiv, vref, pos.into(), neg.into(), gate)
+            AdcDiff::new(
+                adc,
+                ch,
+                resolution,
+                clkdiv,
+                vref,
+                pos.into(),
+                neg.into(),
+                gate,
+            )
         }
     }
 }
@@ -357,7 +353,7 @@ impl Drop for Sim {
 
 pub mod cop {
     use bit_field::BitField;
-    use volatile_register::{RW,WO};
+    use volatile_register::{RW, WO};
 
     pub enum Timeout {
         /// COP timeout after 2^5 LPO cycles or 2^13 bus clock cycles.
@@ -365,19 +361,19 @@ pub mod cop {
         /// COP timeout after 2^8 LPO cycles or 2^16 bus clock cycles.
         Medium = 2,
         /// COP timeout after 2^10 LPO cycles or 2^18 bus clock cycles.
-        Long = 3
+        Long = 3,
     }
 
     pub enum ClockSource {
         /// Internal 1 kHZ clock is the source to COP
         Internal,
         /// Bus clock is the source to COP.
-        Bus(Windowing)
+        Bus(Windowing),
     }
 
     pub enum Windowing {
         Normal = 0,
-        Windowed = 1
+        Windowed = 1,
     }
 
     const COP_ADDR: usize = 0x4004_8100;
@@ -388,7 +384,7 @@ pub mod cop {
     }
 
     pub struct Cop {
-        reg: &'static mut CopRegs
+        reg: &'static mut CopRegs,
     }
 
     impl Cop {

@@ -13,44 +13,44 @@ use sim::ClockGate;
 const I2C0_ADDR: usize = 0x4006_6000;
 const I2C1_ADDR: usize = 0x4006_7000;
 
-#[repr(C,packed)]
+#[repr(C, packed)]
 struct I2cRegs {
-    a1:     RW<u8>,
-    f:      RW<u8>,
-    c1:     RW<u8>,
-    s:      RW<u8>,
-    d:      RW<u8>,
-    c2:     RW<u8>,
-    flt:    RW<u8>,
-    ra:     RW<u8>,
-    smb:    RW<u8>,
-    a2:     RW<u8>,
-    slth:   RW<u8>,
-    sltl:   RW<u8>,
+    a1:   RW<u8>,
+    f:    RW<u8>,
+    c1:   RW<u8>,
+    s:    RW<u8>,
+    d:    RW<u8>,
+    c2:   RW<u8>,
+    flt:  RW<u8>,
+    ra:   RW<u8>,
+    smb:  RW<u8>,
+    a2:   RW<u8>,
+    slth: RW<u8>,
+    sltl: RW<u8>,
 }
 
 pub struct I2cMaster<'a, 'b> {
-    reg: &'static mut I2cRegs,
-    _scl: I2cScl<'a>,
-    _sda: I2cSda<'b>,
-    _gate: ClockGate,
-    bus: u8,
+    reg:     &'static mut I2cRegs,
+    _scl:    I2cScl<'a>,
+    _sda:    I2cSda<'b>,
+    _gate:   ClockGate,
+    bus:     u8,
     op_mode: OpMode,
 }
 
 #[cfg(feature = "i2c-slave")]
 pub struct I2cSlave<'a, 'b> {
-    _reg: &'static mut I2cRegs,
-    _scl: I2cScl<'a>,
-    _sda: I2cSda<'b>,
+    _reg:  &'static mut I2cRegs,
+    _scl:  I2cScl<'a>,
+    _sda:  I2cSda<'b>,
     _gate: ClockGate,
-    bus: u8,
+    bus:   u8,
 }
 
 #[derive(Clone, Copy)]
 pub enum Address {
     Bits7(u8),
-    Bits10(u16)
+    Bits10(u16),
 }
 
 impl Address {
@@ -74,7 +74,7 @@ pub enum OpMode {
     ISR,
     #[cfg(feature = "i2c-dma")]
     /// DMA mode - Like interrupt mode, but it uses DMA to do the magic
-    DMA
+    DMA,
 }
 
 #[derive(Debug)]
@@ -104,17 +104,17 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
         nvic: &mut NVIC,
         (mul, clkdiv): (u8, u8),
         op_mode: OpMode,
-        gate: ClockGate
+        gate: ClockGate,
     ) -> Result<I2cMaster<'a, 'b>, ()> {
         if scl.bus() != sda.bus() {
             return Err(());
         }
 
         if mul >= 3 {
-            return Err(())
+            return Err(());
         }
         if clkdiv >= 64 {
-            return Err(())
+            return Err(());
         }
 
         let bus = sda.bus();
@@ -122,7 +122,7 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
         let reg = match bus {
             0 => &mut *(I2C0_ADDR as *mut I2cRegs),
             1 => &mut *(I2C1_ADDR as *mut I2cRegs),
-            _ => unimplemented!()
+            _ => unimplemented!(),
         };
 
         // init ram vars for tx (IICEN and IICIE)
@@ -143,7 +143,7 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
         if bus_freq >= 32 * 12_000_000 {
             reg.flt.write(4);
         } else {
-            reg.flt.write((bus_freq/12_000_000) as u8);
+            reg.flt.write((bus_freq / 12_000_000) as u8);
         }
 
         reg.a1.write(0);
@@ -169,12 +169,21 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
 
         reg.c1.write(0x80); // enable module
 
-        Ok(I2cMaster { reg, _scl: scl, _sda: sda, _gate: gate, bus, op_mode })
+        Ok(I2cMaster {
+            reg,
+            _scl: scl,
+            _sda: sda,
+            _gate: gate,
+            bus,
+            op_mode,
+        })
     }
 
     pub fn wait_for_interrupt(&mut self) {
         while !self.reg.s.read().get_bit(1) {}
-        unsafe { self.reg.s.write(0x02); }
+        unsafe {
+            self.reg.s.write(0x02);
+        }
     }
 
     // TODO: add timeout
@@ -204,7 +213,7 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
             // only really will matter when timeouts are added
             if !self.reg.c1.read().get_bit(5) {
                 // was timeout
-                return Err(Error::Timeout)
+                return Err(Error::Timeout);
             }
         }
 
@@ -256,7 +265,7 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
                     if state.tx_buf.push_back(addr << 1).is_err() {
                         panic!("Failed to push address to TX buffer");
                     }
-                },
+                }
                 Address::Bits10(addr) => {
                     let upper = *0.set_bits(1..3, (addr >> 8) as u8).set_bits(3..8, 0b11110);
                     let lower = addr as u8;
@@ -302,7 +311,9 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
             }
 
             // clear ARBL and IICIF
-            unsafe { self.reg.s.write(0x12); }
+            unsafe {
+                self.reg.s.write(0x12);
+            }
 
             let force_imm = self.acquire_bus()?;
 
@@ -312,7 +323,9 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
             if force_imm || self.op_mode == OpMode::IMM {
                 while let Some(d) = state.tx_buf.pop_front() {
                     // write address/data to bus
-                    unsafe { self.reg.d.write(d); }
+                    unsafe {
+                        self.reg.d.write(d);
+                    }
                     self.wait_for_interrupt();
                     let status = self.reg.s.read();
 
@@ -320,21 +333,30 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
                     // This is not called out in the Master mode branch in the
                     // in the flowchart in the TRM, but the Teensy folks do it
                     // so I'm putting it in
-                    if status.get_bit(4) { // check arbitration
+                    // check arbitration
+                    if status.get_bit(4) {
                         state.status = Status::ArbLost;
-                        unsafe { self.reg.s.write(0x10); } // clear ARBL
+                        unsafe {
+                            self.reg.s.write(0x10); // clear ARBL
+                        }
+
                         // TODO: this is clearly not right. After ARBL it should
                         // drop into IMM slave mode if IAAS=1. Right now Rx
                         // message would be ignored regardless of IAAS
 
                         // change to Rx mode, intr disabled
                         // (does this send STOP if ARBL flagged?)
-                        unsafe { self.reg.c1.write(0x80); } // Only module enabled
+                        unsafe {
+                            self.reg.c1.write(0x80); // Only module enabled
+                        }
                         return Err(Error::ArbLost);
-                    } else if status.get_bit(0) { // check if slave acked
+                    // check if slave acked
+                    } else if status.get_bit(0) {
                         // TODO: separate out data and addr so we can give different errors
                         state.status = Status::Nak;
-                        unsafe { self.reg.c1.write(0x80); } // Only module enabled
+                        unsafe {
+                            self.reg.c1.write(0x80); // Only module enabled
+                        }
                         return Err(Error::Nak);
                     }
                 }
@@ -343,13 +365,14 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
 
                 match state.stop {
                     Stop::Yes => unsafe { self.reg.c1.write(0x80) }, // Only module enabled
-                    Stop::No => {}, //unsafe { self.reg.c1.write(0xB0) }, // Effectively a nop
+                    Stop::No => {} //unsafe { self.reg.c1.write(0xB0) }, // Effectively a nop
                 }
 
                 Ok(())
             } else {
                 #[cfg(feature = "i2c-dma")]
-                { // All this because attributes are not allowed on if statements yet
+                // All this because attributes are not allowed on if statements yet
+                {
                     // limit transfers less than 5 bytes to ISR method
                     if self.op_mode == OpMode::DMA && state.tx_buf.len() >= 5 {
                         // init DMA, let the hack begin
@@ -362,9 +385,18 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
                 }
 
                 // enable interrupts and tx
-                unsafe { self.reg.c1.write(0xF0); }
+                unsafe {
+                    self.reg.c1.write(0xF0);
+                }
                 // writing first data byte will start ISR
-                unsafe { self.reg.d.write(state.tx_buf.pop_front().expect("Failed to pop first TX byte")); }
+                unsafe {
+                    self.reg.d.write(
+                        state
+                            .tx_buf
+                            .pop_front()
+                            .expect("Failed to pop first TX byte"),
+                    );
+                }
 
                 Ok(())
             }
@@ -406,7 +438,9 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
             state.rx_buf.clear();
 
             // clear ARBL and IICIF
-            unsafe { self.reg.s.write(0x12); }
+            unsafe {
+                self.reg.s.write(0x12);
+            }
 
             let force_imm = self.acquire_bus()?;
 
@@ -416,7 +450,15 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
 
             if force_imm || self.op_mode == OpMode::IMM {
                 // write address to bus
-                unsafe { self.reg.d.write(state.tx_buf.pop_front().expect("Failed to pop address byte") | 0x01); }
+                unsafe {
+                    self.reg.d.write(
+                        state
+                            .tx_buf
+                            .pop_front()
+                            .expect("Failed to pop address byte")
+                            | 0x01,
+                    );
+                }
                 self.wait_for_interrupt();
                 let status = self.reg.s.read();
 
@@ -424,21 +466,30 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
                 // This is not called out in the Master mode branch in the
                 // in the flowchart in the TRM, but the Teensy folks do it
                 // so I'm putting it in
-                if status.get_bit(4) { // check arbitration
+                // check arbitration
+                if status.get_bit(4) {
                     state.status = Status::ArbLost;
-                    unsafe { self.reg.s.write(0x10); } // clear ARBL
+                    unsafe {
+                        self.reg.s.write(0x10); // clear ARBL
+                    }
+
                     // TODO: this is clearly not right. After ARBL it should
                     // drop into IMM slave mode if IAAS=1. Right now Rx
                     // message would be ignored regardless of IAAS
 
                     // change to Rx mode, intr disabled
                     // (does this send STOP if ARBL flagged?)
-                    unsafe { self.reg.c1.write(0x80); } // Only module enabled
+                    unsafe {
+                        self.reg.c1.write(0x80); // Only module enabled
+                    }
                     Err(Error::ArbLost)
-                } else if status.get_bit(0) { // check if slave acked
+                // check if slave acked
+                } else if status.get_bit(0) {
                     // TODO: separate out data and addr so we can give different errors
                     state.status = Status::Nak;
-                    unsafe { self.reg.c1.write(0x80); } // Only module enabled
+                    unsafe {
+                        self.reg.c1.write(0x80); // Only module enabled
+                    }
                     Err(Error::Nak)
                 } else {
                     state.status = Status::Receive;
@@ -462,8 +513,9 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
                         }
                         */
 
-                        if state.rx_buf.len() + 1 == state.rx_req ||
-                           (state.status == Status::Timeout && state.timeout_rx_nak) {
+                        if state.rx_buf.len() + 1 == state.rx_req
+                            || (state.status == Status::Timeout && state.timeout_rx_nak)
+                        {
                             state.timeout_rx_nak = false;
 
                             if state.status != Status::Timeout {
@@ -480,12 +532,15 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
                             match state.stop {
                                 Stop::Yes => {
                                     //delayMicroseconds(1); // empirical patch, lets things settle before issuing STOP
-                                    unsafe { self.reg.c1.write(0x80); } // only module enabled
+                                    unsafe {
+                                        self.reg.c1.write(0x80); // only module enabled
+                                    }
                                 }
                                 Stop::No => unsafe { self.reg.c1.write(0xB0) }, // no stop, tx, intr disabled
                             }
-                        } else if state.rx_buf.len() + 2 == state.rx_req ||
-                                  (state.status == Status::Timeout && !state.timeout_rx_nak) {
+                        } else if state.rx_buf.len() + 2 == state.rx_req
+                            || (state.status == Status::Timeout && !state.timeout_rx_nak)
+                        {
                             if state.status == Status::Timeout && !state.timeout_rx_nak {
                                 state.timeout_rx_nak = true;
                             }
@@ -511,7 +566,8 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
                 }
             } else {
                 #[cfg(feature = "i2c-dma")]
-                { // All this because attributes are not allowed on if statements yet
+                // All this because attributes are not allowed on if statements yet
+                {
                     // limit transfers less than 5 bytes to ISR method
                     if self.op_mode == OpMode::DMA && state.rx_req >= 5 {
                         // init DMA, let the hack begin
@@ -524,9 +580,19 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
                 }
 
                 // enable interrupts
-                unsafe { self.reg.c1.write(0xF0); }
+                unsafe {
+                    self.reg.c1.write(0xF0);
+                }
                 // address + read bit
-                unsafe { self.reg.d.write(state.tx_buf.pop_front().expect("Failed to pop address byte") | 0x01); }
+                unsafe {
+                    self.reg.d.write(
+                        state
+                            .tx_buf
+                            .pop_front()
+                            .expect("Failed to pop address byte")
+                            | 0x01,
+                    );
+                }
 
                 Ok(())
             }
@@ -633,8 +699,8 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
     }
 }
 
-pub struct Transmission<'a:'c, 'b:'c, 'c> {
-    i2c: &'c mut I2cMaster<'a, 'b>
+pub struct Transmission<'a: 'c, 'b: 'c, 'c> {
+    i2c: &'c mut I2cMaster<'a, 'b>,
 }
 
 impl<'a, 'b, 'c> Transmission<'a, 'b, 'c> {
@@ -659,7 +725,7 @@ impl<'a, 'b> I2cSlave<'a, 'b> {
         nvic: &mut NVIC,
         addr: Address,
         general_call: bool,
-        gate: ClockGate
+        gate: ClockGate,
     ) -> Result<I2cSlave<'a, 'b>, ()> {
         if scl.bus() != sda.bus() {
             return Err(());
@@ -670,7 +736,7 @@ impl<'a, 'b> I2cSlave<'a, 'b> {
         let reg = match bus {
             0 => &mut *(I2C0_ADDR as *mut I2cRegs),
             1 => &mut *(I2C1_ADDR as *mut I2cRegs),
-            _ => unimplemented!()
+            _ => unimplemented!(),
         };
 
         // init ram vars for tx (IICEN and IICIE)
@@ -721,7 +787,13 @@ impl<'a, 'b> I2cSlave<'a, 'b> {
 
         reg.c1.write(0xC0); // enable module and interrupts
 
-        Ok(I2cSlave { _reg: reg, _scl: scl, _sda: sda, _gate: gate, bus: bus })
+        Ok(I2cSlave {
+            _reg: reg,
+            _scl: scl,
+            _sda: sda,
+            _gate: gate,
+            bus,
+        })
     }
 
     pub fn set_rx_callback(&mut self, callback: Option<fn(u8, &ArrayDeque<[u8; 64]>)>) {
@@ -749,7 +821,7 @@ struct IsrState {
     #[cfg(feature = "i2c-slave")]
     slave_rx_callback: Option<fn(u8, &ArrayDeque<[u8; 64]>)>,
     #[cfg(feature = "i2c-slave")]
-    slave_tx_callback: Option<fn(u8, &mut ArrayDeque<[u8; 64]>)>
+    slave_tx_callback: Option<fn(u8, &mut ArrayDeque<[u8; 64]>)>,
 }
 
 impl IsrState {
@@ -772,7 +844,7 @@ impl IsrState {
     }
 }
 
-#[derive(Debug,PartialEq)]
+#[derive(Debug, PartialEq)]
 enum Status {
     Idle,
     Address,
@@ -791,13 +863,13 @@ enum Status {
     SlaveReceive,
 
     #[cfg(feature = "i2c-isr")]
-    Fatal
+    Fatal,
 }
 
 #[derive(PartialEq)]
 pub enum Stop {
     Yes,
-    No
+    No,
 }
 
 static I2C0_STATE: Mutex<RefCell<Option<IsrState>>> = Mutex::new(RefCell::new(None));
@@ -847,7 +919,8 @@ unsafe fn isr(reg: &mut I2cRegs, state: &mut IsrState) {
     // Check if master or slave
     if c1.get_bit(5) {
         // Master
-        if c1.get_bit(4) { // check for currently transmitting or receiving
+        // check for currently transmitting or receiving
+        if c1.get_bit(4) {
             match state.status {
                 Status::Transmit => {
                     // TODO: find some way to test this
@@ -856,9 +929,11 @@ unsafe fn isr(reg: &mut I2cRegs, state: &mut IsrState) {
                     // so I'm putting it in
                     // The switch to slave rx might be automatically handled by
                     // the hardware so this would never get hit
-                    if status.get_bit(4) { // check arbitration
+                    // check arbitration
+                    if status.get_bit(4) {
                         state.status = Status::ArbLost;
                         reg.s.write(0x10); // clear ARBL
+
                         // TODO: this is clearly not right. After ARBL it should
                         // drop into IMM slave mode if IAAS=1. Right now Rx
                         // message would be ignored regardless of IAAS
@@ -866,7 +941,9 @@ unsafe fn isr(reg: &mut I2cRegs, state: &mut IsrState) {
                         // change to Rx mode, intr disabled
                         // (does this send STOP if ARBL flagged?)
                         reg.c1.write(0x80); // Only module enabled
-                    } else if status.get_bit(0) { // check if slave acked
+
+                    // check if slave acked
+                    } else if status.get_bit(0) {
                         // TODO: separate out data and addr so we can give different errors
                         state.status = Status::Nak;
                         reg.c1.write(0x80); // Only module enabled
@@ -888,9 +965,11 @@ unsafe fn isr(reg: &mut I2cRegs, state: &mut IsrState) {
                     // This is not called out in the Master mode branch in the
                     // in the flowchart in the TRM, but the Teensy folks do it
                     // so I'm putting it in
-                    if status.get_bit(4) { // check arbitration
+                    // check arbitration
+                    if status.get_bit(4) {
                         state.status = Status::ArbLost;
                         reg.s.write(0x10); // clear ARBL
+
                         // TODO: this is clearly not right. After ARBL it should
                         // drop into IMM slave mode if IAAS=1. Right now Rx
                         // message would be ignored regardless of IAAS
@@ -898,7 +977,9 @@ unsafe fn isr(reg: &mut I2cRegs, state: &mut IsrState) {
                         // change to Rx mode, intr disabled
                         // (does this send STOP if ARBL flagged?)
                         reg.c1.write(0x80); // Only module enabled
-                    } else if status.get_bit(0) { // check if slave acked
+
+                    // check if slave acked
+                    } else if status.get_bit(0) {
                         // TODO: separate out data and addr so we can give different errors
                         state.status = Status::Nak;
                         reg.c1.write(0x80); // Only module enabled
@@ -922,7 +1003,7 @@ unsafe fn isr(reg: &mut I2cRegs, state: &mut IsrState) {
                 Status::Timeout => {
                     match state.stop {
                         Stop::Yes => reg.c1.write(0x80), // only module enabled
-                        Stop::No => reg.c1.write(0xB0), // no stop, still in tx, intr disabled
+                        Stop::No => reg.c1.write(0xB0),  // no stop, still in tx, intr disabled
                     }
                 }
                 _ => {
@@ -932,9 +1013,11 @@ unsafe fn isr(reg: &mut I2cRegs, state: &mut IsrState) {
                 }
             }
         } else {
-            if state.status == Status::Receive { // Not REALLY needed, but might was well double check
-                if state.rx_buf.len() + 1 == state.rx_req ||
-                   (state.status == Status::Timeout && state.timeout_rx_nak) {
+            // Not REALLY needed, but might was well double check
+            if state.status == Status::Receive {
+                if state.rx_buf.len() + 1 == state.rx_req
+                    || (state.status == Status::Timeout && state.timeout_rx_nak)
+                {
                     state.timeout_rx_nak = false;
 
                     if state.status != Status::Timeout {
@@ -953,8 +1036,9 @@ unsafe fn isr(reg: &mut I2cRegs, state: &mut IsrState) {
                         }
                         Stop::No => reg.c1.write(0xB0), // no stop, tx, intr disabled
                     }
-                } else if state.rx_buf.len() + 2 == state.rx_req ||
-                          (state.status == Status::Timeout && !state.timeout_rx_nak) {
+                } else if state.rx_buf.len() + 2 == state.rx_req
+                    || (state.status == Status::Timeout && !state.timeout_rx_nak)
+                {
                     if state.status == Status::Timeout && !state.timeout_rx_nak {
                         state.timeout_rx_nak = true;
                     }
@@ -976,19 +1060,25 @@ unsafe fn isr(reg: &mut I2cRegs, state: &mut IsrState) {
         }
     } else {
         // Slave
-        if status.get_bit(4) { // check arbitration
+        // check arbitration
+        if status.get_bit(4) {
             state.status = Status::ArbLost;
             reg.s.write(0x10); // clear ARBL
-            if !status.get_bit(6) { // not addressed as slave
+
+            // not addressed as slave
+            if !status.get_bit(6) {
                 return;
             }
         }
 
         #[cfg(feature = "i2c-slave")]
         {
-            if status.get_bit(6) { // addressed as slave
+            // addressed as slave
+            if status.get_bit(6) {
                 // repeated START occurred, run callback
-                if let (&Status::SlaveReceive, Some(callback)) = (&state.status, state.slave_rx_callback) {
+                if let (&Status::SlaveReceive, Some(callback)) =
+                    (&state.status, state.slave_rx_callback)
+                {
                     callback(state.rx_addr, &state.rx_buf);
                     state.rx_buf.clear();
                 }
@@ -1023,17 +1113,15 @@ unsafe fn isr(reg: &mut I2cRegs, state: &mut IsrState) {
                     state.rx_addr = reg.d.read() >> 1; // read target addr
 
                     // TODO: attach interrupt on pin
-                    /*
-                    i2c->irqCount = 0;
-                    if(i2c->currentPins == I2C_PINS_18_19)
-                        attachInterrupt(18, i2c_t3::sda0_rising_isr, RISING);
-                    else if(i2c->currentPins == I2C_PINS_16_17)
-                        attachInterrupt(17, i2c_t3::sda0_rising_isr, RISING);
-                    else if(i2c->currentPins == I2C_PINS_29_30)
-                        attachInterrupt(30, i2c_t3::sda1_rising_isr, RISING);
-                    else if(i2c->currentPins == I2C_PINS_26_31)
-                        attachInterrupt(31, i2c_t3::sda1_rising_isr, RISING);
-                    */
+                    //i2c->irqCount = 0;
+                    //if(i2c->currentPins == I2C_PINS_18_19)
+                    //    attachInterrupt(18, i2c_t3::sda0_rising_isr, RISING);
+                    //else if(i2c->currentPins == I2C_PINS_16_17)
+                    //    attachInterrupt(17, i2c_t3::sda0_rising_isr, RISING);
+                    //else if(i2c->currentPins == I2C_PINS_29_30)
+                    //    attachInterrupt(30, i2c_t3::sda1_rising_isr, RISING);
+                    //else if(i2c->currentPins == I2C_PINS_26_31)
+                    //    attachInterrupt(31, i2c_t3::sda1_rising_isr, RISING);
                 }
             } else {
                 // data transfer

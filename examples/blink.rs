@@ -10,11 +10,11 @@ extern crate mkl26;
 
 use cortex_m::asm;
 
-use mkl26::mcg::{Clock,Mcg,OscRange};
+use mkl26::mcg::{Clock, Mcg, OscRange};
 use mkl26::osc::Osc;
 use mkl26::port::PortName;
-use mkl26::sim::Sim;
 use mkl26::sim::cop::Cop;
+use mkl26::sim::Sim;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 #[link_section = ".flashconfig"]
@@ -70,7 +70,7 @@ fn main() -> ! {
 //TODO: change to use USB_Listen for the panic messages
 #[lang = "panic_impl"]
 #[no_mangle]
-pub extern fn rust_begin_panic(_info: &core::panic::PanicInfo) -> ! {
+pub extern "C" fn rust_begin_panic(_info: &core::panic::PanicInfo) -> ! {
     // Reset the MCU after we've printed our panic.
     /*
     let aircr = unsafe {

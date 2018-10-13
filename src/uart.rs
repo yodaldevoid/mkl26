@@ -1,8 +1,8 @@
 use core::fmt::{self, Write};
 use core::marker::PhantomData;
 
-use volatile_register::{RO,RW};
 use bit_field::BitField;
+use volatile_register::{RO, RW};
 
 use port::{UartRx, UartTx};
 use sim::ClockGate;
@@ -11,17 +11,17 @@ const UART0_ADDR: usize = 0x4006_A000;
 const UART1_ADDR: usize = 0x4006_B000;
 const UART2_ADDR: usize = 0x4006_C000;
 
-#[repr(C,packed)]
+#[repr(C, packed)]
 struct UartRegs {
-    bdh:    RW<u8>,
-    bdl:    RW<u8>,
-    c1:     RW<u8>,
-    c2:     RW<u8>,
-    s1:     RO<u8>,
-    s2:     RW<u8>,
-    c3:     RW<u8>,
-    d:      RW<u8>,
-    diff:   UartDiff,
+    bdh:  RW<u8>,
+    bdl:  RW<u8>,
+    c1:   RW<u8>,
+    c2:   RW<u8>,
+    s1:   RO<u8>,
+    s2:   RW<u8>,
+    c3:   RW<u8>,
+    d:    RW<u8>,
+    diff: UartDiff,
 }
 
 #[repr(C)]
@@ -30,17 +30,17 @@ union UartDiff {
     u1: Uart12Diff,
 }
 
-#[repr(C,packed)]
+#[repr(C, packed)]
 struct Uart0Diff {
-    ma1:    RW<u8>,
-    ma2:    RW<u8>,
-    c4:     RW<u8>,
-    c5:     RW<u8>,
+    ma1: RW<u8>,
+    ma2: RW<u8>,
+    c4:  RW<u8>,
+    c5:  RW<u8>,
 }
 
-#[repr(C,packed)]
+#[repr(C, packed)]
 struct Uart12Diff {
-    c4:     RW<u8>,
+    c4: RW<u8>,
 }
 
 /// A UART peripheral
@@ -48,11 +48,11 @@ struct Uart12Diff {
 /// T is the "character" size used for the UART. This can be 8, 9, or 10 bits.
 // TODO: consider grabbing crate ux
 pub struct Uart<'a, 'b, B> {
-    reg: &'static mut UartRegs,
-    _rx: Option<UartRx<'a>>,
-    _tx: Option<UartTx<'b>>,
+    reg:   &'static mut UartRegs,
+    _rx:   Option<UartRx<'a>>,
+    _tx:   Option<UartTx<'b>>,
     _gate: ClockGate,
-    _bus: u8, // TODO: replace with a const generic when that comes around
+    _bus:  u8, // TODO: replace with a const generic when that comes around
     _char: PhantomData<B>,
 }
 
@@ -65,7 +65,7 @@ pub(crate) enum ConnMode {
 /// clock_freq - Frequency of module clock in Hz. UART0 uses the clock specified by
 /// SIM_SOPT2[UART0SRC]. UART1 and UART2 use the bus clock.
 pub fn calc_clkdiv(baud: u32, clock_freq: u32) -> u16 {
-    ((((clock_freq / 16)  + (baud / 2)) / baud) & 0xFFF) as u16
+    ((((clock_freq / 16) + (baud / 2)) / baud) & 0xFFF) as u16
 }
 
 // TODO: flow control
@@ -81,7 +81,7 @@ impl<'a, 'b> Uart<'a, 'b, u8> {
         tx: Option<UartTx<'b>>,
         clkdiv: u16,
         conn_mode: ConnMode,
-        gate: ClockGate
+        gate: ClockGate,
     ) -> Result<Uart<'a, 'b, u8>, ()> {
         if let Some(r) = rx.as_ref() {
             if r.bus() != bus {
@@ -94,14 +94,14 @@ impl<'a, 'b> Uart<'a, 'b, u8> {
             }
         }
         if clkdiv > 0xFFF {
-            return Err(())
+            return Err(());
         }
 
         let reg = match bus {
             0 => &mut *(UART0_ADDR as *mut UartRegs),
             1 => &mut *(UART1_ADDR as *mut UartRegs),
             2 => &mut *(UART2_ADDR as *mut UartRegs),
-            _ => unreachable!()
+            _ => unreachable!(),
         };
 
         reg.bdh.modify(|mut bdh| {
@@ -136,7 +136,14 @@ impl<'a, 'b> Uart<'a, 'b, u8> {
             c2
         });
 
-        Ok(Uart { reg, _tx: tx, _rx: rx, _gate: gate, _bus: bus, _char: PhantomData })
+        Ok(Uart {
+            reg,
+            _tx: tx,
+            _rx: rx,
+            _gate: gate,
+            _bus: bus,
+            _char: PhantomData,
+        })
     }
 
     /// Read is non-blocking
@@ -153,7 +160,9 @@ impl<'a, 'b> Uart<'a, 'b, u8> {
     pub fn write_byte(&mut self, b: u8) -> Result<(), ()> {
         // wait for tx buffer to not be full
         if self.reg.s1.read().get_bit(7) {
-            unsafe { self.reg.d.write(b); }
+            unsafe {
+                self.reg.d.write(b);
+            }
             Ok(())
         } else {
             Err(())
