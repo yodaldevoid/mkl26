@@ -14,7 +14,7 @@ use port::{I2cScl, I2cSda};
 use port::{Port, PortName};
 use port::{SpiCs, SpiMiso, SpiMosi, SpiSck};
 use port::{UartRx, UartTx};
-use spi::{self, Divisor, Prescale, SpiMaster};
+use spi::{self, Divisor, SpiMaster};
 use tpm::{self, ClockMode, PwmSelect, TimerNum, Tpm};
 use uart::{ConnMode, Uart};
 

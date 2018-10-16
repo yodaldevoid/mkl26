@@ -76,8 +76,6 @@ pub struct Tpm<'a> {
     _gate: ClockGate,
 }
 
-use cortex_m::asm;
-
 impl<'a> Tpm<'a> {
     // TODO: pass in pin and double check it matches the selected channel
     pub unsafe fn new(
