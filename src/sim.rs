@@ -71,8 +71,10 @@ pub enum PllFllSel {
     PllDiv2 = 1,
 }
 
-/// UART0 transmit and receive clock source
-pub enum Uart0ClkSrc {
+/// Clock source
+///
+/// UART0 transmit and receive clock selection and TPM clock selection use this.
+pub enum ClkSrc {
     /// Transmit and receive clock disabled
     Disabled = 0,
     /// MCG FLL output or MCG PLL output divided by 2. Which determined by PLLFLLSEL.
@@ -195,14 +197,14 @@ impl Sim {
         unsafe { Uart::new(uart, None, None, clkdiv, ConnMode::Loop, gate) }
     }
 
-    pub unsafe fn set_tpm_clksrc(&mut self) {
+    pub unsafe fn set_tpm_clksrc(&mut self, clksrc: ClkSrc) {
         self.reg.sopt2.modify(|mut sopt2| {
-            sopt2.set_bits(24..25, 0b01);
+            sopt2.set_bits(24..25, clksrc as u32);
             sopt2
         });
     }
 
-    pub unsafe fn set_uart0_clksrc(&mut self, clksrc: Uart0ClkSrc) {
+    pub unsafe fn set_uart0_clksrc(&mut self, clksrc: ClkSrc) {
         self.reg.sopt2.modify(|mut sopt2| {
             sopt2.set_bits(26..28, clksrc as u32);
             sopt2
