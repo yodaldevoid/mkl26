@@ -41,7 +41,7 @@ pub struct SpiMaster<'a, 'b, 'c, 'd, W: Word> {
 
 #[cfg(feature = "spi-slave")]
 pub struct SpiSlave<'a, 'b, 'c, 'd, W: Word> {
-    _reg:   &'static mut SpiRegs,
+    _reg:  &'static mut SpiRegs,
     _mosi: Option<SpiMosi<'a>>,
     _miso: Option<SpiMiso<'b>>,
     _sck:  SpiSck<'c>,

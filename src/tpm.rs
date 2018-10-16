@@ -1,7 +1,7 @@
-use volatile_register::{RW};
 use bit_field::BitField;
 use port::PwmPin;
 use sim::ClockGate;
+use volatile_register::RW;
 
 //KL26 manual - pp 570-571
 const TPM0_ADDR: usize = 0x4003_8000;
@@ -12,30 +12,30 @@ const TPM2_ADDR: usize = 0x4003_A000;
 pub enum TimerNum {
     TPM0,
     TPM1,
-    TPM2
+    TPM2,
 }
 
-#[repr(C,packed)]
+#[repr(C, packed)]
 struct TPMRegs {
-    sc:         RW<u32>,
-    cnt:        RW<u32>,
-    mod_:       RW<u32>,
-    c0sc:       RW<u32>,
-    c0v:        RW<u32>,
-    c1sc:       RW<u32>,
-    c1v:        RW<u32>,
-    c2sc:       RW<u32>,
-    c2v:        RW<u32>,
-    c3sc:       RW<u32>,
-    c3v:        RW<u32>,
-    c4sc:       RW<u32>,
-    c4v:        RW<u32>,
-    c5sc:       RW<u32>,
-    c5v:        RW<u32>,
+    sc: RW<u32>,
+    cnt: RW<u32>,
+    mod_: RW<u32>,
+    c0sc: RW<u32>,
+    c0v: RW<u32>,
+    c1sc: RW<u32>,
+    c1v: RW<u32>,
+    c2sc: RW<u32>,
+    c2v: RW<u32>,
+    c3sc: RW<u32>,
+    c3v: RW<u32>,
+    c4sc: RW<u32>,
+    c4v: RW<u32>,
+    c5sc: RW<u32>,
+    c5v: RW<u32>,
     _pad0: [u8; 20],
     tpm_status: RW<u32>,
     _pad1: [u8; 48],
-    tpm_conf:   RW<u32>,
+    tpm_conf: RW<u32>,
 }
 
 #[derive(PartialEq)]
@@ -71,8 +71,8 @@ pub enum ChannelSelect {
 }
 
 pub struct Tpm<'a> {
-    reg: &'static mut TPMRegs,
-    _pin: Option<PwmPin<'a>>,
+    reg:   &'static mut TPMRegs,
+    _pin:  Option<PwmPin<'a>>,
     _gate: ClockGate,
 }
 
@@ -89,60 +89,62 @@ impl<'a> Tpm<'a> {
         pin: Option<PwmPin<'a>>,
         gate: ClockGate,
     ) -> Result<Tpm<'a>, ()> {
-            //TODO: Use this to assert correct pin usage
-            //let pin_info = pin.as_ref().map(|p| (p.port_name(), p.pin()));
+        //TODO: Use this to assert correct pin usage
+        //let pin_info = pin.as_ref().map(|p| (p.port_name(), p.pin()));
 
-            let reg = &mut * match name {
-                TimerNum::TPM0 => TPM0_ADDR as *mut TPMRegs,
-                TimerNum::TPM1 => TPM1_ADDR as *mut TPMRegs,
-                TimerNum::TPM2 => TPM2_ADDR as *mut TPMRegs,
-            };
+        let reg = &mut *match name {
+            TimerNum::TPM0 => TPM0_ADDR as *mut TPMRegs,
+            TimerNum::TPM1 => TPM1_ADDR as *mut TPMRegs,
+            TimerNum::TPM2 => TPM2_ADDR as *mut TPMRegs,
+        };
 
-            // clear SC
-            reg.sc.write(0);
-            // reset CNT
-            reg.cnt.write(0);
+        // clear SC
+        reg.sc.write(0);
+        // reset CNT
+        reg.cnt.write(0);
 
-            // set MOD
-            reg.mod_.write(count as u32);
+        // set MOD
+        reg.mod_.write(count as u32);
 
-            // set SC values
-            //0 - DMA disable
-            //1 - Clear TOF flag
-            //1 - TOIE
-            //0 - up-counting
-            let mut sc = 0b0110_0000;
-            sc.set_bit(5, cpwms == PwmSelect::UpDown);
-            sc.set_bits(0..3, clkdivider as u32);
-            reg.sc.write(sc);
+        // set SC values
+        //0 - DMA disable
+        //1 - Clear TOF flag
+        //1 - TOIE
+        //0 - up-counting
+        let mut sc = 0b0110_0000;
+        sc.set_bit(5, cpwms == PwmSelect::UpDown);
+        sc.set_bits(0..3, clkdivider as u32);
+        reg.sc.write(sc);
 
-            // Enable the TPM.
-            reg.sc.modify(|mut sc| {
-                sc.set_bits(3..5, cmod as u32);
-                sc
-            });
+        // Enable the TPM.
+        reg.sc.modify(|mut sc| {
+            sc.set_bits(3..5, cmod as u32);
+            sc
+        });
 
-            Ok(Tpm {
-                reg,
-                _pin:pin,
-                _gate: gate,
-            })
+        Ok(Tpm {
+            reg,
+            _pin: pin,
+            _gate: gate,
+        })
     }
 
-    pub fn channel(&mut self, channel:ChannelSelect) -> TpmChannel {
+    pub fn channel(&mut self, channel: ChannelSelect) -> TpmChannel {
         TpmChannel {
-            _tpm: self,
+            _tpm:     self,
             _channel: channel,
         }
     }
 
     pub fn set_period(&mut self, period: u16) {
-        unsafe{ self.reg.mod_.write(period as u32); }
+        unsafe {
+            self.reg.mod_.write(period as u32);
+        }
     }
 }
 
 pub struct TpmChannel<'a> {
-    _tpm: &'a Tpm<'a>,
+    _tpm:     &'a Tpm<'a>,
     _channel: ChannelSelect,
 }
 
@@ -157,7 +159,7 @@ pub enum Mode {
 
 //TODO: More robust channel options using enums.
 impl<'a> TpmChannel<'a> {
-    pub fn channel_mode(&mut self, mode:Mode, edge:u8) {
+    pub fn channel_mode(&mut self, mode: Mode, edge: u8) {
         let mut cnsc = 0;
 
         cnsc.set_bit(7, true); //Clear CHF
@@ -167,33 +169,56 @@ impl<'a> TpmChannel<'a> {
 
         //0b1110_1000 works
         match self._channel {
-            ChannelSelect::Ch0 => unsafe { self._tpm.reg.c0sc.write(cnsc as u32); },
-            ChannelSelect::Ch1 => unsafe { self._tpm.reg.c1sc.write(cnsc as u32); },
-            ChannelSelect::Ch2 => unsafe { self._tpm.reg.c2sc.write(cnsc as u32); },
-            ChannelSelect::Ch3 => unsafe { self._tpm.reg.c3sc.write(cnsc as u32); },
-            ChannelSelect::Ch4 => unsafe { self._tpm.reg.c4sc.write(cnsc as u32); },
-            ChannelSelect::Ch5 => unsafe { self._tpm.reg.c5sc.write(cnsc as u32); },
+            ChannelSelect::Ch0 => unsafe {
+                self._tpm.reg.c0sc.write(cnsc as u32);
+            },
+            ChannelSelect::Ch1 => unsafe {
+                self._tpm.reg.c1sc.write(cnsc as u32);
+            },
+            ChannelSelect::Ch2 => unsafe {
+                self._tpm.reg.c2sc.write(cnsc as u32);
+            },
+            ChannelSelect::Ch3 => unsafe {
+                self._tpm.reg.c3sc.write(cnsc as u32);
+            },
+            ChannelSelect::Ch4 => unsafe {
+                self._tpm.reg.c4sc.write(cnsc as u32);
+            },
+            ChannelSelect::Ch5 => unsafe {
+                self._tpm.reg.c5sc.write(cnsc as u32);
+            },
         }
-
     }
 
     pub fn channel_trigger(&mut self, channel_val: u32) {
         match self._channel {
-            ChannelSelect::Ch0 => unsafe { self._tpm.reg.c0v.write(channel_val as u32); },
-            ChannelSelect::Ch1 => unsafe { self._tpm.reg.c1v.write(channel_val as u32); },
-            ChannelSelect::Ch2 => unsafe { self._tpm.reg.c2v.write(channel_val as u32); },
-            ChannelSelect::Ch3 => unsafe { self._tpm.reg.c3v.write(channel_val as u32); },
-            ChannelSelect::Ch4 => unsafe { self._tpm.reg.c4v.write(channel_val as u32); },
-            ChannelSelect::Ch5 => unsafe { self._tpm.reg.c5v.write(channel_val as u32); },
+            ChannelSelect::Ch0 => unsafe {
+                self._tpm.reg.c0v.write(channel_val as u32);
+            },
+            ChannelSelect::Ch1 => unsafe {
+                self._tpm.reg.c1v.write(channel_val as u32);
+            },
+            ChannelSelect::Ch2 => unsafe {
+                self._tpm.reg.c2v.write(channel_val as u32);
+            },
+            ChannelSelect::Ch3 => unsafe {
+                self._tpm.reg.c3v.write(channel_val as u32);
+            },
+            ChannelSelect::Ch4 => unsafe {
+                self._tpm.reg.c4v.write(channel_val as u32);
+            },
+            ChannelSelect::Ch5 => unsafe {
+                self._tpm.reg.c5v.write(channel_val as u32);
+            },
         }
     }
 }
 
-//Tests for correct memory addresses.
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    #[cfg_attr(rustfmt, rustfmt_skip)]
     #[test]
     fn tpm0_test() {
         unsafe {

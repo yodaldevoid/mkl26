@@ -165,32 +165,32 @@ impl<'a> Pin<'a> {
 
     pub fn to_pwm(mut self) -> Result<PwmPin<'a>, ()> {
         match (self.port.name(), self.pin) {
-            (PortName::C, 1) |
-            (PortName::C, 2) |
-            (PortName::C, 3) |
-            (PortName::C, 4) |
-            (PortName::D, 0) |
-            (PortName::D, 1) |
-            (PortName::D, 2) |
-            (PortName::D, 3) |
-            (PortName::D, 4) |
-            (PortName::D, 5) => {
+            (PortName::C, 1)
+            | (PortName::C, 2)
+            | (PortName::C, 3)
+            | (PortName::C, 4)
+            | (PortName::D, 0)
+            | (PortName::D, 1)
+            | (PortName::D, 2)
+            | (PortName::D, 3)
+            | (PortName::D, 4)
+            | (PortName::D, 5) => {
                 self.set_mode(4);
                 Ok(PwmPin { _pin: self })
-            },
-            (PortName::A, 0) |
-            (PortName::A, 1) |
-            (PortName::A, 2) |
-            (PortName::A, 3) |
-            (PortName::A, 4) |
-            (PortName::B, 0) |
-            (PortName::B, 1) |
-            (PortName::E, 30) => {
+            }
+            (PortName::A, 0)
+            | (PortName::A, 1)
+            | (PortName::A, 2)
+            | (PortName::A, 3)
+            | (PortName::A, 4)
+            | (PortName::B, 0)
+            | (PortName::B, 1)
+            | (PortName::E, 30) => {
                 self.set_mode(3);
-                Ok(PwmPin { _pin: self})
-            },
+                Ok(PwmPin { _pin: self })
+            }
 
-            _ => Err(())
+            _ => Err(()),
         }
     }
 
@@ -1058,7 +1058,7 @@ impl<'a> ToggleableOutputPin for Gpio<'a> {
 }
 
 pub struct PwmPin<'a> {
-    _pin: Pin<'a>
+    _pin: Pin<'a>,
 }
 
 impl<'a> PwmPin<'a> {
