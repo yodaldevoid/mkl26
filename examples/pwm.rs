@@ -16,7 +16,7 @@ use mkl26::osc::Osc;
 use mkl26::port::PortName;
 use mkl26::sim::cop::Cop;
 use mkl26::sim::{ClkSrc, Sim};
-use mkl26::tpm::{ChannelMode, ChannelSelect, ClockMode, Prescale, PwmSelect, TimerNum};
+use mkl26::tpm::{ChannelMode, ChannelSelect, ClockMode, Prescale, PwmSelect, TpmNum};
 use mkl26::uart;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -75,7 +75,7 @@ fn main() -> ! {
         .uart(0, rx, tx, uart::calc_clkdiv(115200, 24_000_000))
         .unwrap();
 
-    let pwm_pin = port_d.pin(4).to_pwm().ok();
+    let pwm_pin = port_d.pin(4).to_tpm().ok();
 
     // sets register value in sopt2 to source TPM to PLL/2
     unsafe {
@@ -84,17 +84,16 @@ fn main() -> ! {
 
     let mut tpm0 = sim
         .tpm(
-            TimerNum::TPM0,
+            TpmNum::TPM0,
             PwmSelect::Up,
             ClockMode::EveryClock,
             Prescale::Div8,
             0x6000,
-            pwm_pin,
         ).unwrap();
 
     // The 0b10 argument corresponds to edge and level selection (Table 31-34).
     let mut tpm0_ch4 = tpm0
-        .channel(ChannelSelect::Ch4, ChannelMode::EdgePWM, 0b10, 0x1E00)
+        .channel(ChannelSelect::Ch4, ChannelMode::EdgePwm, 0b10, 0x1E00, pwm_pin)
         .unwrap();
 
     led.high();

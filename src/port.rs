@@ -1335,7 +1335,6 @@ impl<'a> SpiCs<'a> {
 }
 
 pub struct TpmPin<'a> {
-    // TODO: turn these into const generics
     tpm: u8,
     ch: u8,
     _pin: Pin<'a>,

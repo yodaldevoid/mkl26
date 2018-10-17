@@ -9,10 +9,10 @@ const TPM1_ADDR: usize = 0x4003_9000;
 const TPM2_ADDR: usize = 0x4003_A000;
 
 #[derive(Clone, Copy)]
-pub enum TimerNum {
-    TPM0,
-    TPM1,
-    TPM2,
+pub enum TpmNum {
+    TPM0 = 0,
+    TPM1 = 1,
+    TPM2 = 2,
 }
 
 #[repr(C, packed)]
@@ -61,13 +61,14 @@ pub enum Prescale {
     Div128 = 0b111,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub enum ChannelSelect {
-    Ch0,
-    Ch1,
-    Ch2,
-    Ch3,
-    Ch4,
-    Ch5,
+    Ch0 = 0,
+    Ch1 = 1,
+    Ch2 = 2,
+    Ch3 = 3,
+    Ch4 = 4,
+    Ch5 = 5,
 }
 
 // See Table 31-34 for specific definitions of these modes.
@@ -80,27 +81,32 @@ pub enum ChannelMode {
     CenterPwm,
 }
 
-pub struct Tpm<'a> {
+#[derive(Debug)]
+pub enum ChannelError {
+    PinMismatchTpm,
+    PinMismatchChannel,
+    ChannelNotDisabled,
+}
+
+pub struct Tpm {
     reg:   &'static mut TpmRegs,
-    _pin:  Option<TpmPin<'a>>,
+    name:   TpmNum,
     _gate: ClockGate,
 }
 
-impl<'a> Tpm<'a> {
-    // TODO: pass in pin and double check it matches the selected channel
+impl Tpm {
     pub unsafe fn new(
-        name: TimerNum,
+        name: TpmNum,
         cpwms: PwmSelect,
         cmod: ClockMode,
         clkdivider: Prescale,
         count: u16,
-        pin: Option<TpmPin<'a>>,
         gate: ClockGate,
-    ) -> Result<Tpm<'a>, ()> {
+    ) -> Result<Tpm, ()> {
         let reg = &mut *match name {
-            TimerNum::TPM0 => TPM0_ADDR as *mut TpmRegs,
-            TimerNum::TPM1 => TPM1_ADDR as *mut TpmRegs,
-            TimerNum::TPM2 => TPM2_ADDR as *mut TpmRegs,
+            TpmNum::TPM0 => TPM0_ADDR as *mut TpmRegs,
+            TpmNum::TPM1 => TPM1_ADDR as *mut TpmRegs,
+            TpmNum::TPM2 => TPM2_ADDR as *mut TpmRegs,
         };
 
         reg.sc.write(0);
@@ -126,18 +132,30 @@ impl<'a> Tpm<'a> {
 
         Ok(Tpm {
             reg,
-            _pin: pin,
+            name,
             _gate: gate,
         })
     }
 
-    pub fn channel(
+    pub fn channel<'a, P: Into<Option<TpmPin<'a>>>>(
         &mut self,
         channel: ChannelSelect,
         mode: ChannelMode,
         edge: u8,
         value: u16,
-    ) -> Result<Channel, ()> {
+        pin: P,
+    ) -> Result<Channel<'a>, ChannelError> {
+        let pin = pin.into();
+        if let Some(pin) = pin.as_ref() {
+            if pin.tpm() != self.name as u8 {
+                return Err(ChannelError::PinMismatchTpm);
+            }
+
+            if pin.ch() != channel as u8 {
+                return Err(ChannelError::PinMismatchChannel);
+            }
+        }
+
         unsafe {
             let channel_reg = &*match channel {
                 ChannelSelect::Ch0 => &self.reg.c0sc as *const RW<u32> as *const ChanelRegs,
@@ -151,12 +169,12 @@ impl<'a> Tpm<'a> {
             // Checking both ELSx and MSx.
             if channel_reg.cxsc.read().get_bits(2..6) != 0b0000 {
                 // Channel not currently disabled.
-                return Err(()); // TODO: error enums
+                return Err(ChannelError::ChannelNotDisabled);
             }
 
             // TODO: check center aligned bit if asking for center aligned mode.
 
-            Ok(Channel::new(channel_reg, mode, edge, value))
+            Ok(Channel::new(channel_reg, mode, edge, value, pin))
         }
     }
 
@@ -173,14 +191,20 @@ struct ChanelRegs {
     cxv:  RW<u32>,
 }
 
-// TODO: move pin to chnnel
-pub struct Channel {
+pub struct Channel<'a> {
     reg: &'static ChanelRegs,
+    _pin: Option<TpmPin<'a>>,
 }
 
 //TODO: More robust channel options using enums.
-impl Channel {
-    unsafe fn new(reg: &'static ChanelRegs, mode: ChannelMode, edge: u8, value: u16) -> Channel {
+impl<'a> Channel<'a> {
+    unsafe fn new(
+        reg: &'static ChanelRegs,
+        mode: ChannelMode,
+        edge: u8,
+        value: u16,
+        pin: Option<TpmPin<'a>>
+    ) -> Channel<'a> {
         reg.cxv.write(value as u32);
 
         let mode = match mode {
@@ -201,7 +225,7 @@ impl Channel {
         //0b1110_1000 works
         reg.cxsc.write(cnsc as u32);
 
-        Channel { reg }
+        Channel { reg, _pin: pin }
     }
 
     pub fn get_value(&self) -> u16 {
@@ -218,7 +242,7 @@ impl Channel {
     }
 }
 
-impl Drop for Channel {
+impl<'a> Drop for Channel<'a> {
     fn drop(&mut self) {
         unsafe {
             self.reg.cxsc.write(0);
