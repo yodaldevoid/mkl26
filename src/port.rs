@@ -707,195 +707,347 @@ impl<'a> Pin<'a> {
             // e20:3-1,0
             (PortName::E, 20) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 1, ch: 0, _pin: self })
+                Ok(TpmPin {
+                    tpm:  1,
+                    ch:   0,
+                    _pin: self,
+                })
             }
             // e21:3-1,1
             (PortName::E, 21) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 1, ch: 1, _pin: self })
+                Ok(TpmPin {
+                    tpm:  1,
+                    ch:   1,
+                    _pin: self,
+                })
             }
             // e22:3-2,0
             (PortName::E, 22) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 2, ch: 0, _pin: self })
+                Ok(TpmPin {
+                    tpm:  2,
+                    ch:   0,
+                    _pin: self,
+                })
             }
             // e23:3-2,1
             (PortName::E, 23) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 2, ch: 1, _pin: self })
+                Ok(TpmPin {
+                    tpm:  2,
+                    ch:   1,
+                    _pin: self,
+                })
             }
             // e29:3-0,2
             (PortName::E, 29) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 0, ch: 2, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   2,
+                    _pin: self,
+                })
             }
             // e30:3-0,3
             (PortName::E, 30) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 0, ch: 3, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   3,
+                    _pin: self,
+                })
             }
             // e31:3-0,4
             (PortName::E, 31) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 0, ch: 4, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   4,
+                    _pin: self,
+                })
             }
             // e24:3-0,0
             (PortName::E, 24) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 0, ch: 0, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   0,
+                    _pin: self,
+                })
             }
             // e25:3-0,1
             (PortName::E, 25) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 0, ch: 1, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   1,
+                    _pin: self,
+                })
             }
             // e26:3-0,5
             (PortName::E, 26) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 0, ch: 5, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   5,
+                    _pin: self,
+                })
             }
             // a0:3-0,5
             (PortName::A, 0) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 0, ch: 5, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   5,
+                    _pin: self,
+                })
             }
             // a1:3-2,0
             (PortName::A, 1) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 2, ch: 0, _pin: self })
+                Ok(TpmPin {
+                    tpm:  2,
+                    ch:   0,
+                    _pin: self,
+                })
             }
             // a2:3-2,1
             (PortName::A, 2) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 2, ch: 1, _pin: self })
+                Ok(TpmPin {
+                    tpm:  2,
+                    ch:   1,
+                    _pin: self,
+                })
             }
             // a3:3-0,0
             (PortName::A, 3) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 0, ch: 0, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   0,
+                    _pin: self,
+                })
             }
             // a4:3-0,1
             (PortName::A, 4) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 0, ch: 1, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   1,
+                    _pin: self,
+                })
             }
             // a5:3-0,2
             (PortName::A, 5) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 0, ch: 2, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   2,
+                    _pin: self,
+                })
             }
             // a6:3-0,3
             (PortName::A, 6) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 0, ch: 3, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   3,
+                    _pin: self,
+                })
             }
             // a7:3-0,4
             (PortName::A, 7) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 0, ch: 4, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   4,
+                    _pin: self,
+                })
             }
             // a12:3-1,0
             (PortName::A, 12) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 1, ch: 0, _pin: self })
+                Ok(TpmPin {
+                    tpm:  1,
+                    ch:   0,
+                    _pin: self,
+                })
             }
             // a13:3-1,1
             (PortName::A, 13) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 1, ch: 1, _pin: self })
+                Ok(TpmPin {
+                    tpm:  1,
+                    ch:   1,
+                    _pin: self,
+                })
             }
             // b0:3-1,0
             (PortName::B, 0) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 1, ch: 0, _pin: self })
+                Ok(TpmPin {
+                    tpm:  1,
+                    ch:   0,
+                    _pin: self,
+                })
             }
             // b1:3-1,1
             (PortName::B, 1) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 1, ch: 1, _pin: self })
+                Ok(TpmPin {
+                    tpm:  1,
+                    ch:   1,
+                    _pin: self,
+                })
             }
             // b2:3-2,0
             (PortName::B, 2) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 2, ch: 0, _pin: self })
+                Ok(TpmPin {
+                    tpm:  2,
+                    ch:   0,
+                    _pin: self,
+                })
             }
             // b3:3-2,1
             (PortName::B, 3) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 2, ch: 1, _pin: self })
+                Ok(TpmPin {
+                    tpm:  2,
+                    ch:   1,
+                    _pin: self,
+                })
             }
             // b18:3-2,0
             (PortName::B, 18) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 2, ch: 0, _pin: self })
+                Ok(TpmPin {
+                    tpm:  2,
+                    ch:   0,
+                    _pin: self,
+                })
             }
             // b19:3-2,1
             (PortName::B, 19) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 2, ch: 1, _pin: self })
+                Ok(TpmPin {
+                    tpm:  2,
+                    ch:   1,
+                    _pin: self,
+                })
             }
 
             // c1:4-0,0
             (PortName::C, 1) => {
                 self.set_mode(4);
-                Ok(TpmPin { tpm: 0, ch: 0, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   0,
+                    _pin: self,
+                })
             }
             // c2:4-0,1
             (PortName::C, 2) => {
                 self.set_mode(4);
-                Ok(TpmPin { tpm: 0, ch: 1, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   1,
+                    _pin: self,
+                })
             }
             // c3:4-0,2
             (PortName::C, 3) => {
                 self.set_mode(4);
-                Ok(TpmPin { tpm: 0, ch: 2, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   2,
+                    _pin: self,
+                })
             }
             // c4:4-0,3
             (PortName::C, 4) => {
                 self.set_mode(4);
-                Ok(TpmPin { tpm: 0, ch: 3, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   3,
+                    _pin: self,
+                })
             }
 
             // c8:3-0,4
             (PortName::C, 8) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 0, ch: 4, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   4,
+                    _pin: self,
+                })
             }
             // c9:3-0,5
             (PortName::C, 9) => {
                 self.set_mode(3);
-                Ok(TpmPin { tpm: 0, ch: 5, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   5,
+                    _pin: self,
+                })
             }
 
             // d0:4-0,0
             (PortName::D, 0) => {
                 self.set_mode(4);
-                Ok(TpmPin { tpm: 0, ch: 0, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   0,
+                    _pin: self,
+                })
             }
             // d1:4-0,1
             (PortName::D, 1) => {
                 self.set_mode(4);
-                Ok(TpmPin { tpm: 0, ch: 1, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   1,
+                    _pin: self,
+                })
             }
             // d2:4-0,2
             (PortName::D, 2) => {
                 self.set_mode(4);
-                Ok(TpmPin { tpm: 0, ch: 2, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   2,
+                    _pin: self,
+                })
             }
             // d3:4-0,3
             (PortName::D, 3) => {
                 self.set_mode(4);
-                Ok(TpmPin { tpm: 0, ch: 3, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   3,
+                    _pin: self,
+                })
             }
             // d4:4-0,4
             (PortName::D, 4) => {
                 self.set_mode(4);
-                Ok(TpmPin { tpm: 0, ch: 4, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   4,
+                    _pin: self,
+                })
             }
             // d5:4-0,5
             (PortName::D, 5) => {
                 self.set_mode(4);
-                Ok(TpmPin { tpm: 0, ch: 5, _pin: self })
+                Ok(TpmPin {
+                    tpm:  0,
+                    ch:   5,
+                    _pin: self,
+                })
             }
 
             _ => Err(()),
@@ -1335,8 +1487,8 @@ impl<'a> SpiCs<'a> {
 }
 
 pub struct TpmPin<'a> {
-    tpm: u8,
-    ch: u8,
+    tpm:  u8,
+    ch:   u8,
     _pin: Pin<'a>,
 }
 

@@ -119,7 +119,7 @@ pub enum ChannelError {
 
 pub struct Tpm {
     reg:   &'static mut TpmRegs,
-    name:   TpmNum,
+    name:  TpmNum,
     _gate: ClockGate,
 }
 
@@ -220,7 +220,7 @@ struct ChanelRegs {
 }
 
 pub struct Channel<'a> {
-    reg: &'static ChanelRegs,
+    reg:  &'static ChanelRegs,
     _pin: Option<TpmPin<'a>>,
 }
 
@@ -229,7 +229,7 @@ impl<'a> Channel<'a> {
         reg: &'static ChanelRegs,
         mode: ChannelMode,
         value: u16,
-        pin: Option<TpmPin<'a>>
+        pin: Option<TpmPin<'a>>,
     ) -> Channel<'a> {
         reg.cxv.write(value as u32);
 

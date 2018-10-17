@@ -14,7 +14,7 @@ use port::{Port, PortName};
 use port::{SpiCs, SpiMiso, SpiMosi, SpiSck};
 use port::{UartRx, UartTx};
 use spi::{self, Divisor, SpiMaster};
-use tpm::{self, ClockMode, PwmSelect, TpmNum, Tpm};
+use tpm::{self, ClockMode, PwmSelect, Tpm, TpmNum};
 use uart::{ConnMode, Uart};
 
 pub struct ClockGate {
