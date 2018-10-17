@@ -316,7 +316,7 @@ impl Sim {
         }
         gate.enable();
 
-        unsafe { Tpm::new(name, cpwms, cmod, clkdivider, count, gate) }
+        unsafe { Ok(Tpm::new(name, cpwms, cmod, clkdivider, count, gate)) }
     }
 
     pub fn adc<'a, P: Into<Option<AdcPin<'a>>>>(

@@ -133,7 +133,7 @@ impl Tpm {
         clkdivider: Prescale,
         count: u16,
         gate: ClockGate,
-    ) -> Result<Tpm, ()> {
+    ) -> Tpm {
         let reg = &mut *match name {
             TpmNum::TPM0 => TPM0_ADDR as *mut TpmRegs,
             TpmNum::TPM1 => TPM1_ADDR as *mut TpmRegs,
@@ -161,11 +161,11 @@ impl Tpm {
             sc
         });
 
-        Ok(Tpm {
+        Tpm {
             reg,
             name,
             _gate: gate,
-        })
+        }
     }
 
     pub fn channel<'a, P: Into<Option<TpmPin<'a>>>>(
