@@ -8,7 +8,7 @@ use atomic::{BmeAtomic, InterruptAtomic};
 use i2c::{self, I2cMaster};
 #[cfg(feature = "i2c-slave")]
 use i2c::{Address, I2cSlave};
-use port::PwmPin;
+use port::TpmPin;
 use port::{AdcDiffMPin, AdcDiffPPin, AdcPin};
 use port::{I2cScl, I2cSda};
 use port::{Port, PortName};
@@ -299,7 +299,7 @@ impl Sim {
         }
     }
 
-    pub fn tpm<'a, P: Into<Option<PwmPin<'a>>>>(
+    pub fn tpm<'a, P: Into<Option<TpmPin<'a>>>>(
         &mut self,
         name: TimerNum,
         cpwms: PwmSelect,

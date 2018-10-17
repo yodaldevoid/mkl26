@@ -1,5 +1,5 @@
 use bit_field::BitField;
-use port::PwmPin;
+use port::TpmPin;
 use sim::ClockGate;
 use volatile_register::RW;
 
@@ -82,7 +82,7 @@ pub enum ChannelMode {
 
 pub struct Tpm<'a> {
     reg:   &'static mut TpmRegs,
-    _pin:  Option<PwmPin<'a>>,
+    _pin:  Option<TpmPin<'a>>,
     _gate: ClockGate,
 }
 
@@ -94,12 +94,9 @@ impl<'a> Tpm<'a> {
         cmod: ClockMode,
         clkdivider: Prescale,
         count: u16,
-        pin: Option<PwmPin<'a>>,
+        pin: Option<TpmPin<'a>>,
         gate: ClockGate,
     ) -> Result<Tpm<'a>, ()> {
-        // TODO: Use this to assert correct pin usage
-        // let pin_info = pin.as_ref().map(|p| (p.port_name(), p.pin()));
-
         let reg = &mut *match name {
             TimerNum::TPM0 => TPM0_ADDR as *mut TpmRegs,
             TimerNum::TPM1 => TPM1_ADDR as *mut TpmRegs,
