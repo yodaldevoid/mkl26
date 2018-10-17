@@ -16,7 +16,8 @@ use mkl26::osc::Osc;
 use mkl26::port::PortName;
 use mkl26::sim::cop::Cop;
 use mkl26::sim::{ClkSrc, Sim};
-use mkl26::tpm::{ChannelMode, ChannelSelect, ClockMode, Prescale, PwmSelect, TpmNum};
+use mkl26::tpm::{ChannelMode, ChannelSelect, PwmDirection};
+use mkl26::tpm::{ClockMode, Prescale, PwmSelect, TpmNum};
 use mkl26::uart;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -93,8 +94,12 @@ fn main() -> ! {
 
     // The 0b10 argument corresponds to edge and level selection (Table 31-34).
     let mut tpm0_ch4 = tpm0
-        .channel(ChannelSelect::Ch4, ChannelMode::EdgePwm, 0b10, 0x1E00, pwm_pin)
-        .unwrap();
+        .channel(
+            ChannelSelect::Ch4,
+            ChannelMode::EdgePwm(PwmDirection::HighTrue),
+            0x1E00,
+            pwm_pin,
+        ).unwrap();
 
     led.high();
 

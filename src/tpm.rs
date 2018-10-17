@@ -8,7 +8,7 @@ const TPM0_ADDR: usize = 0x4003_8000;
 const TPM1_ADDR: usize = 0x4003_9000;
 const TPM2_ADDR: usize = 0x4003_A000;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum TpmNum {
     TPM0 = 0,
     TPM1 = 1,
@@ -38,18 +38,20 @@ struct TpmRegs {
     tpm_conf: RW<u32>,
 }
 
-#[derive(PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum PwmSelect {
     Up = 0,
     UpDown = 1,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub enum ClockMode {
     Disabled = 0,
     EveryClock = 1,
     ExternalCLock = 2,
 }
 
+#[derive(Clone, Copy, Debug)]
 pub enum Prescale {
     Div1 = 0b000,
     Div2 = 0b001,
@@ -71,17 +73,44 @@ pub enum ChannelSelect {
     Ch5 = 5,
 }
 
-// See Table 31-34 for specific definitions of these modes.
-pub enum ChannelMode {
-    SoftwareCompare,
-    InputCapture,
-    OutputCompare,
-    EdgePwm,
-    PulseOutputCompare,
-    CenterPwm,
+#[derive(Clone, Copy, Debug)]
+pub enum CaptureEdge {
+    Rising,
+    Falling,
+    Both,
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
+pub enum OutputBehavior {
+    Toggle,
+    Clear,
+    Set,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum PwmDirection {
+    LowTrue,
+    HighTrue,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum PulseDirection {
+    Low,
+    High,
+}
+
+// See Table 31-34 for specific definitions of these modes.
+#[derive(Clone, Copy, Debug)]
+pub enum ChannelMode {
+    SoftwareCompare,
+    InputCapture(CaptureEdge),
+    OutputCompare(OutputBehavior),
+    EdgePwm(PwmDirection),
+    PulseOutputCompare(PulseDirection),
+    CenterPwm(PwmDirection),
+}
+
+#[derive(Clone, Copy, Debug)]
 pub enum ChannelError {
     PinMismatchTpm,
     PinMismatchChannel,
@@ -141,7 +170,6 @@ impl Tpm {
         &mut self,
         channel: ChannelSelect,
         mode: ChannelMode,
-        edge: u8,
         value: u16,
         pin: P,
     ) -> Result<Channel<'a>, ChannelError> {
@@ -174,7 +202,7 @@ impl Tpm {
 
             // TODO: check center aligned bit if asking for center aligned mode.
 
-            Ok(Channel::new(channel_reg, mode, edge, value, pin))
+            Ok(Channel::new(channel_reg, mode, value, pin))
         }
     }
 
@@ -196,24 +224,54 @@ pub struct Channel<'a> {
     _pin: Option<TpmPin<'a>>,
 }
 
-//TODO: More robust channel options using enums.
 impl<'a> Channel<'a> {
     unsafe fn new(
         reg: &'static ChanelRegs,
         mode: ChannelMode,
-        edge: u8,
         value: u16,
         pin: Option<TpmPin<'a>>
     ) -> Channel<'a> {
         reg.cxv.write(value as u32);
 
-        let mode = match mode {
-            ChannelMode::SoftwareCompare => 0b01,
-            ChannelMode::InputCapture => 0b00,
-            ChannelMode::OutputCompare => 0b01,
-            ChannelMode::EdgePwm => 0b10,
-            ChannelMode::PulseOutputCompare => 0b11,
-            ChannelMode::CenterPwm => 0b10,
+        let (mode, edge) = match mode {
+            ChannelMode::SoftwareCompare => (0b01, 0b00),
+            ChannelMode::InputCapture(edge) => {
+                let edge = match edge {
+                    CaptureEdge::Rising => 0b01,
+                    CaptureEdge::Falling => 0b10,
+                    CaptureEdge::Both => 0b11,
+                };
+                (0b00, edge)
+            }
+            ChannelMode::OutputCompare(edge) => {
+                let edge = match edge {
+                    OutputBehavior::Toggle => 0b01,
+                    OutputBehavior::Clear => 0b10,
+                    OutputBehavior::Set => 0b11,
+                };
+                (0b00, edge)
+            }
+            ChannelMode::EdgePwm(edge) => {
+                let edge = match edge {
+                    PwmDirection::HighTrue => 0b10,
+                    PwmDirection::LowTrue => 0b01,
+                };
+                (0b00, edge)
+            }
+            ChannelMode::PulseOutputCompare(edge) => {
+                let edge = match edge {
+                    PulseDirection::Low => 0b10,
+                    PulseDirection::High => 0b01,
+                };
+                (0b00, edge)
+            }
+            ChannelMode::CenterPwm(edge) => {
+                let edge = match edge {
+                    PwmDirection::HighTrue => 0b10,
+                    PwmDirection::LowTrue => 0b01,
+                };
+                (0b00, edge)
+            }
         };
 
         let mut cnsc = 0;
