@@ -1,4 +1,7 @@
+use bit_field::BitField;
 use volatile_register::{RO, RW};
+
+use sim::ClockGate;
 
 const PIT_ADDR: usize = 0x4003_7000;
 
@@ -22,6 +25,22 @@ struct TimerRegs {
     cvaln:  RO<u32>,
     tctrln: RW<u32>,
     tflgn:  RW<u32>,
+}
+
+pub struct Pit {
+    reg:   &'static mut PitRegs,
+    _gate: ClockGate,
+}
+
+impl Pit {
+    pub unsafe fn new(gate: ClockGate) -> Pit {
+        let reg = &mut *(PIT_ADDR as *mut PitRegs);
+
+        // Enable the module and allow timers to run in debug mode.
+        reg.mcr.write(0);
+
+        Pit { reg, _gate: gate }
+    }
 }
 
 #[cfg(test)]
