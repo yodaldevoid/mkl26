@@ -1,7 +1,8 @@
 use bit_field::BitField;
+use volatile_register::RW;
+
 use port::TpmPin;
 use sim::ClockGate;
-use volatile_register::RW;
 
 // KL26 manual - pp 570-571
 const TPM0_ADDR: usize = 0x4003_8000;
@@ -326,7 +327,7 @@ mod tests {
     #[test]
     fn tpm0_test() {
         unsafe {
-            let reg = & *(TPM0_ADDR as *const TPMRegs);
+            let reg = & *(TPM0_ADDR as *const TpmRegs);
             assert_eq!(0x4003_8000 as *const RW<u32>, &reg.sc           as *const RW<u32>, "sc");
             assert_eq!(0x4003_8004 as *const RW<u32>, &reg.cnt          as *const RW<u32>, "cnt");
             assert_eq!(0x4003_8008 as *const RW<u32>, &reg.mod_         as *const RW<u32>, "mod_");
