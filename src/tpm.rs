@@ -198,13 +198,13 @@ impl Tpm {
                 _ => {}
             }
 
-            let channel_reg = &*match channel {
-                ChannelSelect::Ch0 => &self.reg.c0sc as *const RW<u32> as *const ChanelRegs,
-                ChannelSelect::Ch1 => &self.reg.c1sc as *const RW<u32> as *const ChanelRegs,
-                ChannelSelect::Ch2 => &self.reg.c2sc as *const RW<u32> as *const ChanelRegs,
-                ChannelSelect::Ch3 => &self.reg.c3sc as *const RW<u32> as *const ChanelRegs,
-                ChannelSelect::Ch4 => &self.reg.c4sc as *const RW<u32> as *const ChanelRegs,
-                ChannelSelect::Ch5 => &self.reg.c5sc as *const RW<u32> as *const ChanelRegs,
+            let channel_reg = &mut *match channel {
+                ChannelSelect::Ch0 => &self.reg.c0sc as *const RW<u32> as *mut ChanelRegs,
+                ChannelSelect::Ch1 => &self.reg.c1sc as *const RW<u32> as *mut ChanelRegs,
+                ChannelSelect::Ch2 => &self.reg.c2sc as *const RW<u32> as *mut ChanelRegs,
+                ChannelSelect::Ch3 => &self.reg.c3sc as *const RW<u32> as *mut ChanelRegs,
+                ChannelSelect::Ch4 => &self.reg.c4sc as *const RW<u32> as *mut ChanelRegs,
+                ChannelSelect::Ch5 => &self.reg.c5sc as *const RW<u32> as *mut ChanelRegs,
             };
 
             // Checking both ELSx and MSx.
@@ -231,13 +231,13 @@ struct ChanelRegs {
 }
 
 pub struct Channel<'a> {
-    reg:  &'static ChanelRegs,
+    reg:  &'static mut ChanelRegs,
     _pin: Option<TpmPin<'a>>,
 }
 
 impl<'a> Channel<'a> {
     unsafe fn new(
-        reg: &'static ChanelRegs,
+        reg: &'static mut ChanelRegs,
         mode: ChannelMode,
         value: u16,
         pin: Option<TpmPin<'a>>,
