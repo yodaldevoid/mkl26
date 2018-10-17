@@ -114,6 +114,7 @@ pub enum ChannelMode {
 pub enum ChannelError {
     PinMismatchTpm,
     PinMismatchChannel,
+    CenterAlignMismatch,
     ChannelNotDisabled,
 }
 
@@ -185,6 +186,17 @@ impl Tpm {
         }
 
         unsafe {
+            // According to Table 31-34 of the MKL26 Reference Manual v3.3
+            // If Center-aligned PWM is selected but CPWMS is not set, error.
+            // Same if any other mode is selected when CPWMS is set.
+            // Software Compare doesn't care for some reason.
+            match (mode, self.reg.sc.read().get_bit(5)) {
+                (ChannelMode::CenterPwm(_), false) => return Err(ChannelError::CenterAlignMismatch),
+                (ChannelMode::SoftwareCompare, _) => {}
+                (_, true) => return Err(ChannelError::CenterAlignMismatch),
+                _ => {}
+            }
+
             let channel_reg = &*match channel {
                 ChannelSelect::Ch0 => &self.reg.c0sc as *const RW<u32> as *const ChanelRegs,
                 ChannelSelect::Ch1 => &self.reg.c1sc as *const RW<u32> as *const ChanelRegs,
@@ -199,8 +211,6 @@ impl Tpm {
                 // Channel not currently disabled.
                 return Err(ChannelError::ChannelNotDisabled);
             }
-
-            // TODO: check center aligned bit if asking for center aligned mode.
 
             Ok(Channel::new(channel_reg, mode, value, pin))
         }
