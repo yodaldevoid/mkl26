@@ -3,7 +3,7 @@ use port::PwmPin;
 use sim::ClockGate;
 use volatile_register::RW;
 
-//KL26 manual - pp 570-571
+// KL26 manual - pp 570-571
 const TPM0_ADDR: usize = 0x4003_8000;
 const TPM1_ADDR: usize = 0x4003_9000;
 const TPM2_ADDR: usize = 0x4003_A000;
@@ -16,7 +16,7 @@ pub enum TimerNum {
 }
 
 #[repr(C, packed)]
-struct TPMRegs {
+struct TpmRegs {
     sc: RW<u32>,
     cnt: RW<u32>,
     mod_: RW<u32>,
@@ -62,16 +62,26 @@ pub enum Prescale {
 }
 
 pub enum ChannelSelect {
-    Ch0 = 0,
-    Ch1 = 1,
-    Ch2 = 2,
-    Ch3 = 3,
-    Ch4 = 4,
-    Ch5 = 5,
+    Ch0,
+    Ch1,
+    Ch2,
+    Ch3,
+    Ch4,
+    Ch5,
+}
+
+// See Table 31-34 for specific definitions of these modes.
+pub enum ChannelMode {
+    SoftwareCompare,
+    InputCapture,
+    OutputCompare,
+    EdgePwm,
+    PulseOutputCompare,
+    CenterPwm,
 }
 
 pub struct Tpm<'a> {
-    reg:   &'static mut TPMRegs,
+    reg:   &'static mut TpmRegs,
     _pin:  Option<PwmPin<'a>>,
     _gate: ClockGate,
 }
@@ -87,28 +97,25 @@ impl<'a> Tpm<'a> {
         pin: Option<PwmPin<'a>>,
         gate: ClockGate,
     ) -> Result<Tpm<'a>, ()> {
-        //TODO: Use this to assert correct pin usage
-        //let pin_info = pin.as_ref().map(|p| (p.port_name(), p.pin()));
+        // TODO: Use this to assert correct pin usage
+        // let pin_info = pin.as_ref().map(|p| (p.port_name(), p.pin()));
 
         let reg = &mut *match name {
-            TimerNum::TPM0 => TPM0_ADDR as *mut TPMRegs,
-            TimerNum::TPM1 => TPM1_ADDR as *mut TPMRegs,
-            TimerNum::TPM2 => TPM2_ADDR as *mut TPMRegs,
+            TimerNum::TPM0 => TPM0_ADDR as *mut TpmRegs,
+            TimerNum::TPM1 => TPM1_ADDR as *mut TpmRegs,
+            TimerNum::TPM2 => TPM2_ADDR as *mut TpmRegs,
         };
 
-        // clear SC
         reg.sc.write(0);
-        // reset CNT
         reg.cnt.write(0);
 
-        // set MOD
         reg.mod_.write(count as u32);
 
         // set SC values
-        //0 - DMA disable
-        //1 - Clear TOF flag
-        //1 - TOIE
-        //0 - up-counting
+        // 0 - DMA disable
+        // 1 - Clear TOF flag
+        // 1 - TOIE
+        // 0 - up-counting
         let mut sc = 0b0110_0000;
         sc.set_bit(5, cpwms == PwmSelect::UpDown);
         sc.set_bits(0..3, clkdivider as u32);
@@ -127,10 +134,32 @@ impl<'a> Tpm<'a> {
         })
     }
 
-    pub fn channel(&mut self, channel: ChannelSelect) -> TpmChannel {
-        TpmChannel {
-            _tpm:     self,
-            _channel: channel,
+    pub fn channel(
+        &mut self,
+        channel: ChannelSelect,
+        mode: ChannelMode,
+        edge: u8,
+        value: u16,
+    ) -> Result<Channel, ()> {
+        unsafe {
+            let channel_reg = &*match channel {
+                ChannelSelect::Ch0 => &self.reg.c0sc as *const RW<u32> as *const ChanelRegs,
+                ChannelSelect::Ch1 => &self.reg.c1sc as *const RW<u32> as *const ChanelRegs,
+                ChannelSelect::Ch2 => &self.reg.c2sc as *const RW<u32> as *const ChanelRegs,
+                ChannelSelect::Ch3 => &self.reg.c3sc as *const RW<u32> as *const ChanelRegs,
+                ChannelSelect::Ch4 => &self.reg.c4sc as *const RW<u32> as *const ChanelRegs,
+                ChannelSelect::Ch5 => &self.reg.c5sc as *const RW<u32> as *const ChanelRegs,
+            };
+
+            // Checking both ELSx and MSx.
+            if channel_reg.cxsc.read().get_bits(2..6) != 0b0000 {
+                // Channel not currently disabled.
+                return Err(()); // TODO: error enums
+            }
+
+            // TODO: check center aligned bit if asking for center aligned mode.
+
+            Ok(Channel::new(channel_reg, mode, edge, value))
         }
     }
 
@@ -141,73 +170,61 @@ impl<'a> Tpm<'a> {
     }
 }
 
-pub struct TpmChannel<'a> {
-    _tpm:     &'a Tpm<'a>,
-    _channel: ChannelSelect,
+#[repr(C, packed)]
+struct ChanelRegs {
+    cxsc: RW<u32>,
+    cxv:  RW<u32>,
 }
 
-//See Table 31-34 for specific definitions of these modes.
-pub enum Mode {
-    InputCapture = 0,
-    OutputCompare = 1,
-    EdgePWM = 2,
-    PulseOutputCompare = 3,
-    CenterPWM = 4,
+// TODO: move pin to chnnel
+pub struct Channel {
+    reg: &'static ChanelRegs,
 }
 
 //TODO: More robust channel options using enums.
-impl<'a> TpmChannel<'a> {
-    pub fn channel_mode(&mut self, mode: Mode, edge: u8) {
-        let mut cnsc = 0;
+impl Channel {
+    unsafe fn new(reg: &'static ChanelRegs, mode: ChannelMode, edge: u8, value: u16) -> Channel {
+        reg.cxv.write(value as u32);
 
-        cnsc.set_bit(7, true); //Clear CHF
-        cnsc.set_bit(6, true); //CHIE = true
-        cnsc.set_bits(4..6, mode as u8); //set channel mode
-        cnsc.set_bits(2..4, edge as u8); //edge and level selection
+        let mode = match mode {
+            ChannelMode::SoftwareCompare => 0b01,
+            ChannelMode::InputCapture => 0b00,
+            ChannelMode::OutputCompare => 0b01,
+            ChannelMode::EdgePwm => 0b10,
+            ChannelMode::PulseOutputCompare => 0b11,
+            ChannelMode::CenterPwm => 0b10,
+        };
+
+        let mut cnsc = 0;
+        cnsc.set_bit(7, true); // Clear CHF
+        cnsc.set_bit(6, true); // CHIE = true
+        cnsc.set_bits(4..6, mode as u8); // set channel mode
+        cnsc.set_bits(2..4, edge as u8); // edge and level selection
 
         //0b1110_1000 works
-        match self._channel {
-            ChannelSelect::Ch0 => unsafe {
-                self._tpm.reg.c0sc.write(cnsc as u32);
-            },
-            ChannelSelect::Ch1 => unsafe {
-                self._tpm.reg.c1sc.write(cnsc as u32);
-            },
-            ChannelSelect::Ch2 => unsafe {
-                self._tpm.reg.c2sc.write(cnsc as u32);
-            },
-            ChannelSelect::Ch3 => unsafe {
-                self._tpm.reg.c3sc.write(cnsc as u32);
-            },
-            ChannelSelect::Ch4 => unsafe {
-                self._tpm.reg.c4sc.write(cnsc as u32);
-            },
-            ChannelSelect::Ch5 => unsafe {
-                self._tpm.reg.c5sc.write(cnsc as u32);
-            },
+        reg.cxsc.write(cnsc as u32);
+
+        Channel { reg }
+    }
+
+    pub fn get_value(&self) -> u16 {
+        unsafe {
+            // Only the bottom 16 bits of the channel value register are used to truncation is fine.
+            self.reg.cxv.read() as u16
         }
     }
 
-    pub fn channel_trigger(&mut self, channel_val: u32) {
-        match self._channel {
-            ChannelSelect::Ch0 => unsafe {
-                self._tpm.reg.c0v.write(channel_val as u32);
-            },
-            ChannelSelect::Ch1 => unsafe {
-                self._tpm.reg.c1v.write(channel_val as u32);
-            },
-            ChannelSelect::Ch2 => unsafe {
-                self._tpm.reg.c2v.write(channel_val as u32);
-            },
-            ChannelSelect::Ch3 => unsafe {
-                self._tpm.reg.c3v.write(channel_val as u32);
-            },
-            ChannelSelect::Ch4 => unsafe {
-                self._tpm.reg.c4v.write(channel_val as u32);
-            },
-            ChannelSelect::Ch5 => unsafe {
-                self._tpm.reg.c5v.write(channel_val as u32);
-            },
+    pub fn set_value(&mut self, channel_val: u16) {
+        unsafe {
+            self.reg.cxv.write(channel_val as u32);
+        }
+    }
+}
+
+impl Drop for Channel {
+    fn drop(&mut self) {
+        unsafe {
+            self.reg.cxsc.write(0);
         }
     }
 }

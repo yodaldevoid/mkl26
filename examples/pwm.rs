@@ -16,7 +16,7 @@ use mkl26::osc::Osc;
 use mkl26::port::PortName;
 use mkl26::sim::cop::Cop;
 use mkl26::sim::{ClkSrc, Sim};
-use mkl26::tpm::{ChannelSelect, ClockMode, Mode, Prescale, PwmSelect, TimerNum};
+use mkl26::tpm::{ChannelMode, ChannelSelect, ClockMode, Prescale, PwmSelect, TimerNum};
 use mkl26::uart;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -31,13 +31,6 @@ pre_init!(disable_wdog);
 
 unsafe fn disable_wdog() {
     Cop::new().init(None);
-}
-
-//based on sourcing current PLL CLK w/ Div8 (48MHz)
-pub enum Positions {
-    FullyRetracted = 0x500,
-    Middle = 0x1000,
-    FullyActuated = 0x1E00,
 }
 
 entry!(main);
@@ -82,7 +75,7 @@ fn main() -> ! {
         .uart(0, rx, tx, uart::calc_clkdiv(115200, 24_000_000))
         .unwrap();
 
-    let _pwm_pin = port_d.pin(4).to_pwm().ok();
+    let pwm_pin = port_d.pin(4).to_pwm().ok();
 
     // sets register value in sopt2 to source TPM to PLL/2
     unsafe {
@@ -96,32 +89,28 @@ fn main() -> ! {
             ClockMode::EveryClock,
             Prescale::Div8,
             0x6000,
-            _pwm_pin,
+            pwm_pin,
         ).unwrap();
 
-    led.high();
-
     // The 0b10 argument corresponds to edge and level selection (Table 31-34).
-    tpm0.channel(ChannelSelect::Ch4)
-        .channel_mode(Mode::EdgePWM, 0b10);
-    tpm0.channel(ChannelSelect::Ch4)
-        .channel_trigger(0x1E00 as u32);
+    let mut tpm0_ch4 = tpm0
+        .channel(ChannelSelect::Ch4, ChannelMode::EdgePWM, 0b10, 0x1E00)
+        .unwrap();
+
+    led.high();
 
     write!(uart, "PWM Test\r\n").unwrap();
 
     loop {
         asm::delay(100_000_000);
         led.low();
-        tpm0.channel(ChannelSelect::Ch4)
-            .channel_trigger(Positions::Middle as u32);
+        tpm0_ch4.set_value(0x1000);
         asm::delay(100_000_000);
         led.high();
-        tpm0.channel(ChannelSelect::Ch4)
-            .channel_trigger(Positions::FullyRetracted as u32);
+        tpm0_ch4.set_value(0x500);
         asm::delay(100_000_000);
         led.low();
-        tpm0.channel(ChannelSelect::Ch4)
-            .channel_trigger(Positions::FullyActuated as u32);
+        tpm0_ch4.set_value(0x1E00);
     }
 }
 
