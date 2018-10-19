@@ -83,7 +83,7 @@ fn main() -> ! {
         sim.set_tpm_clksrc(ClkSrc::McgXLL);
     }
 
-    let mut tpm0 = sim
+    let tpm0 = sim
         .tpm(
             TpmNum::TPM0,
             PwmSelect::Up,
@@ -92,7 +92,6 @@ fn main() -> ! {
             0x6000,
         ).unwrap();
 
-    // The 0b10 argument corresponds to edge and level selection (Table 31-34).
     let mut tpm0_ch4 = tpm0
         .channel(
             ChannelSelect::Ch4,

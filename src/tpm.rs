@@ -1,4 +1,5 @@
 use bit_field::BitField;
+use cortex_m::interrupt;
 use volatile_register::RW;
 
 use port::TpmPin;
@@ -21,22 +22,17 @@ struct TpmRegs {
     sc: RW<u32>,
     cnt: RW<u32>,
     mod_: RW<u32>,
-    c0sc: RW<u32>,
-    c0v: RW<u32>,
-    c1sc: RW<u32>,
-    c1v: RW<u32>,
-    c2sc: RW<u32>,
-    c2v: RW<u32>,
-    c3sc: RW<u32>,
-    c3v: RW<u32>,
-    c4sc: RW<u32>,
-    c4v: RW<u32>,
-    c5sc: RW<u32>,
-    c5v: RW<u32>,
+    channel: [ChannelRegs; 6],
     _pad0: [u8; 20],
     tpm_status: RW<u32>,
     _pad1: [u8; 48],
     tpm_conf: RW<u32>,
+}
+
+#[repr(C, packed)]
+struct ChannelRegs {
+    cnsc: RW<u32>,
+    cnv:  RW<u32>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -168,13 +164,13 @@ impl Tpm {
         }
     }
 
-    pub fn channel<'a, P: Into<Option<TpmPin<'a>>>>(
-        &mut self,
+    pub fn channel<'a, 'b, P: Into<Option<TpmPin<'b>>>>(
+        &'a self,
         channel: ChannelSelect,
         mode: ChannelMode,
         value: u16,
         pin: P,
-    ) -> Result<Channel<'a>, ChannelError> {
+    ) -> Result<Channel<'a, 'b>, ChannelError> {
         let pin = pin.into();
         if let Some(pin) = pin.as_ref() {
             if pin.tpm() != self.name as u8 {
@@ -198,22 +194,9 @@ impl Tpm {
                 _ => {}
             }
 
-            let channel_reg = &mut *match channel {
-                ChannelSelect::Ch0 => &self.reg.c0sc as *const RW<u32> as *mut ChanelRegs,
-                ChannelSelect::Ch1 => &self.reg.c1sc as *const RW<u32> as *mut ChanelRegs,
-                ChannelSelect::Ch2 => &self.reg.c2sc as *const RW<u32> as *mut ChanelRegs,
-                ChannelSelect::Ch3 => &self.reg.c3sc as *const RW<u32> as *mut ChanelRegs,
-                ChannelSelect::Ch4 => &self.reg.c4sc as *const RW<u32> as *mut ChanelRegs,
-                ChannelSelect::Ch5 => &self.reg.c5sc as *const RW<u32> as *mut ChanelRegs,
-            };
+            let channel_reg = &self.reg.channel[channel as usize];
 
-            // Checking both ELSx and MSx.
-            if channel_reg.cxsc.read().get_bits(2..6) != 0b0000 {
-                // Channel not currently disabled.
-                return Err(ChannelError::ChannelNotDisabled);
-            }
-
-            Ok(Channel::new(channel_reg, mode, value, pin))
+            interrupt::free(|_| Channel::new(channel_reg, mode, value, pin))
         }
     }
 
@@ -224,25 +207,25 @@ impl Tpm {
     }
 }
 
-#[repr(C, packed)]
-struct ChanelRegs {
-    cxsc: RW<u32>,
-    cxv:  RW<u32>,
+pub struct Channel<'a, 'b> {
+    reg:  &'a ChannelRegs,
+    _pin: Option<TpmPin<'b>>,
 }
 
-pub struct Channel<'a> {
-    reg:  &'static mut ChanelRegs,
-    _pin: Option<TpmPin<'a>>,
-}
-
-impl<'a> Channel<'a> {
+impl<'a, 'b> Channel<'a, 'b> {
     unsafe fn new(
-        reg: &'static mut ChanelRegs,
+        reg: &'a ChannelRegs,
         mode: ChannelMode,
         value: u16,
-        pin: Option<TpmPin<'a>>,
-    ) -> Channel<'a> {
-        reg.cxv.write(value as u32);
+        pin: Option<TpmPin<'b>>,
+    ) -> Result<Channel<'a, 'b>, ChannelError> {
+        // Checking both ELSx and MSx.
+        if reg.cnsc.read().get_bits(2..6) != 0b0000 {
+            // Channel not currently disabled.
+            return Err(ChannelError::ChannelNotDisabled);
+        }
+
+        reg.cnv.write(value as u32);
 
         let (mode, edge) = match mode {
             ChannelMode::SoftwareCompare => (0b01, 0b00),
@@ -292,29 +275,29 @@ impl<'a> Channel<'a> {
         cnsc.set_bits(2..4, edge as u8); // edge and level selection
 
         //0b1110_1000 works
-        reg.cxsc.write(cnsc as u32);
+        reg.cnsc.write(cnsc as u32);
 
-        Channel { reg, _pin: pin }
+        Ok(Channel { reg, _pin: pin })
     }
 
     pub fn get_value(&self) -> u16 {
         unsafe {
             // Only the bottom 16 bits of the channel value register are used to truncation is fine.
-            self.reg.cxv.read() as u16
+            self.reg.cnv.read() as u16
         }
     }
 
     pub fn set_value(&mut self, channel_val: u16) {
         unsafe {
-            self.reg.cxv.write(channel_val as u32);
+            self.reg.cnv.write(channel_val as u32);
         }
     }
 }
 
-impl<'a> Drop for Channel<'a> {
+impl<'a, 'b> Drop for Channel<'a, 'b> {
     fn drop(&mut self) {
         unsafe {
-            self.reg.cxsc.write(0);
+            self.reg.cnsc.write(0);
         }
     }
 }
@@ -328,23 +311,23 @@ mod tests {
     fn tpm0_test() {
         unsafe {
             let reg = & *(TPM0_ADDR as *const TpmRegs);
-            assert_eq!(0x4003_8000 as *const RW<u32>, &reg.sc           as *const RW<u32>, "sc");
-            assert_eq!(0x4003_8004 as *const RW<u32>, &reg.cnt          as *const RW<u32>, "cnt");
-            assert_eq!(0x4003_8008 as *const RW<u32>, &reg.mod_         as *const RW<u32>, "mod_");
-            assert_eq!(0x4003_800C as *const RW<u32>, &reg.c0sc         as *const RW<u32>, "c0sc");
-            assert_eq!(0x4003_8010 as *const RW<u32>, &reg.c0v          as *const RW<u32>, "c0v");
-            assert_eq!(0x4003_8014 as *const RW<u32>, &reg.c1sc         as *const RW<u32>, "c1sc");
-            assert_eq!(0x4003_8018 as *const RW<u32>, &reg.c1v          as *const RW<u32>, "c1v");
-            assert_eq!(0x4003_801C as *const RW<u32>, &reg.c2sc         as *const RW<u32>, "c2sc");
-            assert_eq!(0x4003_8020 as *const RW<u32>, &reg.c2v          as *const RW<u32>, "c2v");
-            assert_eq!(0x4003_8024 as *const RW<u32>, &reg.c3sc         as *const RW<u32>, "c3sc");
-            assert_eq!(0x4003_8028 as *const RW<u32>, &reg.c3v          as *const RW<u32>, "c3v");
-            assert_eq!(0x4003_802C as *const RW<u32>, &reg.c4sc         as *const RW<u32>, "c4sc");
-            assert_eq!(0x4003_8030 as *const RW<u32>, &reg.c4v          as *const RW<u32>, "c4v");
-            assert_eq!(0x4003_8034 as *const RW<u32>, &reg.c5sc         as *const RW<u32>, "c5sc");
-            assert_eq!(0x4003_8038 as *const RW<u32>, &reg.c5v          as *const RW<u32>, "c5v");
-            assert_eq!(0x4003_8050 as *const RW<u32>, &reg.tpm_status   as *const RW<u32>, "tpm_status");
-            assert_eq!(0x4003_8084 as *const RW<u32>, &reg.tpm_conf     as *const RW<u32>, "tpm_conf");
+            assert_eq!(0x4003_8000 as *const RW<u32>, &reg.sc               as *const RW<u32>, "sc");
+            assert_eq!(0x4003_8004 as *const RW<u32>, &reg.cnt              as *const RW<u32>, "cnt");
+            assert_eq!(0x4003_8008 as *const RW<u32>, &reg.mod_             as *const RW<u32>, "mod_");
+            assert_eq!(0x4003_800C as *const RW<u32>, &reg.channel[0].cnsc  as *const RW<u32>, "c0sc");
+            assert_eq!(0x4003_8010 as *const RW<u32>, &reg.channel[0].cnv   as *const RW<u32>, "c0v");
+            assert_eq!(0x4003_8014 as *const RW<u32>, &reg.channel[1].cnsc  as *const RW<u32>, "c1sc");
+            assert_eq!(0x4003_8018 as *const RW<u32>, &reg.channel[1].cnv   as *const RW<u32>, "c1v");
+            assert_eq!(0x4003_801C as *const RW<u32>, &reg.channel[2].cnsc  as *const RW<u32>, "c2sc");
+            assert_eq!(0x4003_8020 as *const RW<u32>, &reg.channel[2].cnv   as *const RW<u32>, "c2v");
+            assert_eq!(0x4003_8024 as *const RW<u32>, &reg.channel[3].cnsc  as *const RW<u32>, "c3sc");
+            assert_eq!(0x4003_8028 as *const RW<u32>, &reg.channel[3].cnv   as *const RW<u32>, "c3v");
+            assert_eq!(0x4003_802C as *const RW<u32>, &reg.channel[4].cnsc  as *const RW<u32>, "c4sc");
+            assert_eq!(0x4003_8030 as *const RW<u32>, &reg.channel[4].cnv   as *const RW<u32>, "c4v");
+            assert_eq!(0x4003_8034 as *const RW<u32>, &reg.channel[5].cnsc  as *const RW<u32>, "c5sc");
+            assert_eq!(0x4003_8038 as *const RW<u32>, &reg.channel[5].cnv   as *const RW<u32>, "c5v");
+            assert_eq!(0x4003_8050 as *const RW<u32>, &reg.tpm_status       as *const RW<u32>, "tpm_status");
+            assert_eq!(0x4003_8084 as *const RW<u32>, &reg.tpm_conf         as *const RW<u32>, "tpm_conf");
         }
     }
 }
