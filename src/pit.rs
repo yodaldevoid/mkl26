@@ -1,4 +1,5 @@
 use bit_field::BitField;
+use cortex_m::interrupt;
 use volatile_register::{RO, RW};
 
 use sim::ClockGate;
@@ -27,6 +28,12 @@ struct TimerRegs {
     tflgn:  RW<u32>,
 }
 
+#[derive(Clone, Copy, Debug)]
+pub enum TimerSelect {
+    Timer0 = 0,
+    Timer1 = 1,
+}
+
 pub struct Pit {
     reg:   &'static mut PitRegs,
     _gate: ClockGate,
@@ -40,6 +47,81 @@ impl Pit {
         reg.mcr.write(0);
 
         Pit { reg, _gate: gate }
+    }
+
+    pub fn timer<'a>(
+        &'a self,
+        timer: TimerSelect,
+        start: u32,
+        interrupt: bool
+    ) -> Result<Timer<'a>, ()> {
+        unsafe {
+            let timer_reg = &self.reg.timer[timer as usize];
+            interrupt::free(|_| Timer::new(timer_reg, start, interrupt))
+        }
+    }
+}
+
+
+// TODO: timer chaining
+pub struct Timer<'a> {
+    reg: &'a TimerRegs,
+}
+
+impl<'a> Timer<'a> {
+    unsafe fn new(reg: &'a TimerRegs, start: u32, interrupt: bool) -> Result<Timer<'a>, ()> {
+        if reg.tctrln.read().get_bit(0) {
+            return Err(());
+        }
+
+        reg.ldvaln.write(start);
+
+        let mut tctrl = 0;
+        tctrl.set_bit(0, true); // Enable timer
+        tctrl.set_bit(1, interrupt); // Enable/disable interrupts
+        reg.tctrln.write(tctrl);
+
+        Ok(Timer { reg })
+    }
+
+    pub fn restart(&mut self) {
+        unsafe {
+            self.reg.tctrln.modify(|mut tctrl| {
+                tctrl.set_bit(0, false);
+                tctrl
+            });
+
+            self.reg.tctrln.modify(|mut tctrl| {
+                tctrl.set_bit(0, true);
+                tctrl
+            });
+        }
+    }
+
+    pub fn set_start(&mut self, start: u32) {
+        unsafe {
+            self.reg.ldvaln.write(start);
+        }
+    }
+
+    pub fn get_value(&self) -> u32 {
+        unsafe {
+            self.reg.cvaln.read()
+        }
+    }
+
+    pub fn clear_interrupt(&mut self) {
+        unsafe {
+            self.reg.tflgn.write(1);
+        }
+    }
+}
+
+impl<'a> Drop for Timer<'a> {
+    fn drop(&mut self) {
+        unsafe {
+            self.reg.tctrln.write(0);
+        }
     }
 }
 
