@@ -8,6 +8,7 @@ use atomic::{BmeAtomic, InterruptAtomic};
 use i2c::{self, I2cMaster};
 #[cfg(feature = "i2c-slave")]
 use i2c::{Address, I2cSlave};
+use pit::Pit;
 use port::{AdcDiffMPin, AdcDiffPPin, AdcPin};
 use port::{I2cScl, I2cSda};
 use port::{Port, PortName};
@@ -317,6 +318,16 @@ impl Sim {
         gate.enable();
 
         unsafe { Ok(Tpm::new(name, cpwms, cmod, clkdivider, count, gate)) }
+    }
+
+    pub fn pit(&mut self) -> Result<Pit, ()> {
+        let mut gate = ClockGate::new(6, 23);
+        if gate.is_enabled() {
+            return Err(());
+        }
+        gate.enable();
+
+        unsafe { Ok(Pit::new(gate)) }
     }
 
     pub fn adc<'a, P: Into<Option<AdcPin<'a>>>>(
