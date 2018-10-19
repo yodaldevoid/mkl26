@@ -53,7 +53,7 @@ impl Pit {
         &'a self,
         timer: TimerSelect,
         start: u32,
-        interrupt: bool
+        interrupt: bool,
     ) -> Result<Timer<'a>, ()> {
         unsafe {
             let timer_reg = &self.reg.timer[timer as usize];
@@ -61,7 +61,6 @@ impl Pit {
         }
     }
 }
-
 
 // TODO: timer chaining
 pub struct Timer<'a> {
@@ -105,9 +104,7 @@ impl<'a> Timer<'a> {
     }
 
     pub fn get_value(&self) -> u32 {
-        unsafe {
-            self.reg.cvaln.read()
-        }
+        unsafe { self.reg.cvaln.read() }
     }
 
     pub fn clear_interrupt(&mut self) {
