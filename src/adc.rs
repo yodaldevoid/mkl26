@@ -213,8 +213,8 @@ impl<'a> Adc<'a> {
         unsafe { self.reg.sc1a.read().get_bit(7) }
     }
 
-    pub fn read(&mut self) -> u32 {
-        unsafe { self.reg.ra.read() }
+    pub fn read(&mut self) -> u16 {
+        unsafe { self.reg.ra.read() as u16 }
     }
 }
 
@@ -347,8 +347,8 @@ impl<'a, 'b> AdcDiff<'a, 'b> {
         unsafe { self.reg.sc1a.read().get_bit(7) }
     }
 
-    pub fn read(&mut self) -> i32 {
-        unsafe { self.reg.ra.read() as i32 }
+    pub fn read(&mut self) -> i16 {
+        unsafe { self.reg.ra.read() as i16 }
     }
 }
 
