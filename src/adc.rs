@@ -258,10 +258,7 @@ impl<'a, 'b, 'c> Channel<'a, 'b, 'c> {
             });
         }
 
-        Ok(Channel {
-            adc,
-            _pin: pin,
-        })
+        Ok(Channel { adc, _pin: pin })
     }
 
     pub fn start_conv(&mut self) {
