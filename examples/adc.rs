@@ -74,33 +74,33 @@ fn main() -> ! {
         .unwrap();
 
     // Internal temperature sensor
-    let mut adc = sim
+    let mut adc0 = sim
         .adc(
             0,
-            26,
             Resolution::Bits16,
             Divisor::Div2,
             VoltageRef::Alternative,
-            None,
         ).unwrap();
 
     led.high();
 
     write!(uart, "ADC test\r\n").unwrap();
 
-    if let Ok(calib) = adc.calibrate() {
-        write!(uart, "ADC calibrated with {}\r\n", calib).unwrap();
+    if let Ok((calib_p, _calib_n)) = adc0.calibrate() {
+        write!(uart, "ADC calibrated with {}\r\n", calib_p).unwrap();
     } else {
         write!(uart, "ADC calibration failed\r\n").unwrap();
     }
 
+    let mut temp_sense = adc0.channel(26, None).unwrap();
+
     loop {
         if let Ok(_) = uart.read_byte() {
             led.low();
-            adc.start_conv();
-            while !adc.is_conv_done() {}
+            temp_sense.start_conv();
+            while !temp_sense.is_conv_done() {}
             led.high();
-            write!(uart, "ADC value {0}\r\n", adc.read()).unwrap();
+            write!(uart, "ADC value {0}\r\n", temp_sense.read()).unwrap();
         }
     }
 }
