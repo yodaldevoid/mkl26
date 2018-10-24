@@ -45,7 +45,7 @@ struct Uart12Diff {
 
 /// A UART peripheral
 ///
-/// T is the "character" size used for the UART. This can be 8, 9, or 10 bits.
+/// B is the "character" size used for the UART. This can be 8, 9, or 10 bits.
 // TODO: consider grabbing crate ux
 pub struct Uart<'a, 'b, B> {
     reg:   &'static mut UartRegs,
@@ -216,10 +216,13 @@ impl<'a, 'b> Write for Uart<'a, 'b, u8> {
 }
 
 impl<'a, 'b, B> Uart<'a, 'b, B> {
-    // TODO: add timeout
-    pub fn flush(&self) -> Result<(), ()> {
-        while !self.reg.s1.read().get_bit(6) {}
-        Ok(())
+    /// Flush is non-blocking
+    pub fn flush_byte(&self) -> Result<(), ()> {
+        if self.reg.s1.read().get_bit(6) {
+            Ok(())
+        } else {
+            Err(())
+        }
     }
 }
 
