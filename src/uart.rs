@@ -2,6 +2,8 @@ use core::fmt::{self, Write};
 use core::marker::PhantomData;
 
 use bit_field::BitField;
+use embedded_hal::serial;
+use nb;
 use volatile_register::{RO, RW};
 
 use port::{UartRx, UartTx};
@@ -234,6 +236,26 @@ impl<'a, 'b, B> Drop for Uart<'a, 'b, B> {
                 c2
             });
         }
+    }
+}
+
+impl<'a, 'b> serial::Read<u8> for Uart<'a, 'b, u8> {
+    type Error = ();
+
+    fn read(&mut self) -> Result<u8, nb::Error<()>> {
+        self.read_byte().map_err(|_| nb::Error::WouldBlock)
+    }
+}
+
+impl<'a, 'b> serial::Write<u8> for Uart<'a, 'b, u8> {
+    type Error = ();
+
+    fn write(&mut self, word: u8) -> Result<(), nb::Error<()>> {
+        self.write_byte(word).map_err(|_| nb::Error::WouldBlock)
+    }
+
+    fn flush(&mut self) -> Result<(), nb::Error<()>> {
+        self.flush_byte().map_err(|_| nb::Error::WouldBlock)
     }
 }
 
