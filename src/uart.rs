@@ -2,6 +2,7 @@ use core::fmt::{self, Write};
 use core::marker::PhantomData;
 
 use bit_field::BitField;
+use embedded_hal::blocking::serial::write;
 use embedded_hal::serial;
 use nb;
 use volatile_register::{RO, RW};
@@ -258,6 +259,8 @@ impl<'a, 'b> serial::Write<u8> for Uart<'a, 'b, u8> {
         self.flush_byte().map_err(|_| nb::Error::WouldBlock)
     }
 }
+
+impl<'a, 'b> write::Default<u8> for Uart<'a, 'b, u8> {}
 
 #[cfg(test)]
 mod tests {
