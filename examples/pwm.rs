@@ -1,4 +1,3 @@
-#![feature(lang_items)]
 #![no_main]
 #![no_std]
 #![no_builtins]
@@ -118,9 +117,8 @@ fn main() -> ! {
 }
 
 //TODO: change to use USB_Listen for the panic messages
-#[lang = "panic_impl"]
-#[no_mangle]
-pub extern "C" fn rust_begin_panic(_info: &core::panic::PanicInfo) -> ! {
+#[panic_handler]
+pub fn rust_begin_panic(_info: &core::panic::PanicInfo) -> ! {
     // Reset the MCU after we've printed our panic.
     /*
     let aircr = unsafe {
