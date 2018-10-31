@@ -127,7 +127,7 @@ impl<'a> Pin<'a> {
         }
     }
 
-    fn drive_strength(&mut self, strength: DriveStrength) {
+    pub fn drive_strength(&mut self, strength: DriveStrength) {
         unsafe {
             self.port.reg().pcr[self.pin].modify(|mut pcr| {
                 pcr.set_bit(6, strength == DriveStrength::High);
@@ -136,7 +136,7 @@ impl<'a> Pin<'a> {
         }
     }
 
-    fn open_drain(&mut self, enable: bool) {
+    pub fn open_drain(&mut self, enable: bool) {
         unsafe {
             self.port.reg().pcr[self.pin].modify(|mut pcr| {
                 pcr.set_bit(5, enable);
@@ -145,7 +145,7 @@ impl<'a> Pin<'a> {
         }
     }
 
-    fn slew_rate(&mut self, rate: SlewRate) {
+    pub fn slew_rate(&mut self, rate: SlewRate) {
         unsafe {
             self.port.reg().pcr[self.pin].modify(|mut pcr| {
                 pcr.set_bit(2, rate == SlewRate::Slow);
@@ -154,7 +154,7 @@ impl<'a> Pin<'a> {
         }
     }
 
-    fn pull(&mut self, pull: Pull) {
+    pub fn pull(&mut self, pull: Pull) {
         unsafe {
             self.port.reg().pcr[self.pin].modify(|mut pcr| {
                 pcr.set_bits(0..2, pull as u32);
