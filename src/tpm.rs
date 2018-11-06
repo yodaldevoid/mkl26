@@ -243,28 +243,28 @@ impl<'a, 'b> Channel<'a, 'b> {
                     OutputBehavior::Clear => 0b10,
                     OutputBehavior::Set => 0b11,
                 };
-                (0b00, edge)
+                (0b01, edge)
             }
             ChannelMode::EdgePwm(edge) => {
                 let edge = match edge {
                     PwmDirection::HighTrue => 0b10,
                     PwmDirection::LowTrue => 0b01,
                 };
-                (0b00, edge)
+                (0b10, edge)
             }
             ChannelMode::PulseOutputCompare(edge) => {
                 let edge = match edge {
                     PulseDirection::Low => 0b10,
                     PulseDirection::High => 0b01,
                 };
-                (0b00, edge)
+                (0b11, edge)
             }
             ChannelMode::CenterPwm(edge) => {
                 let edge = match edge {
                     PwmDirection::HighTrue => 0b10,
                     PwmDirection::LowTrue => 0b01,
                 };
-                (0b00, edge)
+                (0b10, edge)
             }
         };
 
