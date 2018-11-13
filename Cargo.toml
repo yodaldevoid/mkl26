@@ -54,5 +54,3 @@ name = "spi_master"
 
 [[example]]
 name = "pwm"
-
-cortex-m-rt = { git = "https://github.com/rust-embedded/cortex-m-rt.git", branch = "master" }
