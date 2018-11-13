@@ -54,3 +54,15 @@ name = "spi_master"
 
 [[example]]
 name = "pwm"
+
+[profile.dev]
+debug = false
+debug-assertions = false
+incremental = false
+lto = true
+opt-level = 3
+panic = "abort"
+
+[profile.release]
+lto = true
+panic = "abort"
