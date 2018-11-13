@@ -49,6 +49,8 @@ impl Pit {
         Pit { reg, _gate: gate }
     }
 
+    /// The timer returned is not enabled. `Timer::enable` must be called for
+    /// the timer to start.
     pub fn timer<'a>(
         &'a self,
         timer: TimerSelect,
@@ -67,6 +69,7 @@ pub struct Timer<'a> {
     reg: &'a TimerRegs,
 }
 
+// TODO: set up the interrupts for the user
 impl<'a> Timer<'a> {
     unsafe fn new(reg: &'a TimerRegs, start: u32, interrupt: bool) -> Result<Timer<'a>, ()> {
         if reg.tctrln.read().get_bit(0) {
@@ -76,11 +79,28 @@ impl<'a> Timer<'a> {
         reg.ldvaln.write(start);
 
         let mut tctrl = 0;
-        tctrl.set_bit(0, true); // Enable timer
         tctrl.set_bit(1, interrupt); // Enable/disable interrupts
         reg.tctrln.write(tctrl);
 
         Ok(Timer { reg })
+    }
+
+    pub fn enable(&mut self) {
+        unsafe {
+            self.reg.tctrln.modify(|mut tctrl| {
+                tctrl.set_bit(0, true);
+                tctrl
+            });
+        }
+    }
+
+    pub fn disable(&mut self) {
+        unsafe {
+            self.reg.tctrln.modify(|mut tctrl| {
+                tctrl.set_bit(0, false);
+                tctrl
+            });
+        }
     }
 
     pub fn restart(&mut self) {
