@@ -55,6 +55,9 @@ name = "spi_master"
 [[example]]
 name = "pwm"
 
+[[example]]
+name = "pit"
+
 [profile.dev]
 debug = false
 debug-assertions = false
