@@ -205,6 +205,21 @@ impl Tpm {
             self.reg.mod_.write(period as u32);
         }
     }
+
+    pub fn is_overflowed(&self) -> bool {
+        unsafe {
+            self.reg.sc.read().get_bit(7)
+        }
+    }
+
+    pub fn clear_overflow(&mut self) {
+        unsafe {
+            self.reg.sc.modify(|mut sc| {
+                sc.set_bit(7, true);
+                sc
+            });
+        }
+    }
 }
 
 pub struct Channel<'a, 'b> {
@@ -282,7 +297,7 @@ impl<'a, 'b> Channel<'a, 'b> {
 
     pub fn get_value(&self) -> u16 {
         unsafe {
-            // Only the bottom 16 bits of the channel value register are used to truncation is fine.
+            // Only the bottom 16 bits of the channel value register are used so truncation is fine.
             self.reg.cnv.read() as u16
         }
     }
@@ -290,6 +305,21 @@ impl<'a, 'b> Channel<'a, 'b> {
     pub fn set_value(&mut self, channel_val: u16) {
         unsafe {
             self.reg.cnv.write(channel_val as u32);
+        }
+    }
+
+    pub fn is_triggered(&mut self) -> bool {
+        unsafe {
+            self.reg.cnsc.read().get_bit(7)
+        }
+    }
+
+    pub fn clear_trigger(&mut self) {
+        unsafe {
+            self.reg.cnsc.modify(|mut cnsc| {
+                cnsc.set_bit(7, true);
+                cnsc
+            });
         }
     }
 }
