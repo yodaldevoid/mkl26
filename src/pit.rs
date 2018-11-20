@@ -127,6 +127,12 @@ impl<'a> Timer<'a> {
         unsafe { self.reg.cvaln.read() }
     }
 
+    pub fn is_triggered(&self) -> bool {
+        unsafe {
+            self.reg.tflgn.read().get_bit(0)
+        }
+    }
+
     pub fn clear_interrupt(&mut self) {
         unsafe {
             self.reg.tflgn.write(1);
