@@ -110,11 +110,24 @@ pub enum SlewRate {
     Slow = 1,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, PartialEq)]
 pub enum Pull {
     Disable = 0,
     Down = 2,
     Up = 3,
+}
+
+#[derive(Clone, Copy, PartialEq)]
+pub enum InterruptConfig {
+    Disabled = 0x0,
+    DmaRising = 0x1,
+    DmaFalling = 0x2,
+    DmaEither = 0x3,
+    LogicZero = 0x8,
+    Rising = 0x9,
+    Falling = 0xA,
+    Either = 0xB,
+    LogicOne = 0xC,
 }
 
 impl<'a> Pin<'a> {
@@ -158,6 +171,30 @@ impl<'a> Pin<'a> {
         unsafe {
             self.port.reg().pcr[self.pin].modify(|mut pcr| {
                 pcr.set_bits(0..2, pull as u32);
+                pcr
+            });
+        }
+    }
+
+    pub fn interrupt_config(&mut self, config: InterruptConfig) {
+        unsafe {
+            self.port.reg().pcr[self.pin].modify(|mut pcr| {
+                pcr.set_bits(16..20, config as u32);
+                pcr
+            });
+        }
+    }
+
+    pub fn is_interrupted(&self) -> bool {
+        unsafe {
+            self.port.reg().pcr[self.pin].read().get_bit(24)
+        }
+    }
+
+    pub fn clear_interrupt(&mut self) {
+        unsafe {
+            self.port.reg().pcr[self.pin].modify(|mut pcr| {
+                pcr.set_bit(24, true);
                 pcr
             });
         }
@@ -1322,6 +1359,14 @@ impl<'a> Gpio<'a> {
 
     pub fn read(&self) -> bool {
         unsafe { (*self.gpio).pdir.read().get_bit(self.pin.pin as u8) }
+    }
+
+    pub fn is_interrupted(&self) -> bool {
+        self.pin.is_interrupted()
+    }
+
+    pub fn clear_interrupt(&mut self) {
+        self.pin.clear_interrupt()
     }
 
     pub fn output(&mut self) {
