@@ -44,7 +44,6 @@ pub struct I2cSlave<'a, 'b> {
     _scl:  I2cScl<'a>,
     _sda:  I2cSda<'b>,
     _gate: ClockGate,
-    bus:   u8,
 }
 
 #[derive(Clone, Copy)]
@@ -792,15 +791,14 @@ impl<'a, 'b> I2cSlave<'a, 'b> {
             _scl: scl,
             _sda: sda,
             _gate: gate,
-            bus,
         })
     }
 
-    pub fn set_rx_callback(&mut self, callback: Option<fn(u8, &ArrayDeque<[u8; 64]>)>) {
+    pub fn set_rx_callback(&mut self, _callback: Option<fn(u8, &ArrayDeque<[u8; 64]>)>) {
         unimplemented!()
     }
 
-    pub fn set_tx_callback(&mut self, callback: Option<fn(u8, &mut ArrayDeque<[u8; 64]>)>) {
+    pub fn set_tx_callback(&mut self, _callback: Option<fn(u8, &mut ArrayDeque<[u8; 64]>)>) {
         unimplemented!()
     }
 }
