@@ -915,248 +915,256 @@ unsafe fn isr(reg: &mut I2cRegs, state: &mut IsrState) {
 
     // Check if master or slave
     if c1.get_bit(5) {
-        // Master
-        // check for currently transmitting or receiving
-        if c1.get_bit(4) {
-            match state.status {
-                Status::Transmit => {
-                    // TODO: find some way to test this
-                    // This is not called out in the Master mode branch in the
-                    // in the flowchart in the TRM, but the Teensy folks do it
-                    // so I'm putting it in
-                    // The switch to slave rx might be automatically handled by
-                    // the hardware so this would never get hit
-                    // check arbitration
-                    if status.get_bit(4) {
-                        state.status = Status::ArbLost;
-                        reg.s.write(0x10); // clear ARBL
+        master_isr(reg, state, status, c1);
+    } else {
+        slave_isr(reg, state, status, c1);
+    }
+}
 
-                        // TODO: this is clearly not right. After ARBL it should
-                        // drop into IMM slave mode if IAAS=1. Right now Rx
-                        // message would be ignored regardless of IAAS
+#[cfg(feature = "i2c-isr")]
+unsafe fn master_isr(reg: &mut I2cRegs, state: &mut IsrState, status: u8, c1: u8) {
+    // check for currently transmitting or receiving
+    if c1.get_bit(4) {
+        match state.status {
+            Status::Address => {
+                // TODO: find some way to test this
+                // This is not called out in the Master mode branch in the
+                // in the flowchart in the TRM, but the Teensy folks do it
+                // so I'm putting it in
+                // check arbitration
+                if status.get_bit(4) {
+                    state.status = Status::ArbLost;
+                    reg.s.write(0x10); // clear ARBL
 
-                        // change to Rx mode, intr disabled
-                        // (does this send STOP if ARBL flagged?)
-                        reg.c1.write(0x80); // Only module enabled
+                    // TODO: this is clearly not right. After ARBL it should
+                    // drop into IMM slave mode if IAAS=1. Right now Rx
+                    // message would be ignored regardless of IAAS
 
-                    // check if slave acked
-                    } else if status.get_bit(0) {
-                        // TODO: separate out data and addr so we can give different errors
-                        state.status = Status::Nak;
-                        reg.c1.write(0x80); // Only module enabled
+                    // change to Rx mode, intr disabled
+                    // (does this send STOP if ARBL flagged?)
+                    reg.c1.write(0x80); // Only module enabled
+
+                // check if slave acked
+                } else if status.get_bit(0) {
+                    // TODO: separate out data and addr so we can give different errors
+                    state.status = Status::Nak;
+                    reg.c1.write(0x80); // Only module enabled
+                } else {
+                    if let Some(d) = state.tx_buf.pop_front() {
+                        reg.d.write(d);
                     } else {
-                        if let Some(d) = state.tx_buf.pop_front() {
-                            reg.d.write(d);
-                        } else {
-                            state.status = Status::Idle;
-
-                            match state.stop {
-                                Stop::Yes => reg.c1.write(0x80), // only module enabled
-                                Stop::No => reg.c1.write(0xB0), // no stop, still in tx, intr disabled
+                        state.status = Status::Receive;
+                        // switch to rx mode
+                        reg.c1.modify(|mut c1| {
+                            c1.set_bit(4, false);
+                            if state.rx_req <= 1 {
+                                c1.set_bit(3, true);
                             }
-                        }
+                            c1
+                        });
+                        reg.d.read(); // dummy read
                     }
-                }
-                Status::Address => {
-                    // TODO: find some way to test this
-                    // This is not called out in the Master mode branch in the
-                    // in the flowchart in the TRM, but the Teensy folks do it
-                    // so I'm putting it in
-                    // check arbitration
-                    if status.get_bit(4) {
-                        state.status = Status::ArbLost;
-                        reg.s.write(0x10); // clear ARBL
-
-                        // TODO: this is clearly not right. After ARBL it should
-                        // drop into IMM slave mode if IAAS=1. Right now Rx
-                        // message would be ignored regardless of IAAS
-
-                        // change to Rx mode, intr disabled
-                        // (does this send STOP if ARBL flagged?)
-                        reg.c1.write(0x80); // Only module enabled
-
-                    // check if slave acked
-                    } else if status.get_bit(0) {
-                        // TODO: separate out data and addr so we can give different errors
-                        state.status = Status::Nak;
-                        reg.c1.write(0x80); // Only module enabled
-                    } else {
-                        if let Some(d) = state.tx_buf.pop_front() {
-                            reg.d.write(d);
-                        } else {
-                            state.status = Status::Receive;
-                            // switch to rx mode
-                            reg.c1.modify(|mut c1| {
-                                c1.set_bit(4, false);
-                                if state.rx_req <= 1 {
-                                    c1.set_bit(3, true);
-                                }
-                                c1
-                            });
-                            reg.d.read(); // dummy read
-                        }
-                    }
-                }
-                Status::Timeout => {
-                    match state.stop {
-                        Stop::Yes => reg.c1.write(0x80), // only module enabled
-                        Stop::No => reg.c1.write(0xB0),  // no stop, still in tx, intr disabled
-                    }
-                }
-                _ => {
-                    // we should not be here. something went really wrong
-                    state.status = Status::Fatal;
-                    reg.c1.write(0x80); // only module enabled
                 }
             }
-        } else {
-            // Not REALLY needed, but might was well double check
-            if state.status == Status::Receive {
-                if state.rx_buf.len() + 1 == state.rx_req
-                    || (state.status == Status::Timeout && state.timeout_rx_nak)
-                {
-                    state.timeout_rx_nak = false;
+            Status::Transmit => {
+                // TODO: find some way to test this
+                // This is not called out in the Master mode branch in the
+                // in the flowchart in the TRM, but the Teensy folks do it
+                // so I'm putting it in
+                // The switch to slave rx might be automatically handled by
+                // the hardware so this would never get hit
+                // check arbitration
+                if status.get_bit(4) {
+                    state.status = Status::ArbLost;
+                    reg.s.write(0x10); // clear ARBL
 
-                    if state.status != Status::Timeout {
+                    // TODO: this is clearly not right. After ARBL it should
+                    // drop into IMM slave mode if IAAS=1. Right now Rx
+                    // message would be ignored regardless of IAAS
+
+                    // change to Rx mode, intr disabled
+                    // (does this send STOP if ARBL flagged?)
+                    reg.c1.write(0x80); // Only module enabled
+
+                // check if slave acked
+                } else if status.get_bit(0) {
+                    // TODO: separate out data and addr so we can give different errors
+                    state.status = Status::Nak;
+                    reg.c1.write(0x80); // Only module enabled
+                } else {
+                    if let Some(d) = state.tx_buf.pop_front() {
+                        reg.d.write(d);
+                    } else {
                         state.status = Status::Idle;
-                    }
-                    // change to tx
-                    reg.c1.modify(|mut c1| {
-                        c1.set_bit(4, true);
-                        c1
-                    });
 
-                    match state.stop {
-                        Stop::Yes => {
-                            //delayMicroseconds(1); // empirical patch, lets things settle before issuing STOP
-                            reg.c1.write(0x80); // only module enabled
+                        match state.stop {
+                            Stop::Yes => reg.c1.write(0x80), // only module enabled
+                            Stop::No => reg.c1.write(0xB0), // no stop, still in tx, intr disabled
                         }
-                        Stop::No => reg.c1.write(0xB0), // no stop, tx, intr disabled
                     }
-                } else if state.rx_buf.len() + 2 == state.rx_req
-                    || (state.status == Status::Timeout && !state.timeout_rx_nak)
-                {
-                    if state.status == Status::Timeout && !state.timeout_rx_nak {
-                        state.timeout_rx_nak = true;
-                    }
-
-                    // set TXACK
-                    reg.c1.modify(|mut c1| {
-                        c1.set_bit(3, true);
-                        c1
-                    });
                 }
-
-                // TODO: error condition
-                let _ = state.rx_buf.push_back(reg.d.read()); // read in data
-            } else {
+            }
+            Status::Timeout => {
+                match state.stop {
+                    Stop::Yes => reg.c1.write(0x80), // only module enabled
+                    Stop::No => reg.c1.write(0xB0),  // no stop, still in tx, intr disabled
+                }
+            }
+            _ => {
                 // we should not be here. something went really wrong
                 state.status = Status::Fatal;
                 reg.c1.write(0x80); // only module enabled
             }
         }
     } else {
-        // Slave
-        // check arbitration
-        if status.get_bit(4) {
-            state.status = Status::ArbLost;
-            reg.s.write(0x10); // clear ARBL
+        // Not REALLY needed, but might was well double check
+        if state.status == Status::Receive {
+            if state.rx_buf.len() + 1 == state.rx_req
+                || (state.status == Status::Timeout && state.timeout_rx_nak)
+            {
+                state.timeout_rx_nak = false;
 
-            // not addressed as slave
-            if !status.get_bit(6) {
-                return;
-            }
-        }
-
-        #[cfg(feature = "i2c-slave")]
-        {
-            // addressed as slave
-            if status.get_bit(6) {
-                // repeated START occurred, run callback
-                if let (&Status::SlaveReceive, Some(callback)) =
-                    (&state.status, state.slave_rx_callback)
-                {
-                    callback(state.rx_addr, &state.rx_buf);
-                    state.rx_buf.clear();
+                if state.status != Status::Timeout {
+                    state.status = Status::Idle;
                 }
-                // set read or write mode
-                if status.get_bit(2) {
-                    // write
-                    state.status = Status::SlaveTransmit;
-                    state.tx_buf.clear();
-                    // change to tx
-                    reg.c1.modify(|mut c1| {
-                        c1.set_bit(4, true);
-                        c1
-                    });
-                    if let Some(callback) = state.slave_tx_callback {
-                        let addr = reg.d.read() >> 1; // read target addr
-                        callback(addr, &mut state.tx_buf);
+                // change to tx
+                reg.c1.modify(|mut c1| {
+                    c1.set_bit(4, true);
+                    c1
+                });
+
+                match state.stop {
+                    Stop::Yes => {
+                        //delayMicroseconds(1); // empirical patch, lets things settle before issuing STOP
+                        reg.c1.write(0x80); // only module enabled
                     }
+                    Stop::No => reg.c1.write(0xB0), // no stop, tx, intr disabled
+                }
+            } else if state.rx_buf.len() + 2 == state.rx_req
+                || (state.status == Status::Timeout && !state.timeout_rx_nak)
+            {
+                if state.status == Status::Timeout && !state.timeout_rx_nak {
+                    state.timeout_rx_nak = true;
+                }
+
+                // set TXACK
+                reg.c1.modify(|mut c1| {
+                    c1.set_bit(3, true);
+                    c1
+                });
+            }
+
+            // TODO: error condition
+            let _ = state.rx_buf.push_back(reg.d.read()); // read in data
+        } else {
+            // we should not be here. something went really wrong
+            state.status = Status::Fatal;
+            reg.c1.write(0x80); // only module enabled
+        }
+    }
+}
+
+#[cfg(feature = "i2c-isr")]
+unsafe fn slave_isr(reg: &mut I2cRegs, state: &mut IsrState, status: u8, c1: u8) {
+    // check arbitration
+    if status.get_bit(4) {
+        state.status = Status::ArbLost;
+        reg.s.write(0x10); // clear ARBL
+
+        // not addressed as slave
+        if !status.get_bit(6) {
+            return;
+        }
+    }
+
+    #[cfg(feature = "i2c-slave")]
+    {
+        // addressed as slave
+        if status.get_bit(6) {
+            // repeated START occurred, run callback
+            if let (&Status::SlaveReceive, Some(callback)) =
+                (&state.status, state.slave_rx_callback)
+            {
+                callback(state.rx_addr, &state.rx_buf);
+                state.rx_buf.clear();
+            }
+            // set read or write mode
+            if status.get_bit(2) {
+                // write
+                state.status = Status::SlaveTransmit;
+                state.tx_buf.clear();
+                // change to tx
+                reg.c1.modify(|mut c1| {
+                    c1.set_bit(4, true);
+                    c1
+                });
+                if let Some(callback) = state.slave_tx_callback {
+                    let addr = reg.d.read() >> 1; // read target addr
+                    callback(addr, &mut state.tx_buf);
+                }
+                if let Some(d) = state.tx_buf.pop_front() {
+                    reg.d.write(d);
+                } else {
+                    reg.d.write(0);
+                }
+            } else {
+                // read
+                state.status = Status::SlaveReceive;
+                state.rx_buf.clear();
+                // change to rx
+                reg.c1.modify(|mut c1| {
+                    c1.set_bit(4, false);
+                    c1
+                });
+                state.rx_addr = reg.d.read() >> 1; // read target addr
+
+                // TODO: attach interrupt on pin
+                //i2c->irqCount = 0;
+                //if(i2c->currentPins == I2C_PINS_18_19)
+                //    attachInterrupt(18, i2c_t3::sda0_rising_isr, RISING);
+                //else if(i2c->currentPins == I2C_PINS_16_17)
+                //    attachInterrupt(17, i2c_t3::sda0_rising_isr, RISING);
+                //else if(i2c->currentPins == I2C_PINS_29_30)
+                //    attachInterrupt(30, i2c_t3::sda1_rising_isr, RISING);
+                //else if(i2c->currentPins == I2C_PINS_26_31)
+                //    attachInterrupt(31, i2c_t3::sda1_rising_isr, RISING);
+            }
+        } else {
+            // data transfer
+            if c1.get_bit(4) {
+                // slave transmit
+                if !status.get_bit(0) {
+                    // master ack - continue transmitting
                     if let Some(d) = state.tx_buf.pop_front() {
                         reg.d.write(d);
                     } else {
                         reg.d.write(0);
                     }
                 } else {
-                    // read
-                    state.status = Status::SlaveReceive;
-                    state.rx_buf.clear();
-                    // change to rx
-                    reg.c1.modify(|mut c1| {
-                        c1.set_bit(4, false);
-                        c1
-                    });
-                    state.rx_addr = reg.d.read() >> 1; // read target addr
-
-                    // TODO: attach interrupt on pin
-                    //i2c->irqCount = 0;
-                    //if(i2c->currentPins == I2C_PINS_18_19)
-                    //    attachInterrupt(18, i2c_t3::sda0_rising_isr, RISING);
-                    //else if(i2c->currentPins == I2C_PINS_16_17)
-                    //    attachInterrupt(17, i2c_t3::sda0_rising_isr, RISING);
-                    //else if(i2c->currentPins == I2C_PINS_29_30)
-                    //    attachInterrupt(30, i2c_t3::sda1_rising_isr, RISING);
-                    //else if(i2c->currentPins == I2C_PINS_26_31)
-                    //    attachInterrupt(31, i2c_t3::sda1_rising_isr, RISING);
+                    // master nak - stop transmitting
+                    reg.c1.write(0xE0); // rx mode
+                    reg.d.read(); // dummy read
+                    state.status = Status::Idle;
                 }
-            } else {
-                // data transfer
-                if c1.get_bit(4) {
-                    // slave transmit
-                    if !status.get_bit(0) {
-                        // master ack - continue transmitting
-                        if let Some(d) = state.tx_buf.pop_front() {
-                            reg.d.write(d);
-                        } else {
-                            reg.d.write(0);
-                        }
-                    } else {
-                        // master nak - stop transmitting
-                        reg.c1.write(0xE0); // rx mode
-                        reg.d.read(); // dummy read
-                        state.status = Status::Idle;
-                    }
-                } else if state.status == Status::SlaveReceive {
-                    // ^ done so this doesn't just happen after arbitration is lost
-                    // slave receive
+            } else if state.status == Status::SlaveReceive {
+                // ^ done so this doesn't just happen after arbitration is lost
+                // slave receive
 
-                    // TODO: attach interrupt on pin
-                    /*
-                    i2c->irqCount = 0;
-                    if(i2c->currentPins == I2C_PINS_18_19)
-                        attachInterrupt(18, i2c_t3::sda0_rising_isr, RISING);
-                    else if(i2c->currentPins == I2C_PINS_16_17)
-                        attachInterrupt(17, i2c_t3::sda0_rising_isr, RISING);
-                    else if(i2c->currentPins == I2C_PINS_29_30)
-                        attachInterrupt(30, i2c_t3::sda1_rising_isr, RISING);
-                    else if(i2c->currentPins == I2C_PINS_26_31)
-                        attachInterrupt(31, i2c_t3::sda1_rising_isr, RISING);
-                    */
+                // TODO: attach interrupt on pin
+                /*
+                i2c->irqCount = 0;
+                if(i2c->currentPins == I2C_PINS_18_19)
+                    attachInterrupt(18, i2c_t3::sda0_rising_isr, RISING);
+                else if(i2c->currentPins == I2C_PINS_16_17)
+                    attachInterrupt(17, i2c_t3::sda0_rising_isr, RISING);
+                else if(i2c->currentPins == I2C_PINS_29_30)
+                    attachInterrupt(30, i2c_t3::sda1_rising_isr, RISING);
+                else if(i2c->currentPins == I2C_PINS_26_31)
+                    attachInterrupt(31, i2c_t3::sda1_rising_isr, RISING);
+                */
 
-                    // TODO: error condition
-                    let _ = state.rx_buf.push_back(reg.d.read());
-                }
+                // TODO: error condition
+                let _ = state.rx_buf.push_back(reg.d.read());
             }
         }
     }
