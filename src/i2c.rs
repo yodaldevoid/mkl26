@@ -664,9 +664,8 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
         }
     }
 
-    // TODO: add timeout
     // TODO: maybe rename to `pop_byte`
-    pub fn read_byte(&self) -> Result<u8, ()> {
+    pub fn read_byte(&self) -> Result<u8, Error> {
         interrupt::free(|cs| {
             let mut state = match self.bus {
                 0 => I2C0_STATE.borrow(cs).borrow_mut(),
@@ -676,14 +675,14 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
             // TODO: format! does not exist,find another way
             let state = state.as_mut().expect("I2CX_STATE uninitialized");
 
-            state.rx_buf.pop_front().ok_or(())
+            state.rx_buf.pop_front().ok_or(Error::BufOverflow)
         })
     }
 
     /// Write byte to transmit buffer.
     ///
     /// Returns `Ok` if the write was successful, `Err` if the buffer was full.
-    fn write_byte(&mut self, b: u8) -> Result<(), ()> {
+    fn write_byte(&mut self, b: u8) -> Result<(), Error> {
         interrupt::free(|cs| {
             let mut state = match self.bus {
                 0 => I2C0_STATE.borrow(cs).borrow_mut(),
@@ -693,7 +692,7 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
             // TODO: format! does not exist,find another way
             let state = state.as_mut().expect("I2CX_STATE uninitialized");
 
-            state.tx_buf.push_back(b).map_err(|_| ())
+            state.tx_buf.push_back(b).map_err(|_| Error::BufOverflow)
         })
     }
 }
@@ -711,7 +710,7 @@ impl<'a, 'b, 'c> Transmission<'a, 'b, 'c> {
         self.i2c.send_request(len, stop)
     }
 
-    pub fn write_byte(&mut self, b: u8) -> Result<(), ()> {
+    pub fn write_byte(&mut self, b: u8) -> Result<(), Error> {
         self.i2c.write_byte(b)
     }
 }
