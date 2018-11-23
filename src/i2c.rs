@@ -259,6 +259,8 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
             // TODO: format! does not exist,find another way
             let state = state.as_mut().expect("I2CX_STATE uninitialized");
 
+            state.status = Status::Idle;
+
             state.tx_buf.clear();
             match addr {
                 Address::Bits7(addr) => {
@@ -277,7 +279,6 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
                     }
                 }
             }
-            state.status = Status::Idle;
         });
 
         Transmission { i2c: self }
@@ -927,7 +928,7 @@ unsafe fn master_isr(reg: &mut I2cRegs, state: &mut IsrState, status: u8, c1: u8
     // check for currently transmitting or receiving
     if c1.get_bit(4) {
         match state.status {
-            Status::Address => {
+            Status::Address | Status::Transmit => {
                 // TODO: find some way to test this
                 // This is not called out in the Master mode branch in the
                 // in the flowchart in the TRM, but the Teensy folks do it
@@ -951,57 +952,36 @@ unsafe fn master_isr(reg: &mut I2cRegs, state: &mut IsrState, status: u8, c1: u8
                     state.status = Status::Nak;
                     reg.c1.write(0x80); // Only module enabled
                 } else {
-                    if let Some(d) = state.tx_buf.pop_front() {
-                        reg.d.write(d);
-                    } else {
-                        state.status = Status::Receive;
-                        // switch to rx mode
-                        reg.c1.modify(|mut c1| {
-                            c1.set_bit(4, false);
-                            if state.rx_req <= 1 {
-                                c1.set_bit(3, true);
+                    match state.status {
+                        Status::Address => {
+                            if let Some(d) = state.tx_buf.pop_front() {
+                                reg.d.write(d);
+                            } else {
+                                state.status = Status::Receive;
+                                // switch to rx mode
+                                reg.c1.modify(|mut c1| {
+                                    c1.set_bit(4, false);
+                                    if state.rx_req <= 1 {
+                                        c1.set_bit(3, true);
+                                    }
+                                    c1
+                                });
+                                reg.d.read(); // dummy read
                             }
-                            c1
-                        });
-                        reg.d.read(); // dummy read
-                    }
-                }
-            }
-            Status::Transmit => {
-                // TODO: find some way to test this
-                // This is not called out in the Master mode branch in the
-                // in the flowchart in the TRM, but the Teensy folks do it
-                // so I'm putting it in
-                // The switch to slave rx might be automatically handled by
-                // the hardware so this would never get hit
-                // check arbitration
-                if status.get_bit(4) {
-                    state.status = Status::ArbLost;
-                    reg.s.write(0x10); // clear ARBL
-
-                    // TODO: this is clearly not right. After ARBL it should
-                    // drop into IMM slave mode if IAAS=1. Right now Rx
-                    // message would be ignored regardless of IAAS
-
-                    // change to Rx mode, intr disabled
-                    // (does this send STOP if ARBL flagged?)
-                    reg.c1.write(0x80); // Only module enabled
-
-                // check if slave acked
-                } else if status.get_bit(0) {
-                    // TODO: separate out data and addr so we can give different errors
-                    state.status = Status::Nak;
-                    reg.c1.write(0x80); // Only module enabled
-                } else {
-                    if let Some(d) = state.tx_buf.pop_front() {
-                        reg.d.write(d);
-                    } else {
-                        state.status = Status::Idle;
-
-                        match state.stop {
-                            Stop::Yes => reg.c1.write(0x80), // only module enabled
-                            Stop::No => reg.c1.write(0xB0), // no stop, still in tx, intr disabled
                         }
+                        Status::Transmit => {
+                            if let Some(d) = state.tx_buf.pop_front() {
+                                reg.d.write(d);
+                            } else {
+                                state.status = Status::Idle;
+
+                                match state.stop {
+                                    Stop::Yes => reg.c1.write(0x80), // only module enabled
+                                    Stop::No => reg.c1.write(0xB0), // no stop, still in tx, intr disabled
+                                }
+                            }
+                        }
+                        _ => unreachable!(),
                     }
                 }
             }
@@ -1011,6 +991,7 @@ unsafe fn master_isr(reg: &mut I2cRegs, state: &mut IsrState, status: u8, c1: u8
                     Stop::No => reg.c1.write(0xB0),  // no stop, still in tx, intr disabled
                 }
             }
+            Status::Idle => {}
             _ => {
                 // we should not be here. something went really wrong
                 state.status = Status::Fatal;
@@ -1019,48 +1000,52 @@ unsafe fn master_isr(reg: &mut I2cRegs, state: &mut IsrState, status: u8, c1: u8
         }
     } else {
         // Not REALLY needed, but might was well double check
-        if state.status == Status::Receive {
-            if state.rx_buf.len() + 1 == state.rx_req
-                || (state.status == Status::Timeout && state.timeout_rx_nak)
-            {
-                state.timeout_rx_nak = false;
+        match state.status {
+            Status::Receive => {
+                if state.rx_buf.len() + 1 == state.rx_req
+                    || (state.status == Status::Timeout && state.timeout_rx_nak)
+                {
+                    state.timeout_rx_nak = false;
 
-                if state.status != Status::Timeout {
-                    state.status = Status::Idle;
-                }
-                // change to tx
-                reg.c1.modify(|mut c1| {
-                    c1.set_bit(4, true);
-                    c1
-                });
-
-                match state.stop {
-                    Stop::Yes => {
-                        //delayMicroseconds(1); // empirical patch, lets things settle before issuing STOP
-                        reg.c1.write(0x80); // only module enabled
+                    if state.status != Status::Timeout {
+                        state.status = Status::Idle;
                     }
-                    Stop::No => reg.c1.write(0xB0), // no stop, tx, intr disabled
-                }
-            } else if state.rx_buf.len() + 2 == state.rx_req
-                || (state.status == Status::Timeout && !state.timeout_rx_nak)
-            {
-                if state.status == Status::Timeout && !state.timeout_rx_nak {
-                    state.timeout_rx_nak = true;
+                    // change to tx
+                    reg.c1.modify(|mut c1| {
+                        c1.set_bit(4, true);
+                        c1
+                    });
+
+                    match state.stop {
+                        Stop::Yes => {
+                            //delayMicroseconds(1); // empirical patch, lets things settle before issuing STOP
+                            reg.c1.write(0x80); // only module enabled
+                        }
+                        Stop::No => reg.c1.write(0xB0), // no stop, tx, intr disabled
+                    }
+                } else if state.rx_buf.len() + 2 == state.rx_req
+                    || (state.status == Status::Timeout && !state.timeout_rx_nak)
+                {
+                    if state.status == Status::Timeout && !state.timeout_rx_nak {
+                        state.timeout_rx_nak = true;
+                    }
+
+                    // set TXACK
+                    reg.c1.modify(|mut c1| {
+                        c1.set_bit(3, true);
+                        c1
+                    });
                 }
 
-                // set TXACK
-                reg.c1.modify(|mut c1| {
-                    c1.set_bit(3, true);
-                    c1
-                });
+                // TODO: error condition
+                let _ = state.rx_buf.push_back(reg.d.read()); // read in data
             }
-
-            // TODO: error condition
-            let _ = state.rx_buf.push_back(reg.d.read()); // read in data
-        } else {
-            // we should not be here. something went really wrong
-            state.status = Status::Fatal;
-            reg.c1.write(0x80); // only module enabled
+            Status::Idle => {}
+            _ => {
+                // we should not be here. something went really wrong
+                state.status = Status::Fatal;
+                reg.c1.write(0x80); // only module enabled
+            }
         }
     }
 }
