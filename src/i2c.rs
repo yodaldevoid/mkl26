@@ -4,6 +4,7 @@ use arraydeque::ArrayDeque;
 use bit_field::BitField;
 use cortex_m::interrupt::{self, Mutex};
 use cortex_m::peripheral::NVIC;
+use embedded_hal::blocking::i2c;
 use volatile_register::RW;
 
 use interrupts::Interrupt;
@@ -1167,6 +1168,62 @@ unsafe fn slave_isr(reg: &mut I2cRegs, state: &mut IsrState, status: u8, c1: u8)
                 let _ = state.rx_buf.push_back(reg.d.read());
             }
         }
+    }
+}
+
+impl<'a, 'b> i2c::Read for I2cMaster<'a, 'b> {
+    type Error = Error;
+
+    fn read(&mut self, address: u8, buffer: &mut [u8]) -> Result<(), Self::Error> {
+        {
+            let t = self.begin_transmission(Address::Bits7(address));
+            t.send_request(buffer.len(), Stop::Yes)?;
+        }
+        self.finish()?;
+        for b in buffer.iter_mut() {
+            *b = self.read_byte()?;
+        }
+        Ok(())
+    }
+}
+
+impl<'a, 'b> i2c::Write for I2cMaster<'a, 'b> {
+    type Error = Error;
+
+    fn write(&mut self, address: u8, bytes: &[u8]) -> Result<(), Self::Error> {
+        {
+            let mut t = self.begin_transmission(Address::Bits7(address));
+            for b in bytes.iter() {
+                t.write_byte(*b)?;
+            }
+            t.send_transmission(Stop::Yes)?;
+        }
+        self.finish()?;
+        Ok(())
+    }
+}
+
+impl<'a, 'b> i2c::WriteRead for I2cMaster<'a, 'b> {
+    type Error = Error;
+
+    fn write_read(&mut self, address: u8, bytes: &[u8], buffer: &mut [u8]) -> Result<(), Self::Error> {
+        {
+            let mut t = self.begin_transmission(Address::Bits7(address));
+            for b in bytes.iter() {
+                t.write_byte(*b)?;
+            }
+            t.send_transmission(Stop::No)?;
+        }
+        self.finish()?;
+        {
+            let t = self.begin_transmission(Address::Bits7(address));
+            t.send_request(buffer.len(), Stop::Yes)?;
+        }
+        self.finish()?;
+        for b in buffer.iter_mut() {
+            *b = self.read_byte()?;
+        }
+        Ok(())
     }
 }
 
