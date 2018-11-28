@@ -304,6 +304,7 @@ impl Sim {
         cpwms: PwmSelect,
         cmod: ClockMode,
         clkdivider: tpm::Prescale,
+        interrupt: bool,
         count: u16,
     ) -> Result<Tpm, ()> {
         let mut gate = match name {
@@ -316,7 +317,7 @@ impl Sim {
         }
         gate.enable();
 
-        unsafe { Ok(Tpm::new(name, cpwms, cmod, clkdivider, count, gate)) }
+        unsafe { Ok(Tpm::new(name, cpwms, cmod, clkdivider, interrupt, count, gate)) }
     }
 
     pub fn pit(&mut self) -> Result<Pit, ()> {

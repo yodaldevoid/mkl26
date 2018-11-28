@@ -127,6 +127,7 @@ impl Tpm {
         cpwms: PwmSelect,
         cmod: ClockMode,
         clkdivider: Prescale,
+        interrupt: bool,
         count: u16,
         gate: ClockGate,
     ) -> Tpm {
@@ -144,9 +145,9 @@ impl Tpm {
         // set SC values
         // 0 - DMA disable
         // 1 - Clear TOF flag
-        // 1 - TOIE
         // 0 - up-counting
-        let mut sc = 0b0110_0000;
+        let mut sc = 0b0100_0000;
+        sc.set_bit(6, interrupt);
         sc.set_bit(5, cpwms == PwmSelect::UpDown);
         sc.set_bits(0..3, clkdivider as u32);
         reg.sc.write(sc);
@@ -168,6 +169,7 @@ impl Tpm {
         &'a self,
         channel: ChannelSelect,
         mode: ChannelMode,
+        interrupt: bool,
         value: u16,
         pin: P,
     ) -> Result<Channel<'a, 'b>, ChannelError> {
@@ -196,7 +198,7 @@ impl Tpm {
 
             let channel_reg = &self.reg.channel[channel as usize];
 
-            interrupt::free(|_| Channel::new(channel_reg, mode, value, pin))
+            interrupt::free(|_| Channel::new(channel_reg, mode, interrupt, value, pin))
         }
     }
 
@@ -231,6 +233,7 @@ impl<'a, 'b> Channel<'a, 'b> {
     unsafe fn new(
         reg: &'a ChannelRegs,
         mode: ChannelMode,
+        interrupt: bool,
         value: u16,
         pin: Option<TpmPin<'b>>,
     ) -> Result<Channel<'a, 'b>, ChannelError> {
@@ -285,7 +288,7 @@ impl<'a, 'b> Channel<'a, 'b> {
 
         let mut cnsc = 0;
         cnsc.set_bit(7, true); // Clear CHF
-        cnsc.set_bit(6, true); // CHIE = true
+        cnsc.set_bit(6, interrupt); // CHIE
         cnsc.set_bits(4..6, mode as u8); // set channel mode
         cnsc.set_bits(2..4, edge as u8); // edge and level selection
 
