@@ -5,7 +5,7 @@ use volatile_register::{RO, RW};
 
 use adc::{self, Adc};
 use atomic::{BmeAtomic, InterruptAtomic};
-use i2c::{self, I2cMaster};
+use i2c::{self, Divider, Multiplier, I2cMaster};
 #[cfg(feature = "i2c-slave")]
 use i2c::{Address, I2cSlave};
 use pit::Pit;
@@ -215,7 +215,7 @@ impl Sim {
         scl: I2cScl<'a>,
         sda: I2cSda<'b>,
         nvic: &mut NVIC,
-        clkdiv: (u8, u8),
+        clkdiv: (Multiplier, Divider),
         op_mode: i2c::OpMode,
     ) -> Result<I2cMaster<'a, 'b>, ()> {
         if scl.bus() != sda.bus() {

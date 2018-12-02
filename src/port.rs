@@ -290,6 +290,7 @@ impl<'a> Pin<'a> {
         }
     }
 
+    // TODO: maybe make the bool an enum ot make it clear at the callsite what is going on.
     pub fn to_i2c_scl(mut self, pullup_ext: bool) -> Result<I2cScl<'a>, ()> {
         let bus = match (self.port.name(), self.pin) {
             (PortName::E, 1) => {
@@ -345,6 +346,7 @@ impl<'a> Pin<'a> {
         })
     }
 
+    // TODO: maybe make the bool an enum ot make it clear at the callsite what is going on.
     pub fn to_i2c_sda(mut self, pullup_ext: bool) -> Result<I2cSda<'a>, ()> {
         let bus = match (self.port.name(), self.pin) {
             (PortName::E, 0) => {

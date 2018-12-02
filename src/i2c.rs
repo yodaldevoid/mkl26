@@ -48,6 +48,81 @@ pub struct I2cSlave<'a, 'b> {
 }
 
 #[derive(Clone, Copy)]
+pub enum Multiplier {
+    Mul1 = 0b00,
+    Mul2 = 0b01,
+    Mul4 = 0b10,
+}
+
+#[derive(Clone, Copy)]
+pub enum Divider {
+    Div20Hold7 = 0x00,
+    Div22Hold7 = 0x01,
+    Div24Hold8 = 0x02,
+    Div26Hold8 = 0x03,
+    Div28Hold9 = 0x04,
+    Div30Hold9 = 0x05,
+    Div34Hold10 = 0x06,
+    Div40Hold10 = 0x07,
+    Div28Hold7 = 0x08,
+    Div32Hold7 = 0x09,
+    Div36Hold9 = 0x0A,
+    Div40Hold9 = 0x0B,
+    Div44Hold11 = 0x0C,
+    Div48Hold11 = 0x0D,
+    Div56Hold13 = 0x0E,
+    Div68Hold13 = 0x0F,
+    Div48Hold9 = 0x10,
+    Div56Hold9 = 0x11,
+    Div64Hold13 = 0x12,
+    Div72Hold13 = 0x13,
+    Div80Hold17 = 0x14,
+    Div88Hold17 = 0x15,
+    Div104Hold21 = 0x16,
+    Div128Hold21 = 0x17,
+    Div80Hold9 = 0x18,
+    Div96Hold9 = 0x19,
+    Div112Hold17 = 0x1A,
+    Div128Hold17 = 0x1B,
+    Div144Hold25 = 0x1C,
+    Div160Hold25 = 0x1D,
+    Div192Hold33 = 0x1E,
+    Div240Hold33 = 0x1F,
+    Div160Hold17 = 0x20,
+    Div192Hold17 = 0x21,
+    Div224Hold33 = 0x22,
+    Div256Hold33 = 0x23,
+    Div288Hold49 = 0x24,
+    Div320Hold49 = 0x25,
+    Div384Hold65 = 0x26,
+    Div480Hold65 = 0x27,
+    Div320Hold33 = 0x28,
+    Div384Hold33 = 0x29,
+    Div448Hold65 = 0x2A,
+    Div512Hold65 = 0x2B,
+    Div576Hold97 = 0x2C,
+    Div640Hold97 = 0x2D,
+    Div768Hold129 = 0x2E,
+    Div960Hold129 = 0x2F,
+    Div640Hold65 = 0x30,
+    Div768Hold65 = 0x31,
+    Div896Hold129 = 0x32,
+    Div1024Hold129 = 0x33,
+    Div1152Hold193 = 0x34,
+    Div1280Hold193 = 0x35,
+    Div1536Hold257 = 0x36,
+    Div1920Hold257 = 0x37,
+    Div1280Hold129 = 0x38,
+    Div1536Hold129 = 0x39,
+    Div1792Hold257 = 0x3A,
+    Div2048Hold257 = 0x3B,
+    Div2304Hold385 = 0x3C,
+    Div2560Hold385 = 0x3D,
+    Div3072Hold513 = 0x3E,
+    Div3840Hold513 = 0x3F,
+}
+
+#[derive(Clone, Copy)]
 pub enum Address {
     Bits7(u8),
     Bits10(u16),
@@ -89,34 +164,23 @@ pub enum Error {
 }
 
 // TODO: write a drop impl
-// TODO: impl Read
-// TODO: impl Write
 // TODO: support DMA mode
-// TODO: support slave address range
-// TODO: way to set slave callbacks
 // TODO: support 10 bit read
 // TODO: maybe rework to use a builder
-// TODO: support higher bus numbers for other chips
+// TODO: helpful errors
+// TODO: don't require passing NVIC on immediate mode
 impl<'a, 'b> I2cMaster<'a, 'b> {
     pub unsafe fn new(
         scl: I2cScl<'a>,
         sda: I2cSda<'b>,
         nvic: &mut NVIC,
-        (mul, clkdiv): (u8, u8),
+        (mul, clkdiv): (Multiplier, Divider),
         op_mode: OpMode,
         gate: ClockGate,
     ) -> Result<I2cMaster<'a, 'b>, ()> {
         if scl.bus() != sda.bus() {
             return Err(());
         }
-
-        if mul >= 3 {
-            return Err(());
-        }
-        if clkdiv >= 64 {
-            return Err(());
-        }
-
         let bus = sda.bus();
 
         let reg = match bus {
@@ -136,10 +200,10 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
         });
 
         // f - clkdiv to set baud
-        reg.f.write((mul << 6) | (clkdiv & 0x3F));
+        reg.f.write(((mul as u8) << 6) | clkdiv as u8);
 
         // TODO: pass this stuff in
-        let bus_freq: u32 = 36_000_000;
+        let bus_freq: u32 = 24_000_000;
         if bus_freq >= 32 * 12_000_000 {
             reg.flt.write(4);
         } else {
@@ -716,6 +780,8 @@ impl<'a, 'b, 'c> Transmission<'a, 'b, 'c> {
     }
 }
 
+// TODO: support slave address range
+// TODO: way to set slave callbacks
 #[cfg(feature = "i2c-slave")]
 impl<'a, 'b> I2cSlave<'a, 'b> {
     pub unsafe fn new(
