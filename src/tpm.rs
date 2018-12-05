@@ -1,7 +1,9 @@
 use bit_field::BitField;
 use cortex_m::interrupt;
+use cortex_m::peripheral::NVIC;
 use volatile_register::RW;
 
+use interrupts::Interrupt;
 use port::TpmPin;
 use sim::ClockGate;
 
@@ -115,8 +117,12 @@ pub enum ChannelError {
     ChannelNotDisabled,
 }
 
-pub struct Tpm {
+pub struct TpmIsr {
     reg:   &'static mut TpmRegs,
+}
+
+pub struct Tpm {
+    tpm: TpmIsr,
     name:  TpmNum,
     _gate: ClockGate,
 }
@@ -127,7 +133,7 @@ impl Tpm {
         cpwms: PwmSelect,
         cmod: ClockMode,
         clkdivider: Prescale,
-        interrupt: bool,
+        interrupt: Option<(&mut NVIC, fn(&mut TpmIsr))>,
         count: u16,
         gate: ClockGate,
     ) -> Tpm {
@@ -147,10 +153,26 @@ impl Tpm {
         // 1 - Clear TOF flag
         // 0 - up-counting
         let mut sc = 0b0100_0000;
-        sc.set_bit(6, interrupt);
+        sc.set_bit(6, interrupt.is_some());
         sc.set_bit(5, cpwms == PwmSelect::UpDown);
         sc.set_bits(0..3, clkdivider as u32);
         reg.sc.write(sc);
+
+        let (callback, isr_num) = match name {
+            TpmNum::TPM0 => (&mut TPM0_CALLBACK, Interrupt::TPM0),
+            TpmNum::TPM1 => (&mut TPM1_CALLBACK, Interrupt::TPM1),
+            TpmNum::TPM2 => (&mut TPM2_CALLBACK, Interrupt::TPM2),
+        };
+
+        interrupt::free(|_| {
+            if let Some((nvic, isr)) = interrupt {
+                *callback = Some(isr);
+
+                nvic.enable(isr_num);
+            } else {
+                *callback = None;
+            }
+        });
 
         // Enable the TPM.
         reg.sc.modify(|mut sc| {
@@ -158,8 +180,10 @@ impl Tpm {
             sc
         });
 
+        let tpm = TpmIsr { reg };
+
         Tpm {
-            reg,
+            tpm,
             name,
             _gate: gate,
         }
@@ -169,7 +193,7 @@ impl Tpm {
         &'a self,
         channel: ChannelSelect,
         mode: ChannelMode,
-        interrupt: bool,
+        interrupt: Option<(&mut NVIC, fn(&mut Channel))>,
         value: u16,
         pin: P,
     ) -> Result<Channel<'a, 'b>, ChannelError> {
@@ -189,19 +213,68 @@ impl Tpm {
             // If Center-aligned PWM is selected but CPWMS is not set, error.
             // Same if any other mode is selected when CPWMS is set.
             // Software Compare doesn't care for some reason.
-            match (mode, self.reg.sc.read().get_bit(5)) {
+            match (mode, self.tpm.reg.sc.read().get_bit(5)) {
                 (ChannelMode::CenterPwm(_), false) => return Err(ChannelError::CenterAlignMismatch),
                 (ChannelMode::SoftwareCompare, _) => {}
                 (_, true) => return Err(ChannelError::CenterAlignMismatch),
                 _ => {}
             }
 
-            let channel_reg = &self.reg.channel[channel as usize];
+            let channel_reg = &self.tpm.reg.channel[channel as usize];
 
-            interrupt::free(|_| Channel::new(channel_reg, mode, interrupt, value, pin))
+            let ch = interrupt::free(|_| Channel::new(channel_reg, mode, interrupt.is_some(), value, pin))?;
+
+            let (callback, isr_num) = match (self.name, channel) {
+                (TpmNum::TPM0, ChannelSelect::Ch0) => (&mut TPM0_CH0_CALLBACK, Interrupt::TPM0),
+                (TpmNum::TPM0, ChannelSelect::Ch1) => (&mut TPM0_CH1_CALLBACK, Interrupt::TPM0),
+                (TpmNum::TPM0, ChannelSelect::Ch2) => (&mut TPM0_CH2_CALLBACK, Interrupt::TPM0),
+                (TpmNum::TPM0, ChannelSelect::Ch3) => (&mut TPM0_CH3_CALLBACK, Interrupt::TPM0),
+                (TpmNum::TPM0, ChannelSelect::Ch4) => (&mut TPM0_CH4_CALLBACK, Interrupt::TPM0),
+                (TpmNum::TPM0, ChannelSelect::Ch5) => (&mut TPM0_CH5_CALLBACK, Interrupt::TPM0),
+
+                (TpmNum::TPM1, ChannelSelect::Ch0) => (&mut TPM1_CH0_CALLBACK, Interrupt::TPM1),
+                (TpmNum::TPM1, ChannelSelect::Ch1) => (&mut TPM1_CH1_CALLBACK, Interrupt::TPM1),
+                (TpmNum::TPM1, ChannelSelect::Ch2) => (&mut TPM1_CH2_CALLBACK, Interrupt::TPM1),
+                (TpmNum::TPM1, ChannelSelect::Ch3) => (&mut TPM1_CH3_CALLBACK, Interrupt::TPM1),
+                (TpmNum::TPM1, ChannelSelect::Ch4) => (&mut TPM1_CH4_CALLBACK, Interrupt::TPM1),
+                (TpmNum::TPM1, ChannelSelect::Ch5) => (&mut TPM1_CH5_CALLBACK, Interrupt::TPM1),
+
+                (TpmNum::TPM2, ChannelSelect::Ch0) => (&mut TPM2_CH0_CALLBACK, Interrupt::TPM2),
+                (TpmNum::TPM2, ChannelSelect::Ch1) => (&mut TPM2_CH1_CALLBACK, Interrupt::TPM2),
+                (TpmNum::TPM2, ChannelSelect::Ch2) => (&mut TPM2_CH2_CALLBACK, Interrupt::TPM2),
+                (TpmNum::TPM2, ChannelSelect::Ch3) => (&mut TPM2_CH3_CALLBACK, Interrupt::TPM2),
+                (TpmNum::TPM2, ChannelSelect::Ch4) => (&mut TPM2_CH4_CALLBACK, Interrupt::TPM2),
+                (TpmNum::TPM2, ChannelSelect::Ch5) => (&mut TPM2_CH5_CALLBACK, Interrupt::TPM2),
+            };
+
+            interrupt::free(|_| {
+                if let Some((nvic, isr)) = interrupt {
+                    *callback = Some(isr);
+
+                    nvic.enable(isr_num);
+                } else {
+                    *callback = None;
+                }
+            });
+
+            Ok(ch)
         }
     }
 
+    pub fn set_period(&mut self, period: u16) {
+        self.tpm.set_period(period);
+    }
+
+    pub fn is_overflowed(&self) -> bool {
+        self.tpm.is_overflowed()
+    }
+
+    pub fn clear_overflow(&mut self) {
+        self.tpm.clear_overflow()
+    }
+}
+
+impl TpmIsr {
     pub fn set_period(&mut self, period: u16) {
         unsafe {
             self.reg.mod_.write(period as u32);
@@ -226,6 +299,7 @@ impl Tpm {
 
 pub struct Channel<'a, 'b> {
     reg:  &'a ChannelRegs,
+    // If this pin is ever used directly in a method, note that this is always None from an ISR.
     _pin: Option<TpmPin<'b>>,
 }
 
@@ -291,8 +365,6 @@ impl<'a, 'b> Channel<'a, 'b> {
         cnsc.set_bit(6, interrupt); // CHIE
         cnsc.set_bits(4..6, mode as u8); // set channel mode
         cnsc.set_bits(2..4, edge as u8); // edge and level selection
-
-        //0b1110_1000 works
         reg.cnsc.write(cnsc as u32);
 
         Ok(Channel { reg, _pin: pin })
@@ -331,6 +403,252 @@ impl<'a, 'b> Drop for Channel<'a, 'b> {
     fn drop(&mut self) {
         unsafe {
             self.reg.cnsc.write(0);
+        }
+    }
+}
+
+// TODO: probably up this all behind a feature flag
+static mut TPM0_CALLBACK: Option<fn(&mut TpmIsr)> = None;
+static mut TPM0_CH0_CALLBACK: Option<fn(&mut Channel)> = None;
+static mut TPM0_CH1_CALLBACK: Option<fn(&mut Channel)> = None;
+static mut TPM0_CH2_CALLBACK: Option<fn(&mut Channel)> = None;
+static mut TPM0_CH3_CALLBACK: Option<fn(&mut Channel)> = None;
+static mut TPM0_CH4_CALLBACK: Option<fn(&mut Channel)> = None;
+static mut TPM0_CH5_CALLBACK: Option<fn(&mut Channel)> = None;
+static mut TPM1_CALLBACK: Option<fn(&mut TpmIsr)> = None;
+static mut TPM1_CH0_CALLBACK: Option<fn(&mut Channel)> = None;
+static mut TPM1_CH1_CALLBACK: Option<fn(&mut Channel)> = None;
+static mut TPM1_CH2_CALLBACK: Option<fn(&mut Channel)> = None;
+static mut TPM1_CH3_CALLBACK: Option<fn(&mut Channel)> = None;
+static mut TPM1_CH4_CALLBACK: Option<fn(&mut Channel)> = None;
+static mut TPM1_CH5_CALLBACK: Option<fn(&mut Channel)> = None;
+static mut TPM2_CALLBACK: Option<fn(&mut TpmIsr)> = None;
+static mut TPM2_CH0_CALLBACK: Option<fn(&mut Channel)> = None;
+static mut TPM2_CH1_CALLBACK: Option<fn(&mut Channel)> = None;
+static mut TPM2_CH2_CALLBACK: Option<fn(&mut Channel)> = None;
+static mut TPM2_CH3_CALLBACK: Option<fn(&mut Channel)> = None;
+static mut TPM2_CH4_CALLBACK: Option<fn(&mut Channel)> = None;
+static mut TPM2_CH5_CALLBACK: Option<fn(&mut Channel)> = None;
+
+interrupt!(TPM0, tpm0_isr);
+interrupt!(TPM1, tpm1_isr);
+interrupt!(TPM2, tpm2_isr);
+
+fn tpm0_isr() {
+    unsafe {
+        if let Some(callback) = TPM0_CALLBACK.as_ref() {
+            let reg = &mut *(TPM0_ADDR as *mut TpmRegs);
+            let mut tpm = TpmIsr { reg };
+            if tpm.is_overflowed() {
+                callback(&mut tpm);
+                tpm.clear_overflow();
+            }
+        }
+
+        if let Some(callback) = TPM0_CH0_CALLBACK.as_ref() {
+            let reg = &mut *(TPM0_ADDR as *mut TpmRegs);
+            let reg = &reg.channel[0];
+            let mut ch = Channel { reg, _pin: None };
+            if ch.is_triggered() {
+                callback(&mut ch);
+                ch.clear_trigger();
+            }
+        }
+
+        if let Some(callback) = TPM0_CH1_CALLBACK.as_ref() {
+            let reg = &mut *(TPM0_ADDR as *mut TpmRegs);
+            let reg = &reg.channel[1];
+            let mut ch = Channel { reg, _pin: None };
+            if ch.is_triggered() {
+                callback(&mut ch);
+                ch.clear_trigger();
+            }
+        }
+
+        if let Some(callback) = TPM0_CH2_CALLBACK.as_ref() {
+            let reg = &mut *(TPM0_ADDR as *mut TpmRegs);
+            let reg = &reg.channel[2];
+            let mut ch = Channel { reg, _pin: None };
+            if ch.is_triggered() {
+                callback(&mut ch);
+                ch.clear_trigger();
+            }
+        }
+
+        if let Some(callback) = TPM0_CH3_CALLBACK.as_ref() {
+            let reg = &mut *(TPM0_ADDR as *mut TpmRegs);
+            let reg = &reg.channel[3];
+            let mut ch = Channel { reg, _pin: None };
+            if ch.is_triggered() {
+                callback(&mut ch);
+                ch.clear_trigger();
+            }
+        }
+
+        if let Some(callback) = TPM0_CH4_CALLBACK.as_ref() {
+            let reg = &mut *(TPM0_ADDR as *mut TpmRegs);
+            let reg = &reg.channel[4];
+            let mut ch = Channel { reg, _pin: None };
+            if ch.is_triggered() {
+                callback(&mut ch);
+                ch.clear_trigger();
+            }
+        }
+
+        if let Some(callback) = TPM0_CH5_CALLBACK.as_ref() {
+            let reg = &mut *(TPM0_ADDR as *mut TpmRegs);
+            let reg = &reg.channel[5];
+            let mut ch = Channel { reg, _pin: None };
+            if ch.is_triggered() {
+                callback(&mut ch);
+                ch.clear_trigger();
+            }
+        }
+    }
+}
+
+fn tpm1_isr() {
+    unsafe {
+        if let Some(callback) = TPM1_CALLBACK.as_ref() {
+            let reg = &mut *(TPM1_ADDR as *mut TpmRegs);
+            let mut tpm = TpmIsr { reg };
+            if tpm.is_overflowed() {
+                callback(&mut tpm);
+                tpm.clear_overflow();
+            }
+        }
+
+        if let Some(callback) = TPM1_CH0_CALLBACK.as_ref() {
+            let reg = &mut *(TPM1_ADDR as *mut TpmRegs);
+            let reg = &reg.channel[0];
+            let mut ch = Channel { reg, _pin: None };
+            if ch.is_triggered() {
+                callback(&mut ch);
+                ch.clear_trigger();
+            }
+        }
+
+        if let Some(callback) = TPM1_CH1_CALLBACK.as_ref() {
+            let reg = &mut *(TPM1_ADDR as *mut TpmRegs);
+            let reg = &reg.channel[1];
+            let mut ch = Channel { reg, _pin: None };
+            if ch.is_triggered() {
+                callback(&mut ch);
+                ch.clear_trigger();
+            }
+        }
+
+        if let Some(callback) = TPM1_CH2_CALLBACK.as_ref() {
+            let reg = &mut *(TPM1_ADDR as *mut TpmRegs);
+            let reg = &reg.channel[2];
+            let mut ch = Channel { reg, _pin: None };
+            if ch.is_triggered() {
+                callback(&mut ch);
+                ch.clear_trigger();
+            }
+        }
+
+        if let Some(callback) = TPM1_CH3_CALLBACK.as_ref() {
+            let reg = &mut *(TPM1_ADDR as *mut TpmRegs);
+            let reg = &reg.channel[3];
+            let mut ch = Channel { reg, _pin: None };
+            if ch.is_triggered() {
+                callback(&mut ch);
+                ch.clear_trigger();
+            }
+        }
+
+        if let Some(callback) = TPM1_CH4_CALLBACK.as_ref() {
+            let reg = &mut *(TPM1_ADDR as *mut TpmRegs);
+            let reg = &reg.channel[4];
+            let mut ch = Channel { reg, _pin: None };
+            if ch.is_triggered() {
+                callback(&mut ch);
+                ch.clear_trigger();
+            }
+        }
+
+        if let Some(callback) = TPM1_CH5_CALLBACK.as_ref() {
+            let reg = &mut *(TPM1_ADDR as *mut TpmRegs);
+            let reg = &reg.channel[5];
+            let mut ch = Channel { reg, _pin: None };
+            if ch.is_triggered() {
+                callback(&mut ch);
+                ch.clear_trigger();
+            }
+        }
+    }
+}
+
+fn tpm2_isr() {
+    unsafe {
+        if let Some(callback) = TPM2_CALLBACK.as_ref() {
+            let reg = &mut *(TPM2_ADDR as *mut TpmRegs);
+            let mut tpm = TpmIsr { reg };
+            if tpm.is_overflowed() {
+                callback(&mut tpm);
+                tpm.clear_overflow();
+            }
+        }
+
+        if let Some(callback) = TPM2_CH0_CALLBACK.as_ref() {
+            let reg = &mut *(TPM2_ADDR as *mut TpmRegs);
+            let reg = &reg.channel[0];
+            let mut ch = Channel { reg, _pin: None };
+            if ch.is_triggered() {
+                callback(&mut ch);
+                ch.clear_trigger();
+            }
+        }
+
+        if let Some(callback) = TPM2_CH1_CALLBACK.as_ref() {
+            let reg = &mut *(TPM2_ADDR as *mut TpmRegs);
+            let reg = &reg.channel[1];
+            let mut ch = Channel { reg, _pin: None };
+            if ch.is_triggered() {
+                callback(&mut ch);
+                ch.clear_trigger();
+            }
+        }
+
+        if let Some(callback) = TPM2_CH2_CALLBACK.as_ref() {
+            let reg = &mut *(TPM2_ADDR as *mut TpmRegs);
+            let reg = &reg.channel[2];
+            let mut ch = Channel { reg, _pin: None };
+            if ch.is_triggered() {
+                callback(&mut ch);
+                ch.clear_trigger();
+            }
+        }
+
+        if let Some(callback) = TPM2_CH3_CALLBACK.as_ref() {
+            let reg = &mut *(TPM2_ADDR as *mut TpmRegs);
+            let reg = &reg.channel[3];
+            let mut ch = Channel { reg, _pin: None };
+            if ch.is_triggered() {
+                callback(&mut ch);
+                ch.clear_trigger();
+            }
+        }
+
+        if let Some(callback) = TPM2_CH4_CALLBACK.as_ref() {
+            let reg = &mut *(TPM2_ADDR as *mut TpmRegs);
+            let reg = &reg.channel[4];
+            let mut ch = Channel { reg, _pin: None };
+            if ch.is_triggered() {
+                callback(&mut ch);
+                ch.clear_trigger();
+            }
+        }
+
+        if let Some(callback) = TPM2_CH5_CALLBACK.as_ref() {
+            let reg = &mut *(TPM2_ADDR as *mut TpmRegs);
+            let reg = &reg.channel[5];
+            let mut ch = Channel { reg, _pin: None };
+            if ch.is_triggered() {
+                callback(&mut ch);
+                ch.clear_trigger();
+            }
         }
     }
 }

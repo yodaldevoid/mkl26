@@ -14,7 +14,7 @@ use port::{Port, PortName};
 use port::{SpiCs, SpiMiso, SpiMosi, SpiSck};
 use port::{UartRx, UartTx};
 use spi::{self, Divisor, SpiMaster};
-use tpm::{self, ClockMode, PwmSelect, Tpm, TpmNum};
+use tpm::{self, ClockMode, TpmIsr, PwmSelect, Tpm, TpmNum};
 use uart::{ConnMode, Uart};
 
 pub struct ClockGate {
@@ -304,7 +304,7 @@ impl Sim {
         cpwms: PwmSelect,
         cmod: ClockMode,
         clkdivider: tpm::Prescale,
-        interrupt: bool,
+        interrupt: Option<(&mut NVIC, fn(&mut TpmIsr))>,
         count: u16,
     ) -> Result<Tpm, ()> {
         let mut gate = match name {

@@ -4,6 +4,7 @@
 use cortex_m::interrupt::Nr;
 
 #[allow(non_camel_case_types)]
+#[derive(Copy, Clone)]
 pub enum Interrupt {
     DMA_CHANNEL0,
     DMA_CHANNEL1,

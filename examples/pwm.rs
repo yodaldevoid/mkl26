@@ -88,7 +88,7 @@ fn main() -> ! {
             PwmSelect::Up,
             ClockMode::EveryClock,
             Prescale::Div8,
-            false,
+            None,
             0x6000,
         ).unwrap();
 
@@ -96,7 +96,7 @@ fn main() -> ! {
         .channel(
             ChannelSelect::Ch4,
             ChannelMode::EdgePwm(PwmDirection::HighTrue),
-            false,
+            None,
             0x1E00,
             pwm_pin,
         ).unwrap();
