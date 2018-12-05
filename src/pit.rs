@@ -34,6 +34,7 @@ pub enum TimerSelect {
     Timer1 = 1,
 }
 
+// TODO: embedded_hal timer traits
 pub struct Pit {
     reg:   &'static mut PitRegs,
     _gate: ClockGate,

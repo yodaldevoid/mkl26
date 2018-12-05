@@ -363,4 +363,54 @@ mod tests {
             assert_eq!(0x4003_8084 as *const RW<u32>, &reg.tpm_conf         as *const RW<u32>, "tpm_conf");
         }
     }
+
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[test]
+    fn tpm1_test() {
+        unsafe {
+            let reg = & *(TPM1_ADDR as *const TpmRegs);
+            assert_eq!(0x4003_9000 as *const RW<u32>, &reg.sc               as *const RW<u32>, "sc");
+            assert_eq!(0x4003_9004 as *const RW<u32>, &reg.cnt              as *const RW<u32>, "cnt");
+            assert_eq!(0x4003_9008 as *const RW<u32>, &reg.mod_             as *const RW<u32>, "mod_");
+            assert_eq!(0x4003_900C as *const RW<u32>, &reg.channel[0].cnsc  as *const RW<u32>, "c0sc");
+            assert_eq!(0x4003_9010 as *const RW<u32>, &reg.channel[0].cnv   as *const RW<u32>, "c0v");
+            assert_eq!(0x4003_9014 as *const RW<u32>, &reg.channel[1].cnsc  as *const RW<u32>, "c1sc");
+            assert_eq!(0x4003_9018 as *const RW<u32>, &reg.channel[1].cnv   as *const RW<u32>, "c1v");
+            assert_eq!(0x4003_901C as *const RW<u32>, &reg.channel[2].cnsc  as *const RW<u32>, "c2sc");
+            assert_eq!(0x4003_9020 as *const RW<u32>, &reg.channel[2].cnv   as *const RW<u32>, "c2v");
+            assert_eq!(0x4003_9024 as *const RW<u32>, &reg.channel[3].cnsc  as *const RW<u32>, "c3sc");
+            assert_eq!(0x4003_9028 as *const RW<u32>, &reg.channel[3].cnv   as *const RW<u32>, "c3v");
+            assert_eq!(0x4003_902C as *const RW<u32>, &reg.channel[4].cnsc  as *const RW<u32>, "c4sc");
+            assert_eq!(0x4003_9030 as *const RW<u32>, &reg.channel[4].cnv   as *const RW<u32>, "c4v");
+            assert_eq!(0x4003_9034 as *const RW<u32>, &reg.channel[5].cnsc  as *const RW<u32>, "c5sc");
+            assert_eq!(0x4003_9038 as *const RW<u32>, &reg.channel[5].cnv   as *const RW<u32>, "c5v");
+            assert_eq!(0x4003_9050 as *const RW<u32>, &reg.tpm_status       as *const RW<u32>, "tpm_status");
+            assert_eq!(0x4003_9084 as *const RW<u32>, &reg.tpm_conf         as *const RW<u32>, "tpm_conf");
+        }
+    }
+
+    #[cfg_attr(rustfmt, rustfmt_skip)]
+    #[test]
+    fn tpm2_test() {
+        unsafe {
+            let reg = & *(TPM2_ADDR as *const TpmRegs);
+            assert_eq!(0x4003_A000 as *const RW<u32>, &reg.sc               as *const RW<u32>, "sc");
+            assert_eq!(0x4003_A004 as *const RW<u32>, &reg.cnt              as *const RW<u32>, "cnt");
+            assert_eq!(0x4003_A008 as *const RW<u32>, &reg.mod_             as *const RW<u32>, "mod_");
+            assert_eq!(0x4003_A00C as *const RW<u32>, &reg.channel[0].cnsc  as *const RW<u32>, "c0sc");
+            assert_eq!(0x4003_A010 as *const RW<u32>, &reg.channel[0].cnv   as *const RW<u32>, "c0v");
+            assert_eq!(0x4003_A014 as *const RW<u32>, &reg.channel[1].cnsc  as *const RW<u32>, "c1sc");
+            assert_eq!(0x4003_A018 as *const RW<u32>, &reg.channel[1].cnv   as *const RW<u32>, "c1v");
+            assert_eq!(0x4003_A01C as *const RW<u32>, &reg.channel[2].cnsc  as *const RW<u32>, "c2sc");
+            assert_eq!(0x4003_A020 as *const RW<u32>, &reg.channel[2].cnv   as *const RW<u32>, "c2v");
+            assert_eq!(0x4003_A024 as *const RW<u32>, &reg.channel[3].cnsc  as *const RW<u32>, "c3sc");
+            assert_eq!(0x4003_A028 as *const RW<u32>, &reg.channel[3].cnv   as *const RW<u32>, "c3v");
+            assert_eq!(0x4003_A02C as *const RW<u32>, &reg.channel[4].cnsc  as *const RW<u32>, "c4sc");
+            assert_eq!(0x4003_A030 as *const RW<u32>, &reg.channel[4].cnv   as *const RW<u32>, "c4v");
+            assert_eq!(0x4003_A034 as *const RW<u32>, &reg.channel[5].cnsc  as *const RW<u32>, "c5sc");
+            assert_eq!(0x4003_A038 as *const RW<u32>, &reg.channel[5].cnv   as *const RW<u32>, "c5v");
+            assert_eq!(0x4003_A050 as *const RW<u32>, &reg.tpm_status       as *const RW<u32>, "tpm_status");
+            assert_eq!(0x4003_A084 as *const RW<u32>, &reg.tpm_conf         as *const RW<u32>, "tpm_conf");
+        }
+    }
 }
