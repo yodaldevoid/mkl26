@@ -1,5 +1,7 @@
 use bit_field::BitField;
 use cortex_m::interrupt;
+use embedded_hal::timer;
+use void::Void;
 use volatile_register::RW;
 
 use port::TpmPin;
@@ -121,6 +123,7 @@ pub struct TpmPeriodic {
     _gate: ClockGate,
 }
 
+// TODO: impl timer::Cancel
 impl TpmPeriodic {
     pub unsafe fn new(
         name: TpmNum,
@@ -244,12 +247,55 @@ impl TpmPeriodic {
     }
 }
 
+impl timer::CountDown for TpmPeriodic {
+    type Time = u16;
+
+    fn start<T>(&mut self, time: T)
+    where
+        T: Into<Self::Time>,
+    {
+        unsafe {
+            let old_sc = self.reg.sc.read();
+
+            // disable
+            self.reg.sc.modify(|mut sc| {
+                // clear the timer overflow flag
+                sc.set_bit(7, true);
+                sc.set_bits(3..5, ClockMode::Disabled as u32);
+                sc
+            });
+
+            // clear the counter
+            self.reg.cnt.write(0);
+            // Set mod value
+            self.reg.mod_.write(time.into() as u32);
+
+            // enable
+            self.reg.sc.write(old_sc);
+        }
+    }
+
+    fn wait(&mut self) -> nb::Result<(), Void> {
+        unsafe {
+            if self.reg.sc.read().get_bit(7) {
+                Ok(())
+            } else {
+                Err(nb::Error::WouldBlock)
+            }
+        }
+    }
+}
+
+impl timer::Periodic for TpmPeriodic {}
+
 pub struct TpmSingleShot {
     reg:   &'static mut TpmRegs,
     name:  TpmNum,
     _gate: ClockGate,
 }
 
+
+// TODO: impl timer::Cancel
 impl TpmSingleShot {
     pub unsafe fn new(
         name: TpmNum,
@@ -373,6 +419,47 @@ impl TpmSingleShot {
     }
 }
 
+impl timer::CountDown for TpmSingleShot {
+    type Time = u16;
+
+    fn start<T>(&mut self, time: T)
+    where
+        T: Into<Self::Time>,
+    {
+        unsafe {
+            let old_sc = self.reg.sc.read();
+
+            // disable
+            self.reg.sc.modify(|mut sc| {
+                // clear the timer overflow flag
+                sc.set_bit(7, true);
+                sc.set_bits(3..5, ClockMode::Disabled as u32);
+                sc
+            });
+
+            // clear the counter
+            self.reg.cnt.write(0);
+            // Set mod value
+            self.reg.mod_.write(time.into() as u32);
+
+            // enable
+            self.reg.sc.write(old_sc);
+        }
+    }
+
+    fn wait(&mut self) -> nb::Result<(), Void> {
+        unsafe {
+            if self.reg.sc.read().get_bit(7) {
+                Ok(())
+            } else {
+                Err(nb::Error::WouldBlock)
+            }
+        }
+    }
+}
+
+// TODO: separate channel modes into different structs
+// TODO: impl embedded_hal timer traits
 pub struct Channel<'a, 'b> {
     reg:  &'a ChannelRegs,
     _pin: Option<TpmPin<'b>>,

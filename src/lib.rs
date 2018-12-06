@@ -7,6 +7,7 @@ extern crate bit_field;
 extern crate cortex_m;
 extern crate embedded_hal;
 extern crate nb;
+extern crate void;
 extern crate volatile_register;
 
 #[macro_use]

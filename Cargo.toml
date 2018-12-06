@@ -9,6 +9,7 @@ bit_field = "^0.8"
 cortex-m = { version = "^0.5", features = ["const-fn", "inline-asm"] }
 embedded-hal = { version = "0.2.1", features = ["unproven"] }
 nb = "0.1.1"
+void = { version = "^1", default-features = false }
 volatile-register = "^0.2"
 
 [dev_dependencies]
