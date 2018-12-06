@@ -207,6 +207,15 @@ impl TpmPeriodic {
         }
     }
 
+    pub fn set_clock_mode(&mut self, clock_mode: ClockMode) {
+        unsafe {
+            self.reg.sc.modify(|mut sc| {
+                sc.set_bits(3..5, clock_mode as u32);
+                sc
+            });
+        }
+    }
+
     pub fn set_period(&mut self, period: u16) {
         unsafe {
             self.reg.mod_.write(period as u32);
@@ -318,6 +327,15 @@ impl TpmSingleShot {
             let channel_reg = &self.reg.channel[channel as usize];
 
             interrupt::free(|_| Channel::new(channel_reg, mode, interrupt, value, pin))
+        }
+    }
+
+    pub fn set_clock_mode(&mut self, clock_mode: ClockMode) {
+        unsafe {
+            self.reg.sc.modify(|mut sc| {
+                sc.set_bits(3..5, clock_mode as u32);
+                sc
+            });
         }
     }
 
