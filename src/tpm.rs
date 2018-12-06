@@ -115,13 +115,13 @@ pub enum ChannelError {
     ChannelNotDisabled,
 }
 
-pub struct Tpm {
+pub struct TpmPeriodic {
     reg:   &'static mut TpmRegs,
     name:  TpmNum,
     _gate: ClockGate,
 }
 
-impl Tpm {
+impl TpmPeriodic {
     pub unsafe fn new(
         name: TpmNum,
         cpwms: PwmSelect,
@@ -130,7 +130,7 @@ impl Tpm {
         interrupt: bool,
         count: u16,
         gate: ClockGate,
-    ) -> Tpm {
+    ) -> TpmPeriodic {
         let reg = &mut *match name {
             TpmNum::TPM0 => TPM0_ADDR as *mut TpmRegs,
             TpmNum::TPM1 => TPM1_ADDR as *mut TpmRegs,
@@ -152,13 +152,132 @@ impl Tpm {
         sc.set_bits(0..3, clkdivider as u32);
         reg.sc.write(sc);
 
+        reg.conf.modify(|mut conf| {
+            conf.set_bit(17, false);
+            conf
+        });
+
         // Enable the TPM.
         reg.sc.modify(|mut sc| {
             sc.set_bits(3..5, cmod as u32);
             sc
         });
 
-        Tpm {
+        TpmPeriodic {
+            reg,
+            name,
+            _gate: gate,
+        }
+    }
+
+    pub fn channel<'a, 'b, P: Into<Option<TpmPin<'b>>>>(
+        &'a self,
+        channel: ChannelSelect,
+        mode: ChannelMode,
+        interrupt: bool,
+        value: u16,
+        pin: P,
+    ) -> Result<Channel<'a, 'b>, ChannelError> {
+        let pin = pin.into();
+        if let Some(pin) = pin.as_ref() {
+            if pin.tpm() != self.name as u8 {
+                return Err(ChannelError::PinMismatchTpm);
+            }
+
+            if pin.ch() != channel as u8 {
+                return Err(ChannelError::PinMismatchChannel);
+            }
+        }
+
+        unsafe {
+            // According to Table 31-34 of the MKL26 Reference Manual v3.3
+            // If Center-aligned PWM is selected but CPWMS is not set, error.
+            // Same if any other mode is selected when CPWMS is set.
+            // Software Compare doesn't care for some reason.
+            match (mode, self.reg.sc.read().get_bit(5)) {
+                (ChannelMode::CenterPwm(_), false) => return Err(ChannelError::CenterAlignMismatch),
+                (ChannelMode::SoftwareCompare, _) => {}
+                (_, true) => return Err(ChannelError::CenterAlignMismatch),
+                _ => {}
+            }
+
+            let channel_reg = &self.reg.channel[channel as usize];
+
+            interrupt::free(|_| Channel::new(channel_reg, mode, interrupt, value, pin))
+        }
+    }
+
+    pub fn set_period(&mut self, period: u16) {
+        unsafe {
+            self.reg.mod_.write(period as u32);
+        }
+    }
+
+    pub fn is_overflowed(&self) -> bool {
+        unsafe {
+            self.reg.sc.read().get_bit(7)
+        }
+    }
+
+    pub fn clear_overflow(&mut self) {
+        unsafe {
+            self.reg.sc.modify(|mut sc| {
+                sc.set_bit(7, true);
+                sc
+            });
+        }
+    }
+}
+
+pub struct TpmSingleShot {
+    reg:   &'static mut TpmRegs,
+    name:  TpmNum,
+    _gate: ClockGate,
+}
+
+impl TpmSingleShot {
+    pub unsafe fn new(
+        name: TpmNum,
+        cpwms: PwmSelect,
+        cmod: ClockMode,
+        clkdivider: Prescale,
+        interrupt: bool,
+        count: u16,
+        gate: ClockGate,
+    ) -> TpmSingleShot {
+        let reg = &mut *match name {
+            TpmNum::TPM0 => TPM0_ADDR as *mut TpmRegs,
+            TpmNum::TPM1 => TPM1_ADDR as *mut TpmRegs,
+            TpmNum::TPM2 => TPM2_ADDR as *mut TpmRegs,
+        };
+
+        reg.sc.write(0);
+        reg.cnt.write(0);
+
+        reg.mod_.write(count as u32);
+
+        // set SC values
+        // 0 - DMA disable
+        // 1 - Clear TOF flag
+        // 0 - up-counting
+        let mut sc = 0b0100_0000;
+        sc.set_bit(6, interrupt);
+        sc.set_bit(5, cpwms == PwmSelect::UpDown);
+        sc.set_bits(0..3, clkdivider as u32);
+        reg.sc.write(sc);
+
+        reg.conf.modify(|mut conf| {
+            conf.set_bit(17, true);
+            conf
+        });
+
+        // Enable the TPM.
+        reg.sc.modify(|mut sc| {
+            sc.set_bits(3..5, cmod as u32);
+            sc
+        });
+
+        TpmSingleShot {
             reg,
             name,
             _gate: gate,

@@ -14,7 +14,7 @@ use port::{Port, PortName};
 use port::{SpiCs, SpiMiso, SpiMosi, SpiSck};
 use port::{UartRx, UartTx};
 use spi::{self, Divisor, SpiMaster};
-use tpm::{self, ClockMode, PwmSelect, Tpm, TpmNum};
+use tpm::{self, ClockMode, PwmSelect, TpmNum, TpmPeriodic, TpmSingleShot};
 use uart::{ConnMode, Uart};
 
 pub struct ClockGate {
@@ -298,7 +298,7 @@ impl Sim {
         }
     }
 
-    pub fn tpm(
+    pub fn tpm_periodic(
         &mut self,
         name: TpmNum,
         cpwms: PwmSelect,
@@ -306,7 +306,7 @@ impl Sim {
         clkdivider: tpm::Prescale,
         interrupt: bool,
         count: u16,
-    ) -> Result<Tpm, ()> {
+    ) -> Result<TpmPeriodic, ()> {
         let mut gate = match name {
             TpmNum::TPM0 => ClockGate::new(6, 24),
             TpmNum::TPM1 => ClockGate::new(6, 25),
@@ -317,7 +317,29 @@ impl Sim {
         }
         gate.enable();
 
-        unsafe { Ok(Tpm::new(name, cpwms, cmod, clkdivider, interrupt, count, gate)) }
+        unsafe { Ok(TpmPeriodic::new(name, cpwms, cmod, clkdivider, interrupt, count, gate)) }
+    }
+
+    pub fn tpm_single_shot(
+        &mut self,
+        name: TpmNum,
+        cpwms: PwmSelect,
+        cmod: ClockMode,
+        clkdivider: tpm::Prescale,
+        interrupt: bool,
+        count: u16,
+    ) -> Result<TpmSingleShot, ()> {
+        let mut gate = match name {
+            TpmNum::TPM0 => ClockGate::new(6, 24),
+            TpmNum::TPM1 => ClockGate::new(6, 25),
+            TpmNum::TPM2 => ClockGate::new(6, 26),
+        };
+        if gate.is_enabled() {
+            return Err(());
+        }
+        gate.enable();
+
+        unsafe { Ok(TpmSingleShot::new(name, cpwms, cmod, clkdivider, interrupt, count, gate)) }
     }
 
     pub fn pit(&mut self) -> Result<Pit, ()> {

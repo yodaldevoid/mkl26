@@ -83,7 +83,7 @@ fn main() -> ! {
     }
 
     let tpm0 = sim
-        .tpm(
+        .tpm_periodic(
             TpmNum::TPM0,
             PwmSelect::Up,
             ClockMode::EveryClock,
