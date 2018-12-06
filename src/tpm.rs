@@ -216,6 +216,12 @@ impl TpmPeriodic {
         }
     }
 
+    pub fn reset_count(&mut self) {
+        unsafe {
+            self.reg.cnt.write(0);
+        }
+    }
+
     pub fn set_period(&mut self, period: u16) {
         unsafe {
             self.reg.mod_.write(period as u32);
@@ -336,6 +342,12 @@ impl TpmSingleShot {
                 sc.set_bits(3..5, clock_mode as u32);
                 sc
             });
+        }
+    }
+
+    pub fn reset_count(&mut self) {
+        unsafe {
+            self.reg.cnt.write(0);
         }
     }
 
