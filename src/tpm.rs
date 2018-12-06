@@ -24,9 +24,9 @@ struct TpmRegs {
     mod_: RW<u32>,
     channel: [ChannelRegs; 6],
     _pad0: [u8; 20],
-    tpm_status: RW<u32>,
+    status: RW<u32>,
     _pad1: [u8; 48],
-    tpm_conf: RW<u32>,
+    conf: RW<u32>,
 }
 
 #[repr(C, packed)]
@@ -359,8 +359,8 @@ mod tests {
             assert_eq!(0x4003_8030 as *const RW<u32>, &reg.channel[4].cnv   as *const RW<u32>, "c4v");
             assert_eq!(0x4003_8034 as *const RW<u32>, &reg.channel[5].cnsc  as *const RW<u32>, "c5sc");
             assert_eq!(0x4003_8038 as *const RW<u32>, &reg.channel[5].cnv   as *const RW<u32>, "c5v");
-            assert_eq!(0x4003_8050 as *const RW<u32>, &reg.tpm_status       as *const RW<u32>, "tpm_status");
-            assert_eq!(0x4003_8084 as *const RW<u32>, &reg.tpm_conf         as *const RW<u32>, "tpm_conf");
+            assert_eq!(0x4003_8050 as *const RW<u32>, &reg.status       as *const RW<u32>, "tpm_status");
+            assert_eq!(0x4003_8084 as *const RW<u32>, &reg.conf         as *const RW<u32>, "tpm_conf");
         }
     }
 
@@ -384,8 +384,8 @@ mod tests {
             assert_eq!(0x4003_9030 as *const RW<u32>, &reg.channel[4].cnv   as *const RW<u32>, "c4v");
             assert_eq!(0x4003_9034 as *const RW<u32>, &reg.channel[5].cnsc  as *const RW<u32>, "c5sc");
             assert_eq!(0x4003_9038 as *const RW<u32>, &reg.channel[5].cnv   as *const RW<u32>, "c5v");
-            assert_eq!(0x4003_9050 as *const RW<u32>, &reg.tpm_status       as *const RW<u32>, "tpm_status");
-            assert_eq!(0x4003_9084 as *const RW<u32>, &reg.tpm_conf         as *const RW<u32>, "tpm_conf");
+            assert_eq!(0x4003_9050 as *const RW<u32>, &reg.status       as *const RW<u32>, "tpm_status");
+            assert_eq!(0x4003_9084 as *const RW<u32>, &reg.conf         as *const RW<u32>, "tpm_conf");
         }
     }
 
@@ -409,8 +409,8 @@ mod tests {
             assert_eq!(0x4003_A030 as *const RW<u32>, &reg.channel[4].cnv   as *const RW<u32>, "c4v");
             assert_eq!(0x4003_A034 as *const RW<u32>, &reg.channel[5].cnsc  as *const RW<u32>, "c5sc");
             assert_eq!(0x4003_A038 as *const RW<u32>, &reg.channel[5].cnv   as *const RW<u32>, "c5v");
-            assert_eq!(0x4003_A050 as *const RW<u32>, &reg.tpm_status       as *const RW<u32>, "tpm_status");
-            assert_eq!(0x4003_A084 as *const RW<u32>, &reg.tpm_conf         as *const RW<u32>, "tpm_conf");
+            assert_eq!(0x4003_A050 as *const RW<u32>, &reg.status       as *const RW<u32>, "tpm_status");
+            assert_eq!(0x4003_A084 as *const RW<u32>, &reg.conf         as *const RW<u32>, "tpm_conf");
         }
     }
 }
