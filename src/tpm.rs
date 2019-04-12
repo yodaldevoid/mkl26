@@ -426,34 +426,24 @@ impl timer::CountDown for TpmSingleShot {
     where
         T: Into<Self::Time>,
     {
+        let old_sc = unsafe { self.reg.sc.read() };
+
+        self.set_clock_mode(ClockMode::Disabled);
+        self.clear_overflow();
+
+        self.reset_count();
+        self.set_period(time.into());
+
         unsafe {
-            let old_sc = self.reg.sc.read();
-
-            // disable
-            self.reg.sc.modify(|mut sc| {
-                // clear the timer overflow flag
-                sc.set_bit(7, true);
-                sc.set_bits(3..5, ClockMode::Disabled as u32);
-                sc
-            });
-
-            // clear the counter
-            self.reg.cnt.write(0);
-            // Set mod value
-            self.reg.mod_.write(time.into() as u32);
-
-            // enable
             self.reg.sc.write(old_sc);
         }
     }
 
     fn wait(&mut self) -> nb::Result<(), Void> {
-        unsafe {
-            if self.reg.sc.read().get_bit(7) {
-                Ok(())
-            } else {
-                Err(nb::Error::WouldBlock)
-            }
+        if self.is_overflowed() {
+            Ok(())
+        } else {
+            Err(nb::Error::WouldBlock)
         }
     }
 }
