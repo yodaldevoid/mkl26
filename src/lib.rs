@@ -11,7 +11,7 @@ extern crate void;
 extern crate volatile_register;
 
 #[macro_use]
-pub mod interrupts;
+pub mod interrupt;
 
 pub mod adc;
 pub mod atomic;

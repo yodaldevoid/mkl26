@@ -7,7 +7,7 @@ use cortex_m::peripheral::NVIC;
 use embedded_hal::blocking::i2c;
 use volatile_register::RW;
 
-use interrupts::Interrupt;
+use interrupt::Interrupt;
 use port::{I2cScl, I2cSda};
 use sim::ClockGate;
 

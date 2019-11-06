@@ -1,33 +1,21 @@
 [package]
 name = "mkl26"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Gabriel Smith <ga29smith@gmail.com>"]
 
 [dependencies]
 arraydeque = { version = "^0.4", default-features = false }
 bit_field = "^0.8"
-cortex-m = { version = "^0.5", features = ["const-fn", "inline-asm"] }
+cortex-m = { version = "^0.6", features = ["const-fn", "inline-asm"] }
 embedded-hal = { version = "0.2.1", features = ["unproven"] }
 nb = "0.1.1"
 void = { version = "^1", default-features = false }
 volatile-register = "^0.2"
 
 [dev_dependencies]
-cortex-m-rt = { version = "^0.5.2", features = ["device"] }
+cortex-m-rt = { version = "^0.6", features = ["device"] }
 
 [features]
-default = [ # default to everything on for docs
-    "fgpio",
-    "i2c-isr",
-    "i2c-slave",
-    "i2c-dma",
-    "spi-isr",
-    "spi-slave",
-    "spi-dma",
-    "uart-isr",
-    "uart-dma"
-]
-
 fgpio = []
 
 i2c-isr = []

@@ -87,7 +87,7 @@ macro_rules! interrupt {
         #[no_mangle]
         pub unsafe extern "C" fn $Name() {
             static mut STATE: $State = $initial_state;
-            let _ = $crate::interrupts::Interrupt::$Name;
+            let _ = $crate::interrupt::Interrupt::$Name;
             let f: fn(&mut $State) = $handler;
             f(&mut STATE)
         }
@@ -97,7 +97,7 @@ macro_rules! interrupt {
         #[deny(private_no_mangle_fns)]
         #[no_mangle]
         pub unsafe extern "C" fn $Name() {
-            let _ = $crate::interrupts::Interrupt::$Name;
+            let _ = $crate::interrupt::Interrupt::$Name;
             let f: fn() = $handler;
             f()
         }

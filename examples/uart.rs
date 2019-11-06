@@ -3,11 +3,12 @@
 #![no_builtins]
 
 extern crate cortex_m;
-#[macro_use]
 extern crate cortex_m_rt;
 extern crate mkl26;
 
 use core::fmt::Write;
+
+use cortex_m_rt::{entry, exception, pre_init};
 
 use mkl26::mcg::{Clock, Mcg, OscRange};
 use mkl26::osc::Osc;
@@ -24,14 +25,12 @@ pub static _FLASHCONFIG: [u8; 16] = [
     0xFF, 0xFF, 0xFF, 0xFF, 0xDE, 0xF9, 0xFF, 0xFF
 ];
 
-pre_init!(disable_wdog);
-
+#[pre_init]
 unsafe fn disable_wdog() {
     Cop::new().init(None);
 }
 
-entry!(main);
-
+#[entry]
 fn main() -> ! {
     // Enable the crystal oscillator with 10 pf of capacitance
     let osc_token = Osc::new().enable(10);
@@ -107,13 +106,11 @@ pub fn rust_begin_panic(_info: &core::panic::PanicInfo) -> ! {
 }
 
 // the hard fault handler
-exception!(HardFault, hard_fault);
-
-fn hard_fault(_ef: &cortex_m_rt::ExceptionFrame) -> ! {
+#[exception]
+fn HardFault(_ef: &cortex_m_rt::ExceptionFrame) -> ! {
     loop {}
 }
 
 // the default exception handler
-exception!(*, default_handler);
-
-fn default_handler(_irqn: i16) {}
+#[exception]
+fn DefaultHandler(_irqn: i16) {}

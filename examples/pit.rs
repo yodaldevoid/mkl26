@@ -3,15 +3,14 @@
 #![no_builtins]
 
 extern crate cortex_m;
-#[macro_use]
 extern crate cortex_m_rt;
-#[macro_use]
 extern crate mkl26;
 
-use cortex_m::interrupt;
+use cortex_m::interrupt as isr;
 use cortex_m::peripheral::{Peripherals, NVIC};
+use cortex_m_rt::*;
 
-use mkl26::interrupts::Interrupt;
+use mkl26::interrupt::{self, Interrupt};
 use mkl26::mcg::{Clock, Mcg, OscRange};
 use mkl26::osc::Osc;
 use mkl26::pit::{Pit, Timer, TimerSelect};
@@ -27,8 +26,7 @@ pub static _FLASHCONFIG: [u8; 16] = [
     0xFF, 0xFF, 0xFF, 0xFF, 0xDE, 0xF9, 0xFF, 0xFF
 ];
 
-pre_init!(disable_wdog);
-
+#[pre_init]
 unsafe fn disable_wdog() {
     Cop::new().init(None);
 }
@@ -39,8 +37,7 @@ static mut LED_PIN: Option<Gpio<'static>> = None;
 static mut PIT0: Option<Pit> = None;
 static mut PIT0_TIMER0: Option<Timer> = None;
 
-entry!(main);
-
+#[entry]
 fn main() -> ! {
     let mut peripherals = Peripherals::take().unwrap();
 
@@ -81,7 +78,7 @@ fn main() -> ! {
         // Subtract one for hardware implementation jazz.
         PIT0 = sim.pit().ok();
         PIT0_TIMER0 = PIT0.as_mut().unwrap().timer(TimerSelect::Timer0, 5000000, true).ok();
-        interrupt::free(|_| {
+        isr::free(|_| {
             NVIC::unpend(Interrupt::PIT);
             peripherals.NVIC.enable(Interrupt::PIT);
         });
@@ -94,9 +91,8 @@ fn main() -> ! {
     loop {}
 }
 
-interrupt!(PIT, pit_isr);
-
-fn pit_isr() {
+#[interrupt]
+fn PIT() {
     unsafe {
         LED_PIN.as_mut().unwrap().toggle();
         PIT0_TIMER0.as_mut().unwrap().clear_interrupt();
@@ -117,13 +113,11 @@ pub fn rust_begin_panic(_info: &core::panic::PanicInfo) -> ! {
 }
 
 // the hard fault handler
-exception!(HardFault, hard_fault);
-
-fn hard_fault(_ef: &cortex_m_rt::ExceptionFrame) -> ! {
+#[exception]
+fn HardFault(_ef: &cortex_m_rt::ExceptionFrame) -> ! {
     loop {}
 }
 
 // the default exception handler
-exception!(*, default_handler);
-
-fn default_handler(_irqn: i16) {}
+#[exception]
+fn DefaultHandler(_irqn: i16) {}
