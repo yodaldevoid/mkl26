@@ -8,36 +8,37 @@ authors = ["Gabriel Smith <ga29smith@gmail.com>"]
 arraydeque = { version = "^0.4", default-features = false }
 bit_field = "^0.8"
 cortex-m = { version = "^0.6", features = ["const-fn", "inline-asm"] }
-embedded-hal = { version = "0.2.1", features = ["unproven"] }
+cortex-m-rt = "^0.6"
+embedded-hal = { version = "0.2", features = ["unproven"] }
+mkl26z4 = "^0.1"
 nb = "0.1.1"
 void = { version = "^1", default-features = false }
 volatile-register = "^0.2"
 
-[dev_dependencies]
-cortex-m-rt = { version = "^0.6", features = ["device"] }
-
 [features]
+rt = ["mkl26z4/rt"]
 fgpio = []
 
-i2c-isr = []
+i2c-isr = ["rt"]
 i2c-slave = ["i2c-isr"]
 i2c-dma = ["i2c-isr"]
 
-spi-isr = []
+spi-isr = ["rt"]
 spi-slave = ["spi-isr"]
 spi-dma = ["spi-isr"]
 
-uart-isr = []
+uart-isr = ["rt"]
 uart-dma = ["uart-isr"]
 
+[[example]]
+name = "pit"
+required-features = ["rt"]
+
 [profile.dev]
-debug = false
-debug-assertions = false
-incremental = false
+debug = true
 lto = true
-opt-level = 3
-panic = "abort"
 
 [profile.release]
 lto = true
-panic = "abort"
+debug = true
+opt-level = "s"

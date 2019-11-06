@@ -5,9 +5,9 @@ use bit_field::BitField;
 use cortex_m::interrupt::{self, Mutex};
 use cortex_m::peripheral::NVIC;
 use embedded_hal::blocking::i2c;
+use mkl26z4::Interrupt;
 use volatile_register::RW;
 
-use crate::interrupt::Interrupt;
 use crate::port::{I2cScl, I2cSda};
 use crate::sim::ClockGate;
 
@@ -940,12 +940,8 @@ static I2C0_STATE: Mutex<RefCell<Option<IsrState>>> = Mutex::new(RefCell::new(No
 static I2C1_STATE: Mutex<RefCell<Option<IsrState>>> = Mutex::new(RefCell::new(None));
 
 #[cfg(feature = "i2c-isr")]
-interrupt!(I2C0, isr0);
-#[cfg(feature = "i2c-isr")]
-interrupt!(I2C1, isr1);
-
-#[cfg(feature = "i2c-isr")]
-fn isr0() {
+#[interrupt]
+fn ISR0() {
     unsafe {
         interrupt::free(|cs| {
             let reg = &mut *(I2C0_ADDR as *mut I2cRegs);
@@ -958,7 +954,8 @@ fn isr0() {
 }
 
 #[cfg(feature = "i2c-isr")]
-fn isr1() {
+#[interrupt]
+fn ISR1() {
     unsafe {
         interrupt::free(|cs| {
             let reg = &mut *(I2C1_ADDR as *mut I2cRegs);

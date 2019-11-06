@@ -3,10 +3,9 @@
 #![no_builtins]
 
 use cortex_m::interrupt as isr;
-use cortex_m::peripheral::{Peripherals, NVIC};
-use cortex_m_rt::*;
+use cortex_m_rt::{entry, exception, pre_init};
+use mkl26z4::{interrupt, Interrupt, CorePeripherals, NVIC};
 
-use mkl26::interrupt::{self, Interrupt};
 use mkl26::mcg::{Clock, Mcg, OscRange};
 use mkl26::osc::Osc;
 use mkl26::pit::{Pit, Timer, TimerSelect};
@@ -19,7 +18,7 @@ use mkl26::sim::Sim;
 #[no_mangle]
 pub static _FLASHCONFIG: [u8; 16] = [
     0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF,
-    0xFF, 0xFF, 0xFF, 0xFF, 0xDE, 0xF9, 0xFF, 0xFF
+    0xFF, 0xFF, 0xFF, 0xFF, 0xDE, 0xF9, 0xFF, 0xFF,
 ];
 
 #[pre_init]
@@ -35,7 +34,7 @@ static mut PIT0_TIMER0: Option<Timer> = None;
 
 #[entry]
 fn main() -> ! {
-    let mut peripherals = Peripherals::take().unwrap();
+    let mut core = CorePeripherals::take().unwrap();
 
     // Enable the crystal oscillator with 10 pf of capacitance
     let osc_token = Osc::new().enable(10);
@@ -76,7 +75,7 @@ fn main() -> ! {
         PIT0_TIMER0 = PIT0.as_mut().unwrap().timer(TimerSelect::Timer0, 5000000, true).ok();
         isr::free(|_| {
             NVIC::unpend(Interrupt::PIT);
-            peripherals.NVIC.enable(Interrupt::PIT);
+            core.NVIC.enable(Interrupt::PIT);
         });
 
         LED_PIN.as_mut().unwrap().high();

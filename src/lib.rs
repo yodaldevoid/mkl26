@@ -1,8 +1,7 @@
 #![feature(untagged_unions)]
 #![no_std]
 
-#[macro_use]
-pub mod interrupt;
+pub use mkl26z4;
 
 pub mod adc;
 pub mod atomic;
