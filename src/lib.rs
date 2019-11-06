@@ -1,14 +1,5 @@
-#![feature(const_fn)]
 #![feature(untagged_unions)]
 #![no_std]
-
-extern crate arraydeque;
-extern crate bit_field;
-extern crate cortex_m;
-extern crate embedded_hal;
-extern crate nb;
-extern crate void;
-extern crate volatile_register;
 
 #[macro_use]
 pub mod interrupt;

@@ -1,4 +1,5 @@
 [package]
+edition = "2018"
 name = "mkl26"
 version = "0.2.0"
 authors = ["Gabriel Smith <ga29smith@gmail.com>"]
@@ -28,24 +29,6 @@ spi-dma = ["spi-isr"]
 
 uart-isr = []
 uart-dma = ["uart-isr"]
-
-[[example]]
-name = "adc"
-
-[[example]]
-name = "blink"
-
-[[example]]
-name = "uart"
-
-[[example]]
-name = "spi_master"
-
-[[example]]
-name = "pwm"
-
-[[example]]
-name = "pit"
 
 [profile.dev]
 debug = false

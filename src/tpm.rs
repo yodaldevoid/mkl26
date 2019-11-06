@@ -4,8 +4,8 @@ use embedded_hal::timer;
 use void::Void;
 use volatile_register::RW;
 
-use port::TpmPin;
-use sim::ClockGate;
+use crate::port::TpmPin;
+use crate::sim::ClockGate;
 
 // KL26 manual - pp 570-571
 const TPM0_ADDR: usize = 0x4003_8000;

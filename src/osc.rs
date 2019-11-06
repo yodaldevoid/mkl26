@@ -1,7 +1,7 @@
 use bit_field::BitField;
 use volatile_register::RW;
 
-use atomic::InterruptAtomic;
+use crate::atomic::InterruptAtomic;
 
 const OSC_ADDR: usize = 0x4006_5000;
 

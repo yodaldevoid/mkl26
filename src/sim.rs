@@ -3,19 +3,19 @@ use cortex_m::peripheral::NVIC;
 use embedded_hal::spi::Mode;
 use volatile_register::{RO, RW};
 
-use adc::{self, Adc};
-use atomic::{BmeAtomic, InterruptAtomic};
-use i2c::{self, Divider, Multiplier, I2cMaster};
+use crate::adc::{self, Adc};
+use crate::atomic::{BmeAtomic, InterruptAtomic};
+use crate::i2c::{self, Divider, Multiplier, I2cMaster};
 #[cfg(feature = "i2c-slave")]
-use i2c::{Address, I2cSlave};
-use pit::Pit;
-use port::{I2cScl, I2cSda};
-use port::{Port, PortName};
-use port::{SpiCs, SpiMiso, SpiMosi, SpiSck};
-use port::{UartRx, UartTx};
-use spi::{self, Divisor, SpiMaster};
-use tpm::{self, ClockMode, PwmSelect, TpmNum, TpmPeriodic, TpmSingleShot};
-use uart::{ConnMode, Uart};
+use crate::i2c::{Address, I2cSlave};
+use crate::pit::Pit;
+use crate::port::{I2cScl, I2cSda};
+use crate::port::{Port, PortName};
+use crate::port::{SpiCs, SpiMiso, SpiMosi, SpiSck};
+use crate::port::{UartRx, UartTx};
+use crate::spi::{self, Divisor, SpiMaster};
+use crate::tpm::{self, ClockMode, PwmSelect, TpmNum, TpmPeriodic, TpmSingleShot};
+use crate::uart::{ConnMode, Uart};
 
 pub struct ClockGate {
     gate: &'static mut BmeAtomic<u32>,

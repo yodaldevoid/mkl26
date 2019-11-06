@@ -2,10 +2,6 @@
 #![no_std]
 #![no_builtins]
 
-extern crate cortex_m;
-extern crate cortex_m_rt;
-extern crate mkl26;
-
 use cortex_m::interrupt as isr;
 use cortex_m::peripheral::{Peripherals, NVIC};
 use cortex_m_rt::*;

@@ -7,9 +7,9 @@ use cortex_m::peripheral::NVIC;
 use embedded_hal::blocking::i2c;
 use volatile_register::RW;
 
-use interrupt::Interrupt;
-use port::{I2cScl, I2cSda};
-use sim::ClockGate;
+use crate::interrupt::Interrupt;
+use crate::port::{I2cScl, I2cSda};
+use crate::sim::ClockGate;
 
 const I2C0_ADDR: usize = 0x4006_6000;
 const I2C1_ADDR: usize = 0x4006_7000;

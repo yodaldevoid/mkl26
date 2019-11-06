@@ -7,8 +7,8 @@ use embedded_hal::spi::{FullDuplex, Phase, Polarity};
 use nb::{self, Error};
 use volatile_register::{RO, RW};
 
-use port::{SpiCs, SpiMiso, SpiMosi, SpiSck};
-use sim::ClockGate;
+use crate::port::{SpiCs, SpiMiso, SpiMosi, SpiSck};
+use crate::sim::ClockGate;
 
 const SPI0_ADDR: usize = 0x4007_6000;
 const SPI1_ADDR: usize = 0x4007_7000;

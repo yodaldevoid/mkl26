@@ -3,9 +3,9 @@ use core::mem;
 use bit_field::BitField;
 use volatile_register::{RO, RW};
 
-use atomic::InterruptAtomic;
-use osc::OscToken;
-use sim::{PllFllSel, Sim};
+use crate::atomic::InterruptAtomic;
+use crate::osc::OscToken;
+use crate::sim::{PllFllSel, Sim};
 
 const MCG_ADDR: usize = 0x4006_4000;
 

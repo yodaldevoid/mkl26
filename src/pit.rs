@@ -2,7 +2,7 @@ use bit_field::BitField;
 use cortex_m::interrupt;
 use volatile_register::{RO, RW};
 
-use sim::ClockGate;
+use crate::sim::ClockGate;
 
 const PIT_ADDR: usize = 0x4003_7000;
 

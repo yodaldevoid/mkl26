@@ -1,8 +1,8 @@
 use bit_field::BitField;
 use volatile_register::{RO, RW};
 
-use port::{AdcDiffMPin, AdcDiffPPin, AdcPin, PortName};
-use sim::ClockGate;
+use crate::port::{AdcDiffMPin, AdcDiffPPin, AdcPin, PortName};
+use crate::sim::ClockGate;
 
 const ADC0_ADDR: usize = 0x4003_B000;
 

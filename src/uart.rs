@@ -7,8 +7,8 @@ use embedded_hal::serial;
 use nb;
 use volatile_register::{RO, RW};
 
-use port::{UartRx, UartTx};
-use sim::ClockGate;
+use crate::port::{UartRx, UartTx};
+use crate::sim::ClockGate;
 
 const UART0_ADDR: usize = 0x4006_A000;
 const UART1_ADDR: usize = 0x4006_B000;

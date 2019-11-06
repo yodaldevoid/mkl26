@@ -4,8 +4,8 @@ use bit_field::BitField;
 use embedded_hal::digital::{InputPin, OutputPin, ToggleableOutputPin};
 use volatile_register::{RO, RW, WO};
 
-use atomic::InterruptAtomic;
-use sim::ClockGate;
+use crate::atomic::InterruptAtomic;
+use crate::sim::ClockGate;
 
 #[derive(Clone, Copy)]
 pub enum PortName {
