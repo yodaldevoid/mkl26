@@ -1,8 +1,9 @@
 use core::cell::UnsafeCell;
 
 use bit_field::BitField;
-use embedded_hal::digital::{InputPin, OutputPin, ToggleableOutputPin};
+use embedded_hal::digital::v2::{InputPin, OutputPin, ToggleableOutputPin};
 use volatile_register::{RO, RW, WO};
+use void::Void;
 
 use crate::atomic::InterruptAtomic;
 use crate::sim::ClockGate;
@@ -1400,28 +1401,40 @@ impl<'a> Gpio<'a> {
 }
 
 impl<'a> InputPin for Gpio<'a> {
-    fn is_high(&self) -> bool {
-        self.read()
+    type Error = Void;
+
+    fn is_high(&self) -> Result<bool, Void> {
+        Ok(self.read())
     }
 
-    fn is_low(&self) -> bool {
-        !self.read()
+    fn is_low(&self) -> Result<bool, Void> {
+        Ok(!self.read())
     }
 }
 
 impl<'a> OutputPin for Gpio<'a> {
-    fn set_high(&mut self) {
-        self.high()
+    type Error = Void;
+
+    fn set_high(&mut self) -> Result<(), Void> {
+        self.high();
+
+        Ok(())
     }
 
-    fn set_low(&mut self) {
-        self.low()
+    fn set_low(&mut self) -> Result<(), Void> {
+        self.low();
+
+        Ok(())
     }
 }
 
 impl<'a> ToggleableOutputPin for Gpio<'a> {
-    fn toggle(&mut self) {
-        self.toggle()
+    type Error = Void;
+
+    fn toggle(&mut self) -> Result<(), Void> {
+        self.toggle();
+
+        Ok(())
     }
 }
 
