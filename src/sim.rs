@@ -1,5 +1,4 @@
 use bit_field::BitField;
-use cortex_m::peripheral::NVIC;
 use embedded_hal::spi::Mode;
 use volatile_register::{RO, RW};
 
@@ -214,7 +213,6 @@ impl Sim {
         &mut self,
         scl: I2cScl<'a>,
         sda: I2cSda<'b>,
-        nvic: &mut NVIC,
         clkdiv: (Multiplier, Divider),
         op_mode: i2c::OpMode,
     ) -> Result<I2cMaster<'a, 'b>, ()> {
@@ -231,7 +229,7 @@ impl Sim {
             return Err(());
         }
         gate.enable();
-        unsafe { I2cMaster::new(scl, sda, nvic, clkdiv, op_mode, gate) }
+        unsafe { I2cMaster::new(scl, sda, clkdiv, op_mode, gate) }
     }
 
     #[cfg(feature = "i2c-slave")]
@@ -239,7 +237,6 @@ impl Sim {
         &mut self,
         scl: I2cScl<'a>,
         sda: I2cSda<'b>,
-        nvic: &mut NVIC,
         addr: Address,
         general_call: bool,
     ) -> Result<I2cSlave<'a, 'b>, ()> {
@@ -252,7 +249,7 @@ impl Sim {
             return Err(());
         }
         gate.enable();
-        unsafe { I2cSlave::new(scl, sda, nvic, addr, general_call, gate) }
+        unsafe { I2cSlave::new(scl, sda, addr, general_call, gate) }
     }
 
     pub fn spi_master<'a, 'b, 'c, 'd, O, I, S, W>(

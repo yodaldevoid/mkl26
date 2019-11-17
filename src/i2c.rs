@@ -173,7 +173,6 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
     pub unsafe fn new(
         scl: I2cScl<'a>,
         sda: I2cSda<'b>,
-        nvic: &mut NVIC,
         (mul, clkdiv): (Multiplier, Divider),
         op_mode: OpMode,
         gate: ClockGate,
@@ -227,7 +226,7 @@ impl<'a, 'b> I2cMaster<'a, 'b> {
                 _ => unreachable!(),
             };
             interrupt::free(|_| {
-                nvic.enable(interrupt);
+                NVIC::unmask(interrupt);
             });
         }
 
@@ -787,7 +786,6 @@ impl<'a, 'b> I2cSlave<'a, 'b> {
     pub unsafe fn new(
         scl: I2cScl<'a>,
         sda: I2cSda<'b>,
-        nvic: &mut NVIC,
         addr: Address,
         general_call: bool,
         gate: ClockGate,
@@ -847,7 +845,7 @@ impl<'a, 'b> I2cSlave<'a, 'b> {
             _ => unreachable!(),
         };
         interrupt::free(|_| {
-            nvic.enable(interrupt);
+            NVIC::unmask(interrupt);
         });
 
         reg.c1.write(0xC0); // enable module and interrupts

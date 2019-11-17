@@ -4,7 +4,7 @@
 
 use cortex_m::interrupt as isr;
 use cortex_m_rt::{entry, exception, pre_init};
-use mkl26z4::{interrupt, Interrupt, CorePeripherals, NVIC};
+use mkl26z4::{interrupt, Interrupt, NVIC};
 
 use mkl26::mcg::{Clock, Mcg, OscRange};
 use mkl26::osc::Osc;
@@ -34,8 +34,6 @@ static mut PIT0_TIMER0: Option<Timer> = None;
 
 #[entry]
 fn main() -> ! {
-    let mut core = CorePeripherals::take().unwrap();
-
     // Enable the crystal oscillator with 10 pf of capacitance
     let osc_token = Osc::new().enable(10);
 
@@ -75,7 +73,7 @@ fn main() -> ! {
         PIT0_TIMER0 = PIT0.as_mut().unwrap().timer(TimerSelect::Timer0, 5000000, true).ok();
         isr::free(|_| {
             NVIC::unpend(Interrupt::PIT);
-            core.NVIC.enable(Interrupt::PIT);
+            NVIC::unmask(Interrupt::PIT);
         });
 
         LED_PIN.as_mut().unwrap().high();
