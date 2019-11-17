@@ -4,8 +4,9 @@
 
 use core::fmt::Write;
 
-use cortex_m_rt::{entry, exception, pre_init};
+use cortex_m_rt::{entry, pre_init};
 use embedded_hal::spi::{FullDuplex, Mode, Phase, Polarity};
+use panic_halt as _;
 
 use mkl26::mcg::{Clock, Mcg, OscRange};
 use mkl26::osc::Osc;
@@ -124,26 +125,3 @@ fn main() -> ! {
         }
     }
 }
-
-//TODO: change to use USB_Listen for the panic messages
-#[panic_handler]
-pub fn rust_begin_panic(_info: &core::panic::PanicInfo) -> ! {
-    // Reset the MCU after we've printed our panic.
-    /*
-    let aircr = unsafe {
-        &mut *(0xE000ED0C as *mut Volatile<u32>)
-    };
-    aircr.write(0x05FA0004);
-    */
-    loop {}
-}
-
-// the hard fault handler
-#[exception]
-fn HardFault(_ef: &cortex_m_rt::ExceptionFrame) -> ! {
-    loop {}
-}
-
-// the default exception handler
-#[exception]
-fn DefaultHandler(_irqn: i16) {}
