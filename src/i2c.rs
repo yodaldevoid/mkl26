@@ -16,34 +16,34 @@ const I2C1_ADDR: usize = 0x4006_7000;
 
 #[repr(C, packed)]
 struct I2cRegs {
-    a1:   RW<u8>,
-    f:    RW<u8>,
-    c1:   RW<u8>,
-    s:    RW<u8>,
-    d:    RW<u8>,
-    c2:   RW<u8>,
-    flt:  RW<u8>,
-    ra:   RW<u8>,
-    smb:  RW<u8>,
-    a2:   RW<u8>,
+    a1: RW<u8>,
+    f: RW<u8>,
+    c1: RW<u8>,
+    s: RW<u8>,
+    d: RW<u8>,
+    c2: RW<u8>,
+    flt: RW<u8>,
+    ra: RW<u8>,
+    smb: RW<u8>,
+    a2: RW<u8>,
     slth: RW<u8>,
     sltl: RW<u8>,
 }
 
 pub struct I2cMaster<'a, 'b> {
-    reg:     &'static mut I2cRegs,
-    _scl:    I2cScl<'a>,
-    _sda:    I2cSda<'b>,
-    _gate:   ClockGate,
-    bus:     u8,
+    reg: &'static mut I2cRegs,
+    _scl: I2cScl<'a>,
+    _sda: I2cSda<'b>,
+    _gate: ClockGate,
+    bus: u8,
     op_mode: OpMode,
 }
 
 #[cfg(feature = "i2c-slave")]
 pub struct I2cSlave<'a, 'b> {
-    _reg:  &'static mut I2cRegs,
-    _scl:  I2cScl<'a>,
-    _sda:  I2cSda<'b>,
+    _reg: &'static mut I2cRegs,
+    _scl: I2cScl<'a>,
+    _sda: I2cSda<'b>,
     _gate: ClockGate,
 }
 
@@ -1061,7 +1061,7 @@ unsafe fn master_isr(reg: &mut I2cRegs, state: &mut IsrState, status: u8, c1: u8
 
                         match state.stop {
                             Stop::Yes => reg.c1.write(0x80), // only module enabled
-                            Stop::No => reg.c1.write(0xB0), // no stop, still in tx, intr disabled
+                            Stop::No => reg.c1.write(0xB0),  // no stop, still in tx, intr disabled
                         }
                     }
                 }
@@ -1267,7 +1267,12 @@ impl<'a, 'b> i2c::Write for I2cMaster<'a, 'b> {
 impl<'a, 'b> i2c::WriteRead for I2cMaster<'a, 'b> {
     type Error = Error;
 
-    fn write_read(&mut self, address: u8, bytes: &[u8], buffer: &mut [u8]) -> Result<(), Self::Error> {
+    fn write_read(
+        &mut self,
+        address: u8,
+        bytes: &[u8],
+        buffer: &mut [u8],
+    ) -> Result<(), Self::Error> {
         {
             let mut t = self.begin_transmission(Address::Bits7(address));
             for b in bytes.iter() {

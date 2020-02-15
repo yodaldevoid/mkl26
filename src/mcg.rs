@@ -11,22 +11,22 @@ const MCG_ADDR: usize = 0x4006_4000;
 
 #[repr(C, packed)]
 struct McgRegs {
-    c1:    RW<u8>,
-    c2:    RW<u8>,
-    c3:    RW<u8>,
-    c4:    RW<u8>,
-    c5:    RW<u8>,
-    c6:    RW<u8>,
-    s:     RO<u8>,
+    c1: RW<u8>,
+    c2: RW<u8>,
+    c3: RW<u8>,
+    c4: RW<u8>,
+    c5: RW<u8>,
+    c6: RW<u8>,
+    s: RO<u8>,
     _pad0: u8,
-    sc:    RW<u8>,
+    sc: RW<u8>,
     _pad1: u8,
     atcvh: RW<u8>,
     atcvl: RW<u8>,
-    c7:    RW<u8>,
-    c8:    RW<u8>,
-    c9:    RW<u8>,
-    c10:   RW<u8>,
+    c7: RW<u8>,
+    c8: RW<u8>,
+    c9: RW<u8>,
+    c10: RW<u8>,
 }
 
 pub struct Mcg {

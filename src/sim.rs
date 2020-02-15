@@ -4,7 +4,7 @@ use volatile_register::{RO, RW};
 
 use crate::adc::{self, Adc};
 use crate::atomic::{BmeAtomic, InterruptAtomic};
-use crate::i2c::{self, Divider, Multiplier, I2cMaster};
+use crate::i2c::{self, Divider, I2cMaster, Multiplier};
 #[cfg(feature = "i2c-slave")]
 use crate::i2c::{Address, I2cSlave};
 use crate::pit::Pit;
@@ -18,7 +18,7 @@ use crate::uart::{ConnMode, Uart, UartNum};
 
 pub struct ClockGate {
     gate: &'static mut BmeAtomic<u32>,
-    bit:  u8, // TODO: replace with a const generic when that comes around?
+    bit: u8, // TODO: replace with a const generic when that comes around?
 }
 
 impl ClockGate {
@@ -31,7 +31,7 @@ impl ClockGate {
         unsafe {
             ClockGate {
                 gate: &mut *ptr,
-                bit:  bit as u8,
+                bit: bit as u8,
             }
         }
     }
@@ -180,7 +180,11 @@ impl Sim {
         unsafe { Uart::new(uart, rx.into(), tx.into(), clkdiv, ConnMode::TwoWire, gate) }
     }
 
-    pub fn uart_loopback<'a, 'b>(&mut self, uart: UartNum, clkdiv: u16) -> Result<Uart<'a, 'b, u8>, ()> {
+    pub fn uart_loopback<'a, 'b>(
+        &mut self,
+        uart: UartNum,
+        clkdiv: u16,
+    ) -> Result<Uart<'a, 'b, u8>, ()> {
         let mut gate = match uart {
             UartNum::UART0 => ClockGate::new(4, 10),
             UartNum::UART1 => ClockGate::new(4, 11),
@@ -312,7 +316,11 @@ impl Sim {
         }
         gate.enable();
 
-        unsafe { Ok(TpmPeriodic::new(name, cpwms, cmod, clkdivider, interrupt, count, gate)) }
+        unsafe {
+            Ok(TpmPeriodic::new(
+                name, cpwms, cmod, clkdivider, interrupt, count, gate,
+            ))
+        }
     }
 
     pub fn tpm_single_shot(
@@ -334,7 +342,11 @@ impl Sim {
         }
         gate.enable();
 
-        unsafe { Ok(TpmSingleShot::new(name, cpwms, cmod, clkdivider, interrupt, count, gate)) }
+        unsafe {
+            Ok(TpmSingleShot::new(
+                name, cpwms, cmod, clkdivider, interrupt, count, gate,
+            ))
+        }
     }
 
     pub fn pit(&mut self) -> Result<Pit, ()> {
@@ -400,7 +412,7 @@ pub mod cop {
     const COP_ADDR: usize = 0x4004_8100;
 
     struct CopRegs {
-        copc:   RW<u32>,
+        copc: RW<u32>,
         srvcop: WO<u32>,
     }
 

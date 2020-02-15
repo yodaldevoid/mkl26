@@ -34,7 +34,7 @@ struct TpmRegs {
 #[repr(C, packed)]
 struct ChannelRegs {
     cnsc: RW<u32>,
-    cnv:  RW<u32>,
+    cnv: RW<u32>,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -198,7 +198,9 @@ impl TpmPeriodic {
             // Same if any other mode is selected when CPWMS is set.
             // Software Compare doesn't care for some reason.
             match (mode, self.reg.sc.read().get_bit(5)) {
-                (ChannelMode::CenterPwm(_), false) => return Err(ChannelError::CenterAlignMismatch),
+                (ChannelMode::CenterPwm(_), false) => {
+                    return Err(ChannelError::CenterAlignMismatch)
+                }
                 (ChannelMode::SoftwareCompare, _) => {}
                 (_, true) => return Err(ChannelError::CenterAlignMismatch),
                 _ => {}
@@ -232,9 +234,7 @@ impl TpmPeriodic {
     }
 
     pub fn is_overflowed(&self) -> bool {
-        unsafe {
-            self.reg.sc.read().get_bit(7)
-        }
+        unsafe { self.reg.sc.read().get_bit(7) }
     }
 
     pub fn clear_overflow(&mut self) {
@@ -293,7 +293,6 @@ pub struct TpmSingleShot {
     name: TpmNum,
     _gate: ClockGate,
 }
-
 
 // TODO: impl timer::Cancel
 impl TpmSingleShot {
@@ -370,7 +369,9 @@ impl TpmSingleShot {
             // Same if any other mode is selected when CPWMS is set.
             // Software Compare doesn't care for some reason.
             match (mode, self.reg.sc.read().get_bit(5)) {
-                (ChannelMode::CenterPwm(_), false) => return Err(ChannelError::CenterAlignMismatch),
+                (ChannelMode::CenterPwm(_), false) => {
+                    return Err(ChannelError::CenterAlignMismatch)
+                }
                 (ChannelMode::SoftwareCompare, _) => {}
                 (_, true) => return Err(ChannelError::CenterAlignMismatch),
                 _ => {}
@@ -404,9 +405,7 @@ impl TpmSingleShot {
     }
 
     pub fn is_overflowed(&self) -> bool {
-        unsafe {
-            self.reg.sc.read().get_bit(7)
-        }
+        unsafe { self.reg.sc.read().get_bit(7) }
     }
 
     pub fn clear_overflow(&mut self) {
@@ -538,9 +537,7 @@ impl<'a, 'b> Channel<'a, 'b> {
     }
 
     pub fn is_triggered(&mut self) -> bool {
-        unsafe {
-            self.reg.cnsc.read().get_bit(7)
-        }
+        unsafe { self.reg.cnsc.read().get_bit(7) }
     }
 
     pub fn clear_trigger(&mut self) {

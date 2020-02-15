@@ -71,7 +71,11 @@ fn main() -> ! {
         // So 1 ms / 41.66 ns = 2400.
         // Subtract one for hardware implementation jazz.
         PIT0 = sim.pit().ok();
-        PIT0_TIMER0 = PIT0.as_mut().unwrap().timer(TimerSelect::Timer0, 5000000, true).ok();
+        PIT0_TIMER0 = PIT0
+            .as_mut()
+            .unwrap()
+            .timer(TimerSelect::Timer0, 5000000, true)
+            .ok();
         isr::free(|_| {
             NVIC::unpend(Interrupt::PIT);
             NVIC::unmask(Interrupt::PIT);

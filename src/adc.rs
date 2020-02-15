@@ -12,15 +12,15 @@ struct AdcRegs {
     sc1b: RW<u32>,
     cfg1: RW<u32>,
     cfg2: RW<u32>,
-    ra:   RO<u32>,
-    rb:   RO<u32>,
-    cv1:  RW<u32>,
-    cv2:  RW<u32>,
-    sc2:  RW<u32>,
-    sc3:  RW<u32>,
-    ofs:  RW<u32>,
-    pg:   RW<u32>,
-    mg:   RW<u32>,
+    ra: RO<u32>,
+    rb: RO<u32>,
+    cv1: RW<u32>,
+    cv2: RW<u32>,
+    sc2: RW<u32>,
+    sc3: RW<u32>,
+    ofs: RW<u32>,
+    pg: RW<u32>,
+    mg: RW<u32>,
     clpd: RW<u32>,
     clps: RW<u32>,
     clp4: RW<u32>,
@@ -41,8 +41,8 @@ struct AdcRegs {
 }
 
 pub struct Adc {
-    id:    u8,
-    reg:   &'static mut AdcRegs,
+    id: u8,
+    reg: &'static mut AdcRegs,
     _gate: ClockGate,
 }
 
@@ -203,7 +203,7 @@ impl Adc {
 }
 
 pub struct Channel<'a, 'b, 'c: 'b> {
-    adc:  &'a mut Adc,
+    adc: &'a mut Adc,
     _pin: Option<&'b mut AdcPin<'c>>,
 }
 
@@ -275,7 +275,7 @@ impl<'a, 'b, 'c> Channel<'a, 'b, 'c> {
 }
 
 pub struct DiffChannel<'a, 'b, 'c: 'b, 'd, 'e: 'd> {
-    adc:  &'a mut Adc,
+    adc: &'a mut Adc,
     _pos: Option<&'b mut AdcDiffPPin<'c>>,
     _neg: Option<&'d mut AdcDiffMPin<'e>>,
 }

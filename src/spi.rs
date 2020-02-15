@@ -15,37 +15,37 @@ const SPI1_ADDR: usize = 0x4007_7000;
 
 #[repr(C, packed)]
 struct SpiRegs {
-    s:     RO<u8>,
-    br:    RW<u8>,
-    c2:    RW<u8>,
-    c1:    RW<u8>,
-    ml:    RW<u8>,
-    mh:    RW<u8>,
-    dl:    RW<u8>,
-    dh:    RW<u8>,
+    s: RO<u8>,
+    br: RW<u8>,
+    c2: RW<u8>,
+    c1: RW<u8>,
+    ml: RW<u8>,
+    mh: RW<u8>,
+    dl: RW<u8>,
+    dh: RW<u8>,
     _pad0: [u8; 2],
-    ci:    RW<u8>,
-    c3:    RW<u8>,
+    ci: RW<u8>,
+    c3: RW<u8>,
 }
 
 pub struct SpiMaster<'a, 'b, 'c, 'd, W: Word> {
-    reg:     &'static mut SpiRegs,
-    _mosi:   Option<SpiMosi<'a>>,
-    _miso:   Option<SpiMiso<'b>>,
-    _sck:    SpiSck<'c>,
-    _cs:     Option<SpiCs<'d>>,
-    _gate:   ClockGate,
-    _char:   PhantomData<W>,
+    reg: &'static mut SpiRegs,
+    _mosi: Option<SpiMosi<'a>>,
+    _miso: Option<SpiMiso<'b>>,
+    _sck: SpiSck<'c>,
+    _cs: Option<SpiCs<'d>>,
+    _gate: ClockGate,
+    _char: PhantomData<W>,
     op_mode: OpMode,
 }
 
 #[cfg(feature = "spi-slave")]
 pub struct SpiSlave<'a, 'b, 'c, 'd, W: Word> {
-    _reg:  &'static mut SpiRegs,
+    _reg: &'static mut SpiRegs,
     _mosi: Option<SpiMosi<'a>>,
     _miso: Option<SpiMiso<'b>>,
-    _sck:  SpiSck<'c>,
-    _cs:   SpiCs<'d>,
+    _sck: SpiSck<'c>,
+    _cs: SpiCs<'d>,
     _gate: ClockGate,
     _char: PhantomData<W>,
 }

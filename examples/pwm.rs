@@ -68,7 +68,12 @@ fn main() -> ! {
         sim.set_uart0_clksrc(ClkSrc::McgXLL);
     }
     let mut uart = sim
-        .uart(UartNum::UART0, rx, tx, uart::calc_clkdiv(115200, 24_000_000))
+        .uart(
+            UartNum::UART0,
+            rx,
+            tx,
+            uart::calc_clkdiv(115200, 24_000_000),
+        )
         .unwrap();
 
     let pwm_pin = port_d.pin(4).to_tpm().ok();
@@ -86,7 +91,8 @@ fn main() -> ! {
             Prescale::Div8,
             false,
             0x6000,
-        ).unwrap();
+        )
+        .unwrap();
 
     let mut tpm0_ch4 = tpm0
         .channel(
@@ -95,7 +101,8 @@ fn main() -> ! {
             false,
             0x1E00,
             pwm_pin,
-        ).unwrap();
+        )
+        .unwrap();
 
     led.high();
 

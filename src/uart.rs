@@ -23,14 +23,14 @@ pub enum UartNum {
 
 #[repr(C, packed)]
 struct UartRegs {
-    bdh:  RW<u8>,
-    bdl:  RW<u8>,
-    c1:   RW<u8>,
-    c2:   RW<u8>,
-    s1:   RO<u8>,
-    s2:   RW<u8>,
-    c3:   RW<u8>,
-    d:    RW<u8>,
+    bdh: RW<u8>,
+    bdl: RW<u8>,
+    c1: RW<u8>,
+    c2: RW<u8>,
+    s1: RO<u8>,
+    s2: RW<u8>,
+    c3: RW<u8>,
+    d: RW<u8>,
     diff: UartDiff,
 }
 
@@ -44,8 +44,8 @@ union UartDiff {
 struct Uart0Diff {
     ma1: RW<u8>,
     ma2: RW<u8>,
-    c4:  RW<u8>,
-    c5:  RW<u8>,
+    c4: RW<u8>,
+    c5: RW<u8>,
 }
 
 #[repr(C, packed)]
@@ -58,11 +58,11 @@ struct Uart12Diff {
 /// B is the "character" size used for the UART. This can be 8, 9, or 10 bits.
 // TODO: consider grabbing crate ux
 pub struct Uart<'a, 'b, B> {
-    reg:   &'static mut UartRegs,
-    _rx:   Option<UartRx<'a>>,
-    _tx:   Option<UartTx<'b>>,
+    reg: &'static mut UartRegs,
+    _rx: Option<UartRx<'a>>,
+    _tx: Option<UartTx<'b>>,
     _gate: ClockGate,
-    _bus:  UartNum, // TODO: replace with a const generic when that comes around
+    _bus: UartNum, // TODO: replace with a const generic when that comes around
     _char: PhantomData<B>,
 }
 

@@ -63,7 +63,12 @@ fn main() -> ! {
         sim.set_uart0_clksrc(ClkSrc::McgXLL);
     }
     let mut uart = sim
-        .uart(UartNum::UART0, rx, tx, uart::calc_clkdiv(115200, 24_000_000))
+        .uart(
+            UartNum::UART0,
+            rx,
+            tx,
+            uart::calc_clkdiv(115200, 24_000_000),
+        )
         .unwrap();
     //unsafe { sim.set_uart0_clksrc(Uart0ClkSrc::OscER); }
     //let mut uart = sim.uart(0, rx, tx, uart::calc_clkdiv(115200, 16_000_000)).unwrap();

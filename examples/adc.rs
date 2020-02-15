@@ -65,7 +65,12 @@ fn main() -> ! {
         sim.set_uart0_clksrc(ClkSrc::McgXLL);
     }
     let mut uart = sim
-        .uart(UartNum::UART0, rx, tx, uart::calc_clkdiv(115200, 24_000_000))
+        .uart(
+            UartNum::UART0,
+            rx,
+            tx,
+            uart::calc_clkdiv(115200, 24_000_000),
+        )
         .unwrap();
 
     // Internal temperature sensor
@@ -75,7 +80,8 @@ fn main() -> ! {
             Resolution::Bits16,
             Divisor::Div2,
             VoltageRef::Alternative,
-        ).unwrap();
+        )
+        .unwrap();
 
     led.high();
 

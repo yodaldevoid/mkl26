@@ -67,7 +67,12 @@ fn main() -> ! {
         sim.set_uart0_clksrc(ClkSrc::McgXLL);
     }
     let mut uart = sim
-        .uart(UartNum::UART0, rx, tx, uart::calc_clkdiv(115200, 24_000_000))
+        .uart(
+            UartNum::UART0,
+            rx,
+            tx,
+            uart::calc_clkdiv(115200, 24_000_000),
+        )
         .unwrap();
 
     let mosi = port_c.pin(6).to_spi_mosi().ok();
@@ -76,7 +81,7 @@ fn main() -> ! {
     let cs = port_c.pin(4).to_spi_cs().ok();
     let spi_mode = Mode {
         polarity: Polarity::IdleLow,
-        phase:    Phase::CaptureOnFirstTransition,
+        phase: Phase::CaptureOnFirstTransition,
     };
     let mut spi: SpiMaster<u8> = sim
         .spi_master(
@@ -88,7 +93,8 @@ fn main() -> ! {
             OpMode::IMM,
             spi_mode,
             true,
-        ).unwrap();
+        )
+        .unwrap();
 
     led.high();
 
