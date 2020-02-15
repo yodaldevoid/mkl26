@@ -12,7 +12,7 @@ const TPM0_ADDR: usize = 0x4003_8000;
 const TPM1_ADDR: usize = 0x4003_9000;
 const TPM2_ADDR: usize = 0x4003_A000;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum TpmNum {
     TPM0 = 0,
     TPM1 = 1,
@@ -62,8 +62,8 @@ pub enum Prescale {
     Div128 = 0b111,
 }
 
-#[derive(Clone, Copy, Debug)]
-pub enum ChannelSelect {
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum ChannelNum {
     Ch0 = 0,
     Ch1 = 1,
     Ch2 = 2,
@@ -118,8 +118,8 @@ pub enum ChannelError {
 }
 
 pub struct TpmPeriodic {
-    reg:   &'static mut TpmRegs,
-    name:  TpmNum,
+    reg: &'static mut TpmRegs,
+    name: TpmNum,
     _gate: ClockGate,
 }
 
@@ -175,7 +175,7 @@ impl TpmPeriodic {
 
     pub fn channel<'a, 'b, P: Into<Option<TpmPin<'b>>>>(
         &'a self,
-        channel: ChannelSelect,
+        channel: ChannelNum,
         mode: ChannelMode,
         interrupt: bool,
         value: u16,
@@ -183,11 +183,11 @@ impl TpmPeriodic {
     ) -> Result<Channel<'a, 'b>, ChannelError> {
         let pin = pin.into();
         if let Some(pin) = pin.as_ref() {
-            if pin.tpm() != self.name as u8 {
+            if pin.tpm() != self.name {
                 return Err(ChannelError::PinMismatchTpm);
             }
 
-            if pin.ch() != channel as u8 {
+            if pin.ch() != channel {
                 return Err(ChannelError::PinMismatchChannel);
             }
         }
@@ -289,8 +289,8 @@ impl timer::CountDown for TpmPeriodic {
 impl timer::Periodic for TpmPeriodic {}
 
 pub struct TpmSingleShot {
-    reg:   &'static mut TpmRegs,
-    name:  TpmNum,
+    reg: &'static mut TpmRegs,
+    name: TpmNum,
     _gate: ClockGate,
 }
 
@@ -347,7 +347,7 @@ impl TpmSingleShot {
 
     pub fn channel<'a, 'b, P: Into<Option<TpmPin<'b>>>>(
         &'a self,
-        channel: ChannelSelect,
+        channel: ChannelNum,
         mode: ChannelMode,
         interrupt: bool,
         value: u16,
@@ -355,11 +355,11 @@ impl TpmSingleShot {
     ) -> Result<Channel<'a, 'b>, ChannelError> {
         let pin = pin.into();
         if let Some(pin) = pin.as_ref() {
-            if pin.tpm() != self.name as u8 {
+            if pin.tpm() != self.name {
                 return Err(ChannelError::PinMismatchTpm);
             }
 
-            if pin.ch() != channel as u8 {
+            if pin.ch() != channel {
                 return Err(ChannelError::PinMismatchChannel);
             }
         }
@@ -451,7 +451,7 @@ impl timer::CountDown for TpmSingleShot {
 // TODO: separate channel modes into different structs
 // TODO: impl embedded_hal timer traits
 pub struct Channel<'a, 'b> {
-    reg:  &'a ChannelRegs,
+    reg: &'a ChannelRegs,
     _pin: Option<TpmPin<'b>>,
 }
 

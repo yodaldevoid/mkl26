@@ -7,6 +7,7 @@ use void::Void;
 
 use crate::atomic::InterruptAtomic;
 use crate::sim::ClockGate;
+use crate::tpm::{ChannelNum, TpmNum};
 use crate::uart::UartNum;
 
 #[derive(Clone, Copy)]
@@ -749,8 +750,8 @@ impl<'a> Pin<'a> {
             (PortName::E, 20) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  1,
-                    ch:   0,
+                    tpm: TpmNum::TPM1,
+                    ch: ChannelNum::Ch0,
                     _pin: self,
                 })
             }
@@ -758,8 +759,8 @@ impl<'a> Pin<'a> {
             (PortName::E, 21) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  1,
-                    ch:   1,
+                    tpm: TpmNum::TPM1,
+                    ch: ChannelNum::Ch1,
                     _pin: self,
                 })
             }
@@ -767,8 +768,8 @@ impl<'a> Pin<'a> {
             (PortName::E, 22) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  2,
-                    ch:   0,
+                    tpm: TpmNum::TPM2,
+                    ch: ChannelNum::Ch0,
                     _pin: self,
                 })
             }
@@ -776,8 +777,8 @@ impl<'a> Pin<'a> {
             (PortName::E, 23) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  2,
-                    ch:   1,
+                    tpm: TpmNum::TPM2,
+                    ch: ChannelNum::Ch1,
                     _pin: self,
                 })
             }
@@ -785,8 +786,8 @@ impl<'a> Pin<'a> {
             (PortName::E, 29) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   2,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch2,
                     _pin: self,
                 })
             }
@@ -794,8 +795,8 @@ impl<'a> Pin<'a> {
             (PortName::E, 30) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   3,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch3,
                     _pin: self,
                 })
             }
@@ -803,8 +804,8 @@ impl<'a> Pin<'a> {
             (PortName::E, 31) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   4,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch4,
                     _pin: self,
                 })
             }
@@ -812,8 +813,8 @@ impl<'a> Pin<'a> {
             (PortName::E, 24) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   0,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch0,
                     _pin: self,
                 })
             }
@@ -821,8 +822,8 @@ impl<'a> Pin<'a> {
             (PortName::E, 25) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   1,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch1,
                     _pin: self,
                 })
             }
@@ -830,8 +831,8 @@ impl<'a> Pin<'a> {
             (PortName::E, 26) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   5,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch5,
                     _pin: self,
                 })
             }
@@ -839,8 +840,8 @@ impl<'a> Pin<'a> {
             (PortName::A, 0) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   5,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch5,
                     _pin: self,
                 })
             }
@@ -848,8 +849,8 @@ impl<'a> Pin<'a> {
             (PortName::A, 1) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  2,
-                    ch:   0,
+                    tpm: TpmNum::TPM2,
+                    ch: ChannelNum::Ch0,
                     _pin: self,
                 })
             }
@@ -857,8 +858,8 @@ impl<'a> Pin<'a> {
             (PortName::A, 2) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  2,
-                    ch:   1,
+                    tpm: TpmNum::TPM2,
+                    ch: ChannelNum::Ch1,
                     _pin: self,
                 })
             }
@@ -866,8 +867,8 @@ impl<'a> Pin<'a> {
             (PortName::A, 3) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   0,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch0,
                     _pin: self,
                 })
             }
@@ -875,8 +876,8 @@ impl<'a> Pin<'a> {
             (PortName::A, 4) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   1,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch1,
                     _pin: self,
                 })
             }
@@ -884,8 +885,8 @@ impl<'a> Pin<'a> {
             (PortName::A, 5) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   2,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch2,
                     _pin: self,
                 })
             }
@@ -893,8 +894,8 @@ impl<'a> Pin<'a> {
             (PortName::A, 6) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   3,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch3,
                     _pin: self,
                 })
             }
@@ -902,8 +903,8 @@ impl<'a> Pin<'a> {
             (PortName::A, 7) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   4,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch4,
                     _pin: self,
                 })
             }
@@ -911,8 +912,8 @@ impl<'a> Pin<'a> {
             (PortName::A, 12) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  1,
-                    ch:   0,
+                    tpm: TpmNum::TPM1,
+                    ch: ChannelNum::Ch0,
                     _pin: self,
                 })
             }
@@ -920,8 +921,8 @@ impl<'a> Pin<'a> {
             (PortName::A, 13) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  1,
-                    ch:   1,
+                    tpm: TpmNum::TPM1,
+                    ch: ChannelNum::Ch1,
                     _pin: self,
                 })
             }
@@ -929,8 +930,8 @@ impl<'a> Pin<'a> {
             (PortName::B, 0) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  1,
-                    ch:   0,
+                    tpm: TpmNum::TPM1,
+                    ch: ChannelNum::Ch0,
                     _pin: self,
                 })
             }
@@ -938,8 +939,8 @@ impl<'a> Pin<'a> {
             (PortName::B, 1) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  1,
-                    ch:   1,
+                    tpm: TpmNum::TPM1,
+                    ch: ChannelNum::Ch1,
                     _pin: self,
                 })
             }
@@ -947,8 +948,8 @@ impl<'a> Pin<'a> {
             (PortName::B, 2) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  2,
-                    ch:   0,
+                    tpm: TpmNum::TPM2,
+                    ch: ChannelNum::Ch0,
                     _pin: self,
                 })
             }
@@ -956,8 +957,8 @@ impl<'a> Pin<'a> {
             (PortName::B, 3) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  2,
-                    ch:   1,
+                    tpm: TpmNum::TPM2,
+                    ch: ChannelNum::Ch1,
                     _pin: self,
                 })
             }
@@ -965,8 +966,8 @@ impl<'a> Pin<'a> {
             (PortName::B, 18) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  2,
-                    ch:   0,
+                    tpm: TpmNum::TPM2,
+                    ch: ChannelNum::Ch0,
                     _pin: self,
                 })
             }
@@ -974,8 +975,8 @@ impl<'a> Pin<'a> {
             (PortName::B, 19) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  2,
-                    ch:   1,
+                    tpm: TpmNum::TPM2,
+                    ch: ChannelNum::Ch1,
                     _pin: self,
                 })
             }
@@ -984,8 +985,8 @@ impl<'a> Pin<'a> {
             (PortName::C, 1) => {
                 self.set_mode(4);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   0,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch0,
                     _pin: self,
                 })
             }
@@ -993,8 +994,8 @@ impl<'a> Pin<'a> {
             (PortName::C, 2) => {
                 self.set_mode(4);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   1,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch1,
                     _pin: self,
                 })
             }
@@ -1002,8 +1003,8 @@ impl<'a> Pin<'a> {
             (PortName::C, 3) => {
                 self.set_mode(4);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   2,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch2,
                     _pin: self,
                 })
             }
@@ -1011,8 +1012,8 @@ impl<'a> Pin<'a> {
             (PortName::C, 4) => {
                 self.set_mode(4);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   3,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch3,
                     _pin: self,
                 })
             }
@@ -1021,8 +1022,8 @@ impl<'a> Pin<'a> {
             (PortName::C, 8) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   4,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch4,
                     _pin: self,
                 })
             }
@@ -1030,8 +1031,8 @@ impl<'a> Pin<'a> {
             (PortName::C, 9) => {
                 self.set_mode(3);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   5,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch5,
                     _pin: self,
                 })
             }
@@ -1040,8 +1041,8 @@ impl<'a> Pin<'a> {
             (PortName::D, 0) => {
                 self.set_mode(4);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   0,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch0,
                     _pin: self,
                 })
             }
@@ -1049,8 +1050,8 @@ impl<'a> Pin<'a> {
             (PortName::D, 1) => {
                 self.set_mode(4);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   1,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch1,
                     _pin: self,
                 })
             }
@@ -1058,8 +1059,8 @@ impl<'a> Pin<'a> {
             (PortName::D, 2) => {
                 self.set_mode(4);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   2,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch2,
                     _pin: self,
                 })
             }
@@ -1067,8 +1068,8 @@ impl<'a> Pin<'a> {
             (PortName::D, 3) => {
                 self.set_mode(4);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   3,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch3,
                     _pin: self,
                 })
             }
@@ -1076,8 +1077,8 @@ impl<'a> Pin<'a> {
             (PortName::D, 4) => {
                 self.set_mode(4);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   4,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch4,
                     _pin: self,
                 })
             }
@@ -1085,8 +1086,8 @@ impl<'a> Pin<'a> {
             (PortName::D, 5) => {
                 self.set_mode(4);
                 Ok(TpmPin {
-                    tpm:  0,
-                    ch:   5,
+                    tpm: TpmNum::TPM0,
+                    ch: ChannelNum::Ch5,
                     _pin: self,
                 })
             }
@@ -1548,8 +1549,8 @@ impl<'a> SpiCs<'a> {
 }
 
 pub struct TpmPin<'a> {
-    tpm:  u8,
-    ch:   u8,
+    tpm: TpmNum,
+    ch: ChannelNum,
     _pin: Pin<'a>,
 }
 
@@ -1562,11 +1563,11 @@ impl<'a> TpmPin<'a> {
         self._pin.pin
     }
 
-    pub fn tpm(&self) -> u8 {
+    pub fn tpm(&self) -> TpmNum {
         self.tpm
     }
 
-    pub fn ch(&self) -> u8 {
+    pub fn ch(&self) -> ChannelNum {
         self.ch
     }
 }

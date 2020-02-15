@@ -13,7 +13,7 @@ use mkl26::osc::Osc;
 use mkl26::port::PortName;
 use mkl26::sim::cop::Cop;
 use mkl26::sim::{ClkSrc, Sim};
-use mkl26::tpm::{ChannelMode, ChannelSelect, PwmDirection};
+use mkl26::tpm::{ChannelMode, ChannelNum, PwmDirection};
 use mkl26::tpm::{ClockMode, Prescale, PwmSelect, TpmNum};
 use mkl26::uart::{self, UartNum};
 
@@ -90,7 +90,7 @@ fn main() -> ! {
 
     let mut tpm0_ch4 = tpm0
         .channel(
-            ChannelSelect::Ch4,
+            ChannelNum::Ch4,
             ChannelMode::EdgePwm(PwmDirection::HighTrue),
             false,
             0x1E00,
