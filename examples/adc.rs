@@ -13,7 +13,7 @@ use mkl26::osc::Osc;
 use mkl26::port::PortName;
 use mkl26::sim::cop::Cop;
 use mkl26::sim::{ClkSrc, Sim};
-use mkl26::uart;
+use mkl26::uart::{self, UartNum};
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 #[link_section = ".flashconfig"]
@@ -65,7 +65,7 @@ fn main() -> ! {
         sim.set_uart0_clksrc(ClkSrc::McgXLL);
     }
     let mut uart = sim
-        .uart(0, rx, tx, uart::calc_clkdiv(115200, 24_000_000))
+        .uart(UartNum::UART0, rx, tx, uart::calc_clkdiv(115200, 24_000_000))
         .unwrap();
 
     // Internal temperature sensor

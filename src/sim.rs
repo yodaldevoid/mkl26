@@ -14,7 +14,7 @@ use crate::port::{SpiCs, SpiMiso, SpiMosi, SpiSck};
 use crate::port::{UartRx, UartTx};
 use crate::spi::{self, Divisor, SpiMaster};
 use crate::tpm::{self, ClockMode, PwmSelect, TpmNum, TpmPeriodic, TpmSingleShot};
-use crate::uart::{ConnMode, Uart};
+use crate::uart::{ConnMode, Uart, UartNum};
 
 pub struct ClockGate {
     gate: &'static mut BmeAtomic<u32>,
@@ -163,16 +163,15 @@ impl Sim {
 
     pub fn uart<'a, 'b, R: Into<Option<UartRx<'a>>>, T: Into<Option<UartTx<'b>>>>(
         &mut self,
-        uart: u8,
+        uart: UartNum,
         rx: R,
         tx: T,
         clkdiv: u16,
     ) -> Result<Uart<'a, 'b, u8>, ()> {
         let mut gate = match uart {
-            0 => ClockGate::new(4, 10),
-            1 => ClockGate::new(4, 11),
-            2 => ClockGate::new(4, 12),
-            _ => return Err(()),
+            UartNum::UART0 => ClockGate::new(4, 10),
+            UartNum::UART1 => ClockGate::new(4, 11),
+            UartNum::UART2 => ClockGate::new(4, 12),
         };
         if gate.is_enabled() {
             return Err(());
@@ -181,12 +180,11 @@ impl Sim {
         unsafe { Uart::new(uart, rx.into(), tx.into(), clkdiv, ConnMode::TwoWire, gate) }
     }
 
-    pub fn uart_loopback<'a, 'b>(&mut self, uart: u8, clkdiv: u16) -> Result<Uart<'a, 'b, u8>, ()> {
+    pub fn uart_loopback<'a, 'b>(&mut self, uart: UartNum, clkdiv: u16) -> Result<Uart<'a, 'b, u8>, ()> {
         let mut gate = match uart {
-            0 => ClockGate::new(4, 10),
-            1 => ClockGate::new(4, 11),
-            2 => ClockGate::new(4, 12),
-            _ => return Err(()),
+            UartNum::UART0 => ClockGate::new(4, 10),
+            UartNum::UART1 => ClockGate::new(4, 11),
+            UartNum::UART2 => ClockGate::new(4, 12),
         };
         if gate.is_enabled() {
             return Err(());

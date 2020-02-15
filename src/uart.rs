@@ -14,6 +14,13 @@ const UART0_ADDR: usize = 0x4006_A000;
 const UART1_ADDR: usize = 0x4006_B000;
 const UART2_ADDR: usize = 0x4006_C000;
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum UartNum {
+    UART0 = 0,
+    UART1 = 1,
+    UART2 = 2,
+}
+
 #[repr(C, packed)]
 struct UartRegs {
     bdh:  RW<u8>,
@@ -55,7 +62,7 @@ pub struct Uart<'a, 'b, B> {
     _rx:   Option<UartRx<'a>>,
     _tx:   Option<UartTx<'b>>,
     _gate: ClockGate,
-    _bus:  u8, // TODO: replace with a const generic when that comes around
+    _bus:  UartNum, // TODO: replace with a const generic when that comes around
     _char: PhantomData<B>,
 }
 
@@ -79,7 +86,7 @@ pub fn calc_clkdiv(baud: u32, clock_freq: u32) -> u16 {
 // TODO: stop bits
 impl<'a, 'b> Uart<'a, 'b, u8> {
     pub(crate) unsafe fn new(
-        bus: u8,
+        bus: UartNum,
         rx: Option<UartRx<'a>>,
         tx: Option<UartTx<'b>>,
         clkdiv: u16,
@@ -101,10 +108,9 @@ impl<'a, 'b> Uart<'a, 'b, u8> {
         }
 
         let reg = match bus {
-            0 => &mut *(UART0_ADDR as *mut UartRegs),
-            1 => &mut *(UART1_ADDR as *mut UartRegs),
-            2 => &mut *(UART2_ADDR as *mut UartRegs),
-            _ => unreachable!(),
+            UartNum::UART0 => &mut *(UART0_ADDR as *mut UartRegs),
+            UartNum::UART1 => &mut *(UART1_ADDR as *mut UartRegs),
+            UartNum::UART2 => &mut *(UART2_ADDR as *mut UartRegs),
         };
 
         reg.bdh.modify(|mut bdh| {

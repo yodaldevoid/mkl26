@@ -7,6 +7,7 @@ use void::Void;
 
 use crate::atomic::InterruptAtomic;
 use crate::sim::ClockGate;
+use crate::uart::UartNum;
 
 #[derive(Clone, Copy)]
 pub enum PortName {
@@ -1099,84 +1100,84 @@ impl<'a> Pin<'a> {
             (PortName::E, 1) => {
                 self.set_mode(3);
                 Ok(UartRx {
-                    uart: 1,
+                    uart: UartNum::UART1,
                     _pin: self,
                 })
             }
             (PortName::E, 17) => {
                 self.set_mode(3);
                 Ok(UartRx {
-                    uart: 2,
+                    uart: UartNum::UART2,
                     _pin: self,
                 })
             }
             (PortName::E, 21) => {
                 self.set_mode(4);
                 Ok(UartRx {
-                    uart: 0,
+                    uart: UartNum::UART0,
                     _pin: self,
                 })
             }
             (PortName::E, 23) => {
                 self.set_mode(4);
                 Ok(UartRx {
-                    uart: 2,
+                    uart: UartNum::UART2,
                     _pin: self,
                 })
             }
             (PortName::A, 1) => {
                 self.set_mode(2);
                 Ok(UartRx {
-                    uart: 0,
+                    uart: UartNum::UART0,
                     _pin: self,
                 })
             }
             (PortName::A, 15) => {
                 self.set_mode(3);
                 Ok(UartRx {
-                    uart: 0,
+                    uart: UartNum::UART0,
                     _pin: self,
                 })
             }
             (PortName::A, 18) => {
                 self.set_mode(3);
                 Ok(UartRx {
-                    uart: 1,
+                    uart: UartNum::UART1,
                     _pin: self,
                 })
             }
             (PortName::B, 16) => {
                 self.set_mode(3);
                 Ok(UartRx {
-                    uart: 0,
+                    uart: UartNum::UART0,
                     _pin: self,
                 })
             }
             (PortName::C, 3) => {
                 self.set_mode(3);
                 Ok(UartRx {
-                    uart: 1,
+                    uart: UartNum::UART1,
                     _pin: self,
                 })
             }
             (PortName::D, 2) => {
                 self.set_mode(3);
                 Ok(UartRx {
-                    uart: 2,
+                    uart: UartNum::UART2,
                     _pin: self,
                 })
             }
             (PortName::D, 4) => {
                 self.set_mode(3);
                 Ok(UartRx {
-                    uart: 2,
+                    uart: UartNum::UART2,
                     _pin: self,
                 })
             }
             (PortName::D, 6) => {
                 self.set_mode(3);
                 Ok(UartRx {
-                    uart: 0,
+                    uart: UartNum::UART0,
                     _pin: self,
                 })
             }
@@ -1189,84 +1190,84 @@ impl<'a> Pin<'a> {
             (PortName::E, 0) => {
                 self.set_mode(3);
                 Ok(UartTx {
-                    uart: 1,
+                    uart: UartNum::UART1,
                     _pin: self,
                 })
             }
             (PortName::E, 16) => {
                 self.set_mode(3);
                 Ok(UartTx {
-                    uart: 2,
+                    uart: UartNum::UART2,
                     _pin: self,
                 })
             }
             (PortName::E, 20) => {
                 self.set_mode(4);
                 Ok(UartTx {
-                    uart: 0,
+                    uart: UartNum::UART0,
                     _pin: self,
                 })
             }
             (PortName::E, 22) => {
                 self.set_mode(4);
                 Ok(UartTx {
-                    uart: 2,
+                    uart: UartNum::UART2,
                     _pin: self,
                 })
             }
             (PortName::A, 2) => {
                 self.set_mode(2);
                 Ok(UartTx {
-                    uart: 0,
+                    uart: UartNum::UART0,
                     _pin: self,
                 })
             }
             (PortName::A, 14) => {
                 self.set_mode(3);
                 Ok(UartTx {
-                    uart: 0,
+                    uart: UartNum::UART0,
                     _pin: self,
                 })
             }
             (PortName::A, 19) => {
                 self.set_mode(3);
                 Ok(UartTx {
-                    uart: 1,
+                    uart: UartNum::UART1,
                     _pin: self,
                 })
             }
             (PortName::B, 17) => {
                 self.set_mode(3);
                 Ok(UartTx {
-                    uart: 0,
+                    uart: UartNum::UART0,
                     _pin: self,
                 })
             }
             (PortName::C, 4) => {
                 self.set_mode(3);
                 Ok(UartTx {
-                    uart: 1,
+                    uart: UartNum::UART1,
                     _pin: self,
                 })
             }
             (PortName::D, 3) => {
                 self.set_mode(3);
                 Ok(UartTx {
-                    uart: 2,
+                    uart: UartNum::UART2,
                     _pin: self,
                 })
             }
             (PortName::D, 5) => {
                 self.set_mode(3);
                 Ok(UartTx {
-                    uart: 2,
+                    uart: UartNum::UART2,
                     _pin: self,
                 })
             }
             (PortName::D, 7) => {
                 self.set_mode(3);
                 Ok(UartTx {
-                    uart: 0,
+                    uart: UartNum::UART0,
                     _pin: self,
                 })
             }
@@ -1571,23 +1572,23 @@ impl<'a> TpmPin<'a> {
 }
 
 pub struct UartRx<'a> {
-    uart: u8,
+    uart: UartNum,
     _pin: Pin<'a>,
 }
 
 pub struct UartTx<'a> {
-    uart: u8,
+    uart: UartNum,
     _pin: Pin<'a>,
 }
 
 impl<'a> UartRx<'a> {
-    pub fn bus(&self) -> u8 {
+    pub fn bus(&self) -> UartNum {
         self.uart
     }
 }
 
 impl<'a> UartTx<'a> {
-    pub fn bus(&self) -> u8 {
+    pub fn bus(&self) -> UartNum {
         self.uart
     }
 }
