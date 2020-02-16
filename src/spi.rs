@@ -7,7 +7,7 @@ use embedded_hal::spi::{FullDuplex, Phase, Polarity};
 use nb::{self, Error};
 use volatile_register::{RO, RW};
 
-use crate::port::{SpiCs, SpiMiso, SpiMosi, SpiSck};
+use crate::port::{PortName, SpiCs, SpiMiso, SpiMosi, SpiSck};
 use crate::sim::ClockGate;
 
 const SPI0_ADDR: usize = 0x4007_6000;
@@ -28,24 +28,24 @@ struct SpiRegs {
     c3: RW<u8>,
 }
 
-pub struct SpiMaster<'a, 'b, 'c, 'd, W: Word> {
+pub struct SpiMaster<'a, 'b, 'c, 'd, W: Word, const NO: PortName, const NI: PortName, const NC: PortName, const NS: PortName> {
     reg: &'static mut SpiRegs,
-    _mosi: Option<SpiMosi<'a>>,
-    _miso: Option<SpiMiso<'b>>,
-    _sck: SpiSck<'c>,
-    _cs: Option<SpiCs<'d>>,
+    _mosi: Option<SpiMosi<'a, NO>>,
+    _miso: Option<SpiMiso<'b, NI>>,
+    _sck: SpiSck<'c, NC>,
+    _cs: Option<SpiCs<'d, NS>>,
     _gate: ClockGate,
     _char: PhantomData<W>,
     op_mode: OpMode,
 }
 
 #[cfg(feature = "spi-slave")]
-pub struct SpiSlave<'a, 'b, 'c, 'd, W: Word> {
+pub struct SpiSlave<'a, 'b, 'c, 'd, W: Word, const NO: PortName, const NI: PortName, const NC: PortName, const NS: PortName> {
     _reg: &'static mut SpiRegs,
-    _mosi: Option<SpiMosi<'a>>,
-    _miso: Option<SpiMiso<'b>>,
-    _sck: SpiSck<'c>,
-    _cs: SpiCs<'d>,
+    _mosi: Option<SpiMosi<'a, NO>>,
+    _miso: Option<SpiMiso<'b, NI>>,
+    _sck: SpiSck<'c, NC>,
+    _cs: SpiCs<'d, NS>,
     _gate: ClockGate,
     _char: PhantomData<W>,
 }
@@ -118,19 +118,19 @@ impl Word for u16 {
 // TODO: MSb/LSb
 // TODO: hardware match
 // TODO: mode fault feature
-impl<'a, 'b, 'c, 'd, W: Word> SpiMaster<'a, 'b, 'c, 'd, W> {
+impl<'a, 'b, 'c, 'd, W: Word, const NO: PortName, const NI: PortName, const NC: PortName, const NS: PortName> SpiMaster<'a, 'b, 'c, 'd, W, NO, NI, NC, NS> {
     pub(crate) unsafe fn new(
-        mosi: Option<SpiMosi<'a>>,
-        miso: Option<SpiMiso<'b>>,
-        sck: SpiSck<'c>,
-        cs: Option<SpiCs<'d>>,
+        mosi: Option<SpiMosi<'a, NO>>,
+        miso: Option<SpiMiso<'b, NI>>,
+        sck: SpiSck<'c, NC>,
+        cs: Option<SpiCs<'d, NS>>,
         clkdiv: (Prescale, Divisor),
         op_mode: OpMode,
         polarity: Polarity,
         phase: Phase,
         fifo: bool,
         gate: ClockGate,
-    ) -> Result<SpiMaster<'a, 'b, 'c, 'd, W>, ()> {
+    ) -> Result<SpiMaster<'a, 'b, 'c, 'd, W, NO, NI, NC, NS>, ()> {
         let bus = sck.bus();
 
         if let Some(mosi) = mosi.as_ref() {
@@ -210,7 +210,7 @@ impl<'a, 'b, 'c, 'd, W: Word> SpiMaster<'a, 'b, 'c, 'd, W> {
     }
 }
 
-impl<'a, 'b, 'c, 'd> FullDuplex<u8> for SpiMaster<'a, 'b, 'c, 'd, u8> {
+impl<'a, 'b, 'c, 'd, const NO: PortName, const NI: PortName, const NC: PortName, const NS: PortName> FullDuplex<u8> for SpiMaster<'a, 'b, 'c, 'd, u8, NO, NI, NC, NS> {
     type Error = ();
 
     fn send(&mut self, word: u8) -> nb::Result<(), Self::Error> {
@@ -241,7 +241,7 @@ impl<'a, 'b, 'c, 'd> FullDuplex<u8> for SpiMaster<'a, 'b, 'c, 'd, u8> {
     }
 }
 
-impl<'a, 'b, 'c, 'd> FullDuplex<u16> for SpiMaster<'a, 'b, 'c, 'd, u16> {
+impl<'a, 'b, 'c, 'd, const NO: PortName, const NI: PortName, const NC: PortName, const NS: PortName> FullDuplex<u16> for SpiMaster<'a, 'b, 'c, 'd, u16, NO, NI, NC, NS> {
     type Error = ();
 
     fn send(&mut self, word: u16) -> nb::Result<(), Self::Error> {

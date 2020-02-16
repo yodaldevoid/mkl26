@@ -1,3 +1,4 @@
+#![feature(const_generics)]
 #![feature(untagged_unions)]
 #![no_std]
 

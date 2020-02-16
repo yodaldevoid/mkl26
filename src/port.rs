@@ -10,7 +10,7 @@ use crate::sim::ClockGate;
 use crate::tpm::{ChannelNum, TpmNum};
 use crate::uart::UartNum;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Eq, PartialEq)]
 pub enum PortName {
     A,
     B,
@@ -34,15 +34,15 @@ const PORT_C_ADDR: usize = 0x4004_B000;
 const PORT_D_ADDR: usize = 0x4004_C000;
 const PORT_E_ADDR: usize = 0x4004_D000;
 
-pub struct Port {
+pub struct Port<const N: PortName> {
     reg: UnsafeCell<&'static mut PortRegs>,
     locks: [InterruptAtomic<bool>; 32],
     _gate: ClockGate,
 }
 
-impl Port {
-    pub unsafe fn new(name: PortName, gate: ClockGate) -> Port {
-        let reg = &mut *match name {
+impl<const N: PortName> Port<N> {
+    pub unsafe fn new(gate: ClockGate) -> Port<N> {
+        let reg = &mut *match N {
             PortName::A => PORT_A_ADDR as *mut PortRegs,
             PortName::B => PORT_B_ADDR as *mut PortRegs,
             PortName::C => PORT_C_ADDR as *mut PortRegs,
@@ -57,19 +57,7 @@ impl Port {
         }
     }
 
-    pub fn name(&self) -> PortName {
-        let addr = (self.reg() as *const PortRegs) as usize;
-        match addr {
-            PORT_A_ADDR => PortName::A,
-            PORT_B_ADDR => PortName::B,
-            PORT_C_ADDR => PortName::C,
-            PORT_D_ADDR => PortName::D,
-            PORT_E_ADDR => PortName::E,
-            _ => unreachable!(),
-        }
-    }
-
-    pub fn pin(&self, p: usize) -> Pin {
+    pub fn pin(&self, p: usize) -> Pin<N> {
         assert!(p < 32);
         let was_init = self.locks[p].swap(true);
         if was_init {
@@ -93,8 +81,8 @@ impl Port {
     }
 }
 
-pub struct Pin<'a> {
-    port: &'a Port,
+pub struct Pin<'a, const N: PortName> {
+    port: &'a Port<N>,
     pin: usize,
 }
 
@@ -130,7 +118,7 @@ pub enum InterruptConfig {
     LogicOne = 0xC,
 }
 
-impl<'a> Pin<'a> {
+impl<'a, const N: PortName> Pin<'a, N> {
     fn set_mode(&mut self, mode: u32) {
         unsafe {
             self.port.reg().pcr[self.pin].modify(|mut pcr| {
@@ -198,15 +186,17 @@ impl<'a> Pin<'a> {
         }
     }
 
-    pub fn to_gpio(mut self) -> Gpio<'a> {
+    pub fn to_gpio(mut self) -> Gpio<'a, N> {
         unsafe {
             self.set_mode(1);
-            Gpio::new(self.port.name(), self)
+            Gpio::new(self)
         }
     }
+}
 
-    pub fn to_adc(mut self) -> Result<AdcPin<'a>, ()> {
-        match (self.port.name(), self.pin) {
+impl<'a, const N: PortName> Pin<'a, N> {
+    pub fn to_adc(mut self) -> Result<AdcPin<'a, N>, ()> {
+        match (N, self.pin) {
             // e16:0-S0,1
             (PortName::E, 16) |
             // e17:0-S0,5a
@@ -254,8 +244,8 @@ impl<'a> Pin<'a> {
         }
     }
 
-    pub fn to_adc_diff_p(mut self) -> Result<AdcDiffPPin<'a>, ()> {
-        match (self.port.name(), self.pin) {
+    pub fn to_adc_diff_p(mut self) -> Result<AdcDiffPPin<'a, N>, ()> {
+        match (N, self.pin) {
             // e16:0-D0,1P
             (PortName::E, 16) |
             // e18:0-D0,1P
@@ -271,8 +261,8 @@ impl<'a> Pin<'a> {
         }
     }
 
-    pub fn to_adc_diff_m(mut self) -> Result<AdcDiffMPin<'a>, ()> {
-        match (self.port.name(), self.pin) {
+    pub fn to_adc_diff_m(mut self) -> Result<AdcDiffMPin<'a, N>, ()> {
+        match (N, self.pin) {
             // e17:0-D0,1M
             (PortName::E, 17) |
             // e19:0-D0,1M
@@ -289,8 +279,8 @@ impl<'a> Pin<'a> {
     }
 
     // TODO: maybe make the bool an enum ot make it clear at the callsite what is going on.
-    pub fn to_i2c_scl(mut self, pullup_ext: bool) -> Result<I2cScl<'a>, ()> {
-        let bus = match (self.port.name(), self.pin) {
+    pub fn to_i2c_scl(mut self, pullup_ext: bool) -> Result<I2cScl<'a, N>, ()> {
+        let bus = match (N, self.pin) {
             (PortName::E, 1) => {
                 self.set_mode(6);
                 1
@@ -345,8 +335,8 @@ impl<'a> Pin<'a> {
     }
 
     // TODO: maybe make the bool an enum ot make it clear at the callsite what is going on.
-    pub fn to_i2c_sda(mut self, pullup_ext: bool) -> Result<I2cSda<'a>, ()> {
-        let bus = match (self.port.name(), self.pin) {
+    pub fn to_i2c_sda(mut self, pullup_ext: bool) -> Result<I2cSda<'a, N>, ()> {
+        let bus = match (N, self.pin) {
             (PortName::E, 0) => {
                 self.set_mode(6);
                 1
@@ -400,8 +390,8 @@ impl<'a> Pin<'a> {
         })
     }
 
-    pub fn to_spi_mosi(mut self) -> Result<SpiMosi<'a>, ()> {
-        match (self.port.name(), self.pin) {
+    pub fn to_spi_mosi(mut self) -> Result<SpiMosi<'a, N>, ()> {
+        match (N, self.pin) {
             (PortName::E, 1) => {
                 self.set_mode(2);
                 Ok(SpiMosi { spi: 1, _pin: self })
@@ -462,8 +452,8 @@ impl<'a> Pin<'a> {
         }
     }
 
-    pub fn to_spi_miso(mut self) -> Result<SpiMiso<'a>, ()> {
-        match (self.port.name(), self.pin) {
+    pub fn to_spi_miso(mut self) -> Result<SpiMiso<'a, N>, ()> {
+        match (N, self.pin) {
             (PortName::E, 0) => {
                 self.set_mode(2);
                 Ok(SpiMiso { spi: 1, _pin: self })
@@ -528,8 +518,8 @@ impl<'a> Pin<'a> {
         }
     }
 
-    pub fn to_spi_sck(mut self) -> Result<SpiSck<'a>, ()> {
-        match (self.port.name(), self.pin) {
+    pub fn to_spi_sck(mut self) -> Result<SpiSck<'a, N>, ()> {
+        match (N, self.pin) {
             (PortName::E, 2) => {
                 self.set_mode(2);
                 Ok(SpiSck { spi: 1, _pin: self })
@@ -566,8 +556,8 @@ impl<'a> Pin<'a> {
         }
     }
 
-    pub fn to_spi_cs(mut self) -> Result<SpiCs<'a>, ()> {
-        match (self.port.name(), self.pin) {
+    pub fn to_spi_cs(mut self) -> Result<SpiCs<'a, N>, ()> {
+        match (N, self.pin) {
             (PortName::E, 4) => {
                 self.set_mode(2);
                 Ok(SpiCs { spi: 1, _pin: self })
@@ -604,8 +594,8 @@ impl<'a> Pin<'a> {
         }
     }
 
-    pub fn to_tpm(mut self) -> Result<TpmPin<'a>, ()> {
-        match (self.port.name(), self.pin) {
+    pub fn to_tpm(mut self) -> Result<TpmPin<'a, N>, ()> {
+        match (N, self.pin) {
             // e20:3-1,0
             (PortName::E, 20) => {
                 self.set_mode(3);
@@ -956,8 +946,8 @@ impl<'a> Pin<'a> {
         }
     }
 
-    pub fn to_uart_rx(mut self) -> Result<UartRx<'a>, ()> {
-        match (self.port.name(), self.pin) {
+    pub fn to_uart_rx(mut self) -> Result<UartRx<'a, N>, ()> {
+        match (N, self.pin) {
             (PortName::E, 1) => {
                 self.set_mode(3);
                 Ok(UartRx {
@@ -1046,8 +1036,8 @@ impl<'a> Pin<'a> {
         }
     }
 
-    pub fn to_uart_tx(mut self) -> Result<UartTx<'a>, ()> {
-        match (self.port.name(), self.pin) {
+    pub fn to_uart_tx(mut self) -> Result<UartTx<'a, N>, ()> {
+        match (N, self.pin) {
             (PortName::E, 0) => {
                 self.set_mode(3);
                 Ok(UartTx {
@@ -1137,7 +1127,7 @@ impl<'a> Pin<'a> {
     }
 }
 
-impl<'a> Drop for Pin<'a> {
+impl<'a, const N: PortName> Drop for Pin<'a, N> {
     fn drop(&mut self) {
         unsafe {
             self.port.drop_pin(self.pin);
@@ -1177,15 +1167,15 @@ struct GpioRegs {
 }
 
 // TODO: maybe split into input and output
-pub struct Gpio<'a> {
+pub struct Gpio<'a, const N: PortName> {
     gpio: *mut GpioRegs,
-    pin: Pin<'a>,
+    pin: Pin<'a, N>,
 }
 
-impl<'a> Gpio<'a> {
+impl<'a, const N: PortName> Gpio<'a, N> {
     // TODO: BME?
-    pub unsafe fn new(port: PortName, pin: Pin<'a>) -> Gpio<'a> {
-        let gpio = match port {
+    pub unsafe fn new(pin: Pin<'a, N>) -> Gpio<'a, N> {
+        let gpio = match N {
             // GPIO
             #[cfg(not(feature = "fgpio"))]
             PortName::A => GPIO_A_ADDR as *mut GpioRegs,
@@ -1262,7 +1252,7 @@ impl<'a> Gpio<'a> {
     }
 }
 
-impl<'a> InputPin for Gpio<'a> {
+impl<'a, const N: PortName> InputPin for Gpio<'a, N> {
     type Error = Void;
 
     fn is_high(&self) -> Result<bool, Void> {
@@ -1274,7 +1264,7 @@ impl<'a> InputPin for Gpio<'a> {
     }
 }
 
-impl<'a> OutputPin for Gpio<'a> {
+impl<'a, const N: PortName> OutputPin for Gpio<'a, N> {
     type Error = Void;
 
     fn set_high(&mut self) -> Result<(), Void> {
@@ -1290,7 +1280,7 @@ impl<'a> OutputPin for Gpio<'a> {
     }
 }
 
-impl<'a> ToggleableOutputPin for Gpio<'a> {
+impl<'a, const N: PortName> ToggleableOutputPin for Gpio<'a, N> {
     type Error = Void;
 
     fn toggle(&mut self) -> Result<(), Void> {
@@ -1300,125 +1290,109 @@ impl<'a> ToggleableOutputPin for Gpio<'a> {
     }
 }
 
-pub struct AdcPin<'a> {
-    _pin: Pin<'a>,
+pub struct AdcPin<'a, const N: PortName> {
+    _pin: Pin<'a, N>,
 }
 
-impl<'a> AdcPin<'a> {
-    pub fn port_name(&self) -> PortName {
-        self._pin.port.name()
-    }
-
+impl<'a, const N: PortName> AdcPin<'a, N> {
     pub fn pin(&self) -> usize {
         self._pin.pin
     }
 }
 
-pub struct AdcDiffPPin<'a> {
-    _pin: Pin<'a>,
+pub struct AdcDiffPPin<'a, const N: PortName> {
+    _pin: Pin<'a, N>,
 }
 
-impl<'a> AdcDiffPPin<'a> {
-    pub fn port_name(&self) -> PortName {
-        self._pin.port.name()
-    }
-
+impl<'a, const N: PortName> AdcDiffPPin<'a, N> {
     pub fn pin(&self) -> usize {
         self._pin.pin
     }
 }
 
-pub struct AdcDiffMPin<'a> {
-    _pin: Pin<'a>,
+pub struct AdcDiffMPin<'a, const N: PortName> {
+    _pin: Pin<'a, N>,
 }
 
-impl<'a> AdcDiffMPin<'a> {
-    pub fn port_name(&self) -> PortName {
-        self._pin.port.name()
-    }
-
+impl<'a, const N: PortName> AdcDiffMPin<'a, N> {
     pub fn pin(&self) -> usize {
         self._pin.pin
     }
 }
 
-pub struct I2cScl<'a> {
+pub struct I2cScl<'a, const N: PortName> {
     i2c: u8,
-    _pin: Pin<'a>,
+    _pin: Pin<'a, N>,
 }
 
-pub struct I2cSda<'a> {
+pub struct I2cSda<'a, const N: PortName> {
     i2c: u8,
-    _pin: Pin<'a>,
+    _pin: Pin<'a, N>,
 }
 
-impl<'a> I2cScl<'a> {
+impl<'a, const N: PortName> I2cScl<'a, N> {
     pub fn bus(&self) -> u8 {
         self.i2c
     }
 }
 
-impl<'a> I2cSda<'a> {
+impl<'a, const N: PortName> I2cSda<'a, N> {
     pub fn bus(&self) -> u8 {
         self.i2c
     }
 }
 
-pub struct SpiMosi<'a> {
+pub struct SpiMosi<'a, const N: PortName> {
     spi: u8,
-    _pin: Pin<'a>,
+    _pin: Pin<'a, N>,
 }
 
-pub struct SpiMiso<'a> {
+pub struct SpiMiso<'a, const N: PortName> {
     spi: u8,
-    _pin: Pin<'a>,
+    _pin: Pin<'a, N>,
 }
 
-pub struct SpiSck<'a> {
+pub struct SpiSck<'a, const N: PortName> {
     spi: u8,
-    _pin: Pin<'a>,
+    _pin: Pin<'a, N>,
 }
 
-pub struct SpiCs<'a> {
+pub struct SpiCs<'a, const N: PortName> {
     spi: u8,
-    _pin: Pin<'a>,
+    _pin: Pin<'a, N>,
 }
 
-impl<'a> SpiMosi<'a> {
+impl<'a, const N: PortName> SpiMosi<'a, N> {
     pub fn bus(&self) -> u8 {
         self.spi
     }
 }
 
-impl<'a> SpiMiso<'a> {
+impl<'a, const N: PortName> SpiMiso<'a, N> {
     pub fn bus(&self) -> u8 {
         self.spi
     }
 }
 
-impl<'a> SpiSck<'a> {
+impl<'a, const N: PortName> SpiSck<'a, N> {
     pub fn bus(&self) -> u8 {
         self.spi
     }
 }
 
-impl<'a> SpiCs<'a> {
+impl<'a, const N: PortName> SpiCs<'a, N> {
     pub fn bus(&self) -> u8 {
         self.spi
     }
 }
 
-pub struct TpmPin<'a> {
+pub struct TpmPin<'a, const N: PortName> {
     tpm: TpmNum,
     ch: ChannelNum,
-    _pin: Pin<'a>,
+    _pin: Pin<'a, N>,
 }
 
-impl<'a> TpmPin<'a> {
-    pub fn port_name(&self) -> PortName {
-        self._pin.port.name()
-    }
-
+impl<'a, const N: PortName> TpmPin<'a, N> {
     pub fn pin(&self) -> usize {
         self._pin.pin
     }
@@ -1432,23 +1406,23 @@ impl<'a> TpmPin<'a> {
     }
 }
 
-pub struct UartRx<'a> {
+pub struct UartRx<'a, const N: PortName> {
     uart: UartNum,
-    _pin: Pin<'a>,
+    _pin: Pin<'a, N>,
 }
 
-pub struct UartTx<'a> {
+pub struct UartTx<'a, const N: PortName> {
     uart: UartNum,
-    _pin: Pin<'a>,
+    _pin: Pin<'a, N>,
 }
 
-impl<'a> UartRx<'a> {
+impl<'a, const N: PortName> UartRx<'a, N> {
     pub fn bus(&self) -> UartNum {
         self.uart
     }
 }
 
-impl<'a> UartTx<'a> {
+impl<'a, const N: PortName> UartTx<'a, N> {
     pub fn bus(&self) -> UartNum {
         self.uart
     }

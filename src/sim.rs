@@ -146,8 +146,8 @@ impl Sim {
         });
     }
 
-    pub fn port(&mut self, port: PortName) -> Port {
-        let mut gate = match port {
+    pub fn port<const N: PortName>(&mut self) -> Port<N> {
+        let mut gate = match N {
             PortName::A => ClockGate::new(5, 9),
             PortName::B => ClockGate::new(5, 10),
             PortName::C => ClockGate::new(5, 11),
@@ -158,16 +158,20 @@ impl Sim {
             panic!("Cannot create Port instance; it is already in use");
         }
         gate.enable();
-        unsafe { Port::new(port, gate) }
+        unsafe { Port::new(gate) }
     }
 
-    pub fn uart<'a, 'b, R: Into<Option<UartRx<'a>>>, T: Into<Option<UartTx<'b>>>>(
+    pub fn uart<'a, 'b, R, T, const NR: PortName, const NT: PortName>(
         &mut self,
         uart: UartNum,
         rx: R,
         tx: T,
         clkdiv: u16,
-    ) -> Result<Uart<'a, 'b, u8>, ()> {
+    ) -> Result<Uart<'a, 'b, u8, NR, NT>, ()>
+    where
+        R: Into<Option<UartRx<'a, NR>>>,
+        T: Into<Option<UartTx<'b, NT>>>
+    {
         let mut gate = match uart {
             UartNum::UART0 => ClockGate::new(4, 10),
             UartNum::UART1 => ClockGate::new(4, 11),
@@ -184,7 +188,7 @@ impl Sim {
         &mut self,
         uart: UartNum,
         clkdiv: u16,
-    ) -> Result<Uart<'a, 'b, u8>, ()> {
+    ) -> Result<Uart<'a, 'b, u8, {PortName::A}, {PortName::A}>, ()> {
         let mut gate = match uart {
             UartNum::UART0 => ClockGate::new(4, 10),
             UartNum::UART1 => ClockGate::new(4, 11),
@@ -211,13 +215,13 @@ impl Sim {
         });
     }
 
-    pub fn i2c_master<'a, 'b>(
+    pub fn i2c_master<'a, 'b, const NC: PortName, const ND: PortName>(
         &mut self,
-        scl: I2cScl<'a>,
-        sda: I2cSda<'b>,
+        scl: I2cScl<'a, NC>,
+        sda: I2cSda<'b, ND>,
         clkdiv: (Multiplier, Divider),
         op_mode: i2c::OpMode,
-    ) -> Result<I2cMaster<'a, 'b>, ()> {
+    ) -> Result<I2cMaster<'a, 'b, NC, ND>, ()> {
         if scl.bus() != sda.bus() {
             return Err(());
         }
@@ -235,13 +239,13 @@ impl Sim {
     }
 
     #[cfg(feature = "i2c-slave")]
-    pub fn i2c_slave<'a, 'b>(
+    pub fn i2c_slave<'a, 'b, const NC: PortName, const ND: PortName>(
         &mut self,
-        scl: I2cScl<'a>,
-        sda: I2cSda<'b>,
+        scl: I2cScl<'a, NC>,
+        sda: I2cSda<'b, ND>,
         addr: Address,
         general_call: bool,
-    ) -> Result<I2cSlave<'a, 'b>, ()> {
+    ) -> Result<I2cSlave<'a, 'b, NC, ND>, ()> {
         let mut gate = match scl.bus() {
             0 => ClockGate::new(4, 6),
             1 => ClockGate::new(4, 7),
@@ -254,21 +258,21 @@ impl Sim {
         unsafe { I2cSlave::new(scl, sda, addr, general_call, gate) }
     }
 
-    pub fn spi_master<'a, 'b, 'c, 'd, O, I, S, W>(
+    pub fn spi_master<'a, 'b, 'c, 'd, O, I, S, W, const NO: PortName, const NI: PortName, const NC: PortName, const NS: PortName>(
         &mut self,
         mosi: O,
         miso: I,
-        sck: SpiSck<'c>,
+        sck: SpiSck<'c, NC>,
         cs: S,
         clkdiv: (spi::Prescale, Divisor),
         op_mode: spi::OpMode,
         Mode { polarity, phase }: Mode,
         fifo: bool,
-    ) -> Result<SpiMaster<'a, 'b, 'c, 'd, W>, ()>
+    ) -> Result<SpiMaster<'a, 'b, 'c, 'd, W, NO, NI, NC, NS>, ()>
     where
-        O: Into<Option<SpiMosi<'a>>>,
-        I: Into<Option<SpiMiso<'b>>>,
-        S: Into<Option<SpiCs<'d>>>,
+        O: Into<Option<SpiMosi<'a, NO>>>,
+        I: Into<Option<SpiMiso<'b, NI>>>,
+        S: Into<Option<SpiCs<'d, NS>>>,
         W: spi::Word,
     {
         let mut gate = match sck.bus() {

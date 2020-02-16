@@ -7,7 +7,7 @@ use embedded_hal::serial;
 use nb;
 use volatile_register::{RO, RW};
 
-use crate::port::{UartRx, UartTx};
+use crate::port::{PortName, UartRx, UartTx};
 use crate::sim::ClockGate;
 
 const UART0_ADDR: usize = 0x4006_A000;
@@ -57,10 +57,11 @@ struct Uart12Diff {
 ///
 /// B is the "character" size used for the UART. This can be 8, 9, or 10 bits.
 // TODO: consider grabbing crate ux
-pub struct Uart<'a, 'b, B> {
+// TODO: split into separate Uart and UartLoop struts
+pub struct Uart<'a, 'b, B, const NR: PortName, const NT: PortName> {
     reg: &'static mut UartRegs,
-    _rx: Option<UartRx<'a>>,
-    _tx: Option<UartTx<'b>>,
+    _rx: Option<UartRx<'a, NR>>,
+    _tx: Option<UartTx<'b, NT>>,
     _gate: ClockGate,
     _bus: UartNum, // TODO: replace with a const generic when that comes around
     _char: PhantomData<B>,
@@ -84,15 +85,15 @@ pub fn calc_clkdiv(baud: u32, clock_freq: u32) -> u16 {
 // TODO: 9 bit mode
 // TODO: 10 bit mode
 // TODO: stop bits
-impl<'a, 'b> Uart<'a, 'b, u8> {
+impl<'a, 'b, const NR: PortName, const NT: PortName> Uart<'a, 'b, u8, NR, NT> {
     pub(crate) unsafe fn new(
         bus: UartNum,
-        rx: Option<UartRx<'a>>,
-        tx: Option<UartTx<'b>>,
+        rx: Option<UartRx<'a, NR>>,
+        tx: Option<UartTx<'b, NT>>,
         clkdiv: u16,
         conn_mode: ConnMode,
         gate: ClockGate,
-    ) -> Result<Uart<'a, 'b, u8>, ()> {
+    ) -> Result<Uart<'a, 'b, u8, NR, NT>, ()> {
         if let Some(r) = rx.as_ref() {
             if r.bus() != bus {
                 return Err(());
@@ -214,7 +215,7 @@ impl<'a, 'b> Uart<'a, 'b, u8> {
     }
 }
 
-impl<'a, 'b> Write for Uart<'a, 'b, u8> {
+impl<'a, 'b, const NR: PortName, const NT: PortName> Write for Uart<'a, 'b, u8, NR, NT> {
     fn write_str(&mut self, s: &str) -> fmt::Result {
         for b in s.bytes() {
             // Retry if the buffer is full
@@ -224,7 +225,7 @@ impl<'a, 'b> Write for Uart<'a, 'b, u8> {
     }
 }
 
-impl<'a, 'b, B> Uart<'a, 'b, B> {
+impl<'a, 'b, B, const NR: PortName, const NT: PortName> Uart<'a, 'b, B, NR, NT> {
     /// Flush is non-blocking
     pub fn flush_byte(&self) -> Result<(), ()> {
         if self.reg.s1.read().get_bit(6) {
@@ -235,7 +236,7 @@ impl<'a, 'b, B> Uart<'a, 'b, B> {
     }
 }
 
-impl<'a, 'b, B> Drop for Uart<'a, 'b, B> {
+impl<'a, 'b, B, const NR: PortName, const NT: PortName> Drop for Uart<'a, 'b, B, NR, NT> {
     fn drop(&mut self) {
         unsafe {
             self.reg.c2.modify(|mut c2| {
@@ -246,7 +247,7 @@ impl<'a, 'b, B> Drop for Uart<'a, 'b, B> {
     }
 }
 
-impl<'a, 'b> serial::Read<u8> for Uart<'a, 'b, u8> {
+impl<'a, 'b, const NR: PortName, const NT: PortName> serial::Read<u8> for Uart<'a, 'b, u8, NR, NT> {
     type Error = ();
 
     fn read(&mut self) -> Result<u8, nb::Error<()>> {
@@ -254,7 +255,7 @@ impl<'a, 'b> serial::Read<u8> for Uart<'a, 'b, u8> {
     }
 }
 
-impl<'a, 'b> serial::Write<u8> for Uart<'a, 'b, u8> {
+impl<'a, 'b, const NR: PortName, const NT: PortName> serial::Write<u8> for Uart<'a, 'b, u8, NR, NT> {
     type Error = ();
 
     fn write(&mut self, word: u8) -> Result<(), nb::Error<()>> {
@@ -266,7 +267,7 @@ impl<'a, 'b> serial::Write<u8> for Uart<'a, 'b, u8> {
     }
 }
 
-impl<'a, 'b> write::Default<u8> for Uart<'a, 'b, u8> {}
+impl<'a, 'b, const NR: PortName, const NT: PortName> write::Default<u8> for Uart<'a, 'b, u8, NR, NT> {}
 
 #[cfg(test)]
 mod tests {

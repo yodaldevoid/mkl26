@@ -168,23 +168,26 @@ impl Adc {
         }
     }
 
-    pub fn channel<'a, 'b, 'c: 'b, P: Into<Option<&'b mut AdcPin<'c>>>>(
+    pub fn channel<'a, 'b, 'c: 'b, P, const N: PortName>(
         &'a mut self,
         ch: u8,
         pin: P,
-    ) -> Result<Channel<'a, 'b, 'c>, ()> {
+    ) -> Result<Channel<'a, 'b, 'c, N>, ()>
+    where
+        P: Into<Option<&'b mut AdcPin<'c, N>>>,
+    {
         Channel::new(self, ch, pin.into())
     }
 
-    pub fn diff_channel<'a, 'b, 'c, 'd, 'e, P, N>(
+    pub fn diff_channel<'a, 'b, 'c, 'd, 'e, P, N, const NP: PortName, const NN: PortName>(
         &'a mut self,
         ch: u8,
         pos: P,
         neg: N,
-    ) -> Result<DiffChannel<'a, 'b, 'c, 'd, 'e>, ()>
+    ) -> Result<DiffChannel<'a, 'b, 'c, 'd, 'e, NN, NP>, ()>
     where
-        P: Into<Option<&'b mut AdcDiffPPin<'c>>>,
-        N: Into<Option<&'d mut AdcDiffMPin<'e>>>,
+        P: Into<Option<&'b mut AdcDiffPPin<'c, NN>>>,
+        N: Into<Option<&'d mut AdcDiffMPin<'e, NP>>>,
     {
         DiffChannel::new(self, ch, pos.into(), neg.into())
     }
@@ -202,18 +205,19 @@ impl Adc {
     }
 }
 
-pub struct Channel<'a, 'b, 'c: 'b> {
+pub struct Channel<'a, 'b, 'c: 'b, const N: PortName> {
     adc: &'a mut Adc,
-    _pin: Option<&'b mut AdcPin<'c>>,
+    _pin: Option<&'b mut AdcPin<'c, N>>,
 }
 
-impl<'a, 'b, 'c> Channel<'a, 'b, 'c> {
+// TODO: impls using port name
+impl<'a, 'b, 'c, const N: PortName> Channel<'a, 'b, 'c, N> {
     fn new(
         adc: &'a mut Adc,
         ch: u8,
-        pin: Option<&'b mut AdcPin<'c>>,
-    ) -> Result<Channel<'a, 'b, 'c>, ()> {
-        let pin_info = pin.as_ref().map(|p| (p.port_name(), p.pin()));
+        pin: Option<&'b mut AdcPin<'c, N>>,
+    ) -> Result<Channel<'a, 'b, 'c, N>, ()> {
+        let pin_info = pin.as_ref().map(|p| (N, p.pin()));
         let mux = match (adc.id, ch, pin_info) {
             // ADC0
             (0, 0, Some((PortName::E, 20))) => AdcMux::A, // e20:0-S0,0
@@ -274,21 +278,22 @@ impl<'a, 'b, 'c> Channel<'a, 'b, 'c> {
     }
 }
 
-pub struct DiffChannel<'a, 'b, 'c: 'b, 'd, 'e: 'd> {
+pub struct DiffChannel<'a, 'b, 'c: 'b, 'd, 'e: 'd, const NP: PortName, const NN: PortName> {
     adc: &'a mut Adc,
-    _pos: Option<&'b mut AdcDiffPPin<'c>>,
-    _neg: Option<&'d mut AdcDiffMPin<'e>>,
+    _pos: Option<&'b mut AdcDiffPPin<'c, NP>>,
+    _neg: Option<&'d mut AdcDiffMPin<'e, NN>>,
 }
 
-impl<'a, 'b, 'c, 'd, 'e> DiffChannel<'a, 'b, 'c, 'd, 'e> {
+// TODO: impls using port name
+impl<'a, 'b, 'c, 'd, 'e, const NP: PortName, const NN: PortName> DiffChannel<'a, 'b, 'c, 'd, 'e, NP, NN> {
     fn new(
         adc: &'a mut Adc,
         ch: u8,
-        pos: Option<&'b mut AdcDiffPPin<'c>>,
-        neg: Option<&'d mut AdcDiffMPin<'e>>,
-    ) -> Result<DiffChannel<'a, 'b, 'c, 'd, 'e>, ()> {
-        let pos_info = pos.as_ref().map(|p| (p.port_name(), p.pin()));
-        let neg_info = neg.as_ref().map(|p| (p.port_name(), p.pin()));
+        pos: Option<&'b mut AdcDiffPPin<'c, NP>>,
+        neg: Option<&'d mut AdcDiffMPin<'e, NN>>,
+    ) -> Result<DiffChannel<'a, 'b, 'c, 'd, 'e, NP, NN>, ()> {
+        let pos_info = pos.as_ref().map(|p| (NP, p.pin()));
+        let neg_info = neg.as_ref().map(|p| (NN, p.pin()));
         match (adc.id, ch, pos_info, neg_info) {
             // ADC0
             // e20:0-D0,0P
