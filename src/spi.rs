@@ -7,7 +7,7 @@ use embedded_hal::spi::{FullDuplex, Phase, Polarity};
 use nb::{self, Error};
 use volatile_register::{RO, RW};
 
-use crate::port::{PortName, SpiCs, SpiMiso, SpiMosi, SpiSck};
+use crate::port::{PinNum, PortName, SpiCs, SpiMiso, SpiMosi, SpiSck};
 use crate::sim::ClockGate;
 
 const SPI0_ADDR: usize = 0x4007_6000;
@@ -28,24 +28,52 @@ struct SpiRegs {
     c3: RW<u8>,
 }
 
-pub struct SpiMaster<'a, 'b, 'c, 'd, W: Word, const NO: PortName, const NI: PortName, const NC: PortName, const NS: PortName> {
+pub struct SpiMaster<
+    'a,
+    'b,
+    'c,
+    'd,
+    W: Word,
+    const NO: PortName,
+    const NI: PortName,
+    const NC: PortName,
+    const NS: PortName,
+    const PO: PinNum,
+    const PI: PinNum,
+    const PC: PinNum,
+    const PS: PinNum,
+> {
     reg: &'static mut SpiRegs,
-    _mosi: Option<SpiMosi<'a, NO>>,
-    _miso: Option<SpiMiso<'b, NI>>,
-    _sck: SpiSck<'c, NC>,
-    _cs: Option<SpiCs<'d, NS>>,
+    _mosi: Option<SpiMosi<'a, NO, PO>>,
+    _miso: Option<SpiMiso<'b, NI, PI>>,
+    _sck: SpiSck<'c, NC, PC>,
+    _cs: Option<SpiCs<'d, NS, PS>>,
     _gate: ClockGate,
     _char: PhantomData<W>,
     op_mode: OpMode,
 }
 
 #[cfg(feature = "spi-slave")]
-pub struct SpiSlave<'a, 'b, 'c, 'd, W: Word, const NO: PortName, const NI: PortName, const NC: PortName, const NS: PortName> {
+pub struct SpiSlave<
+    'a,
+    'b,
+    'c,
+    'd,
+    W: Word,
+    const NO: PortName,
+    const NI: PortName,
+    const NC: PortName,
+    const NS: PortName,
+    const PO: PinNum,
+    const PI: PinNum,
+    const PC: PinNum,
+    const PS: PinNum,
+> {
     _reg: &'static mut SpiRegs,
-    _mosi: Option<SpiMosi<'a, NO>>,
-    _miso: Option<SpiMiso<'b, NI>>,
-    _sck: SpiSck<'c, NC>,
-    _cs: SpiCs<'d, NS>,
+    _mosi: Option<SpiMosi<'a, NO, PO>>,
+    _miso: Option<SpiMiso<'b, NI, PI>>,
+    _sck: SpiSck<'c, NC, PC>,
+    _cs: SpiCs<'d, NS, PS>,
     _gate: ClockGate,
     _char: PhantomData<W>,
 }
@@ -118,19 +146,33 @@ impl Word for u16 {
 // TODO: MSb/LSb
 // TODO: hardware match
 // TODO: mode fault feature
-impl<'a, 'b, 'c, 'd, W: Word, const NO: PortName, const NI: PortName, const NC: PortName, const NS: PortName> SpiMaster<'a, 'b, 'c, 'd, W, NO, NI, NC, NS> {
+impl<
+    'a,
+    'b,
+    'c,
+    'd,
+    W: Word,
+    const NO: PortName,
+    const NI: PortName,
+    const NC: PortName,
+    const NS: PortName,
+    const PO: PinNum,
+    const PI: PinNum,
+    const PC: PinNum,
+    const PS: PinNum,
+> SpiMaster<'a, 'b, 'c, 'd, W, NO, NI, NC, NS, PO, PI, PC, PS> {
     pub(crate) unsafe fn new(
-        mosi: Option<SpiMosi<'a, NO>>,
-        miso: Option<SpiMiso<'b, NI>>,
-        sck: SpiSck<'c, NC>,
-        cs: Option<SpiCs<'d, NS>>,
+        mosi: Option<SpiMosi<'a, NO, PO>>,
+        miso: Option<SpiMiso<'b, NI, PI>>,
+        sck: SpiSck<'c, NC, PC>,
+        cs: Option<SpiCs<'d, NS, PS>>,
         clkdiv: (Prescale, Divisor),
         op_mode: OpMode,
         polarity: Polarity,
         phase: Phase,
         fifo: bool,
         gate: ClockGate,
-    ) -> Result<SpiMaster<'a, 'b, 'c, 'd, W, NO, NI, NC, NS>, ()> {
+    ) -> Result<SpiMaster<'a, 'b, 'c, 'd, W, NO, NI, NC, NS, PO, PI, PC, PS>, ()> {
         let bus = sck.bus();
 
         if let Some(mosi) = mosi.as_ref() {
@@ -210,7 +252,20 @@ impl<'a, 'b, 'c, 'd, W: Word, const NO: PortName, const NI: PortName, const NC: 
     }
 }
 
-impl<'a, 'b, 'c, 'd, const NO: PortName, const NI: PortName, const NC: PortName, const NS: PortName> FullDuplex<u8> for SpiMaster<'a, 'b, 'c, 'd, u8, NO, NI, NC, NS> {
+impl<
+    'a,
+    'b,
+    'c,
+    'd,
+    const NO: PortName,
+    const NI: PortName,
+    const NC: PortName,
+    const NS: PortName,
+    const PO: PinNum,
+    const PI: PinNum,
+    const PC: PinNum,
+    const PS: PinNum,
+> FullDuplex<u8> for SpiMaster<'a, 'b, 'c, 'd, u8, NO, NI, NC, NS, PO, PI, PC, PS> {
     type Error = ();
 
     fn send(&mut self, word: u8) -> nb::Result<(), Self::Error> {
@@ -241,7 +296,20 @@ impl<'a, 'b, 'c, 'd, const NO: PortName, const NI: PortName, const NC: PortName,
     }
 }
 
-impl<'a, 'b, 'c, 'd, const NO: PortName, const NI: PortName, const NC: PortName, const NS: PortName> FullDuplex<u16> for SpiMaster<'a, 'b, 'c, 'd, u16, NO, NI, NC, NS> {
+impl<
+    'a,
+    'b,
+    'c,
+    'd,
+    const NO: PortName,
+    const NI: PortName,
+    const NC: PortName,
+    const NS: PortName,
+    const PO: PinNum,
+    const PI: PinNum,
+    const PC: PinNum,
+    const PS: PinNum,
+> FullDuplex<u16> for SpiMaster<'a, 'b, 'c, 'd, u16, NO, NI, NC, NS, PO, PI, PC, PS> {
     type Error = ();
 
     fn send(&mut self, word: u16) -> nb::Result<(), Self::Error> {

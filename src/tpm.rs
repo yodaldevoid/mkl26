@@ -4,7 +4,7 @@ use embedded_hal::timer;
 use void::Void;
 use volatile_register::RW;
 
-use crate::port::{PortName, TpmPin};
+use crate::port::{PinNum, PortName, TpmPin};
 use crate::sim::ClockGate;
 
 // KL26 manual - pp 570-571
@@ -173,16 +173,16 @@ impl TpmPeriodic {
         }
     }
 
-    pub fn channel<'a, 'b, P, const N: PortName>(
+    pub fn channel<'a, 'b, T, const N: PortName, const P: PinNum>(
         &'a self,
         channel: ChannelNum,
         mode: ChannelMode,
         interrupt: bool,
         value: u16,
-        pin: P,
-    ) -> Result<Channel<'a, 'b, N>, ChannelError>
+        pin: T,
+    ) -> Result<Channel<'a, 'b, N, P>, ChannelError>
     where
-        P: Into<Option<TpmPin<'b, N>>>,
+        T: Into<Option<TpmPin<'b, N, P>>>,
     {
         let pin = pin.into();
         if let Some(pin) = pin.as_ref() {
@@ -347,16 +347,16 @@ impl TpmSingleShot {
         }
     }
 
-    pub fn channel<'a, 'b, P, const N: PortName>(
+    pub fn channel<'a, 'b, T, const N: PortName, const P: PinNum>(
         &'a self,
         channel: ChannelNum,
         mode: ChannelMode,
         interrupt: bool,
         value: u16,
-        pin: P,
-    ) -> Result<Channel<'a, 'b, N>, ChannelError>
+        pin: T,
+    ) -> Result<Channel<'a, 'b, N, P>, ChannelError>
     where
-        P: Into<Option<TpmPin<'b, N>>>,
+        T: Into<Option<TpmPin<'b, N, P>>>,
     {
         let pin = pin.into();
         if let Some(pin) = pin.as_ref() {
@@ -455,19 +455,19 @@ impl timer::CountDown for TpmSingleShot {
 
 // TODO: separate channel modes into different structs
 // TODO: impl embedded_hal timer traits
-pub struct Channel<'a, 'b, const N: PortName> {
+pub struct Channel<'a, 'b, const N: PortName, const P: PinNum> {
     reg: &'a ChannelRegs,
-    _pin: Option<TpmPin<'b, N>>,
+    _pin: Option<TpmPin<'b, N, P>>,
 }
 
-impl<'a, 'b, const N: PortName> Channel<'a, 'b, N> {
+impl<'a, 'b, const N: PortName, const P: PinNum> Channel<'a, 'b, N, P> {
     unsafe fn new(
         reg: &'a ChannelRegs,
         mode: ChannelMode,
         interrupt: bool,
         value: u16,
-        pin: Option<TpmPin<'b, N>>,
-    ) -> Result<Channel<'a, 'b, N>, ChannelError> {
+        pin: Option<TpmPin<'b, N, P>>,
+    ) -> Result<Channel<'a, 'b, N, P>, ChannelError> {
         // Checking both ELSx and MSx.
         if reg.cnsc.read().get_bits(2..6) != 0b0000 {
             // Channel not currently disabled.
@@ -556,7 +556,7 @@ impl<'a, 'b, const N: PortName> Channel<'a, 'b, N> {
     }
 }
 
-impl<'a, 'b, const N: PortName> Drop for Channel<'a, 'b, N> {
+impl<'a, 'b, const N: PortName, const P: PinNum> Drop for Channel<'a, 'b, N, P> {
     fn drop(&mut self) {
         unsafe {
             self.reg.cnsc.write(0);

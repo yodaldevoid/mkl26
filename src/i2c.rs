@@ -8,7 +8,7 @@ use embedded_hal::blocking::i2c;
 use mkl26z4::Interrupt;
 use volatile_register::RW;
 
-use crate::port::{I2cScl, I2cSda, PortName};
+use crate::port::{I2cScl, I2cSda, PinNum, PortName};
 use crate::sim::ClockGate;
 
 const I2C0_ADDR: usize = 0x4006_6000;
@@ -30,20 +30,20 @@ struct I2cRegs {
     sltl: RW<u8>,
 }
 
-pub struct I2cMaster<'a, 'b, const NC: PortName, const ND: PortName> {
+pub struct I2cMaster<'a, 'b, const NC: PortName, const ND: PortName, const PC: PinNum, const PD: PinNum> {
     reg: &'static mut I2cRegs,
-    _scl: I2cScl<'a, NC>,
-    _sda: I2cSda<'b, ND>,
+    _scl: I2cScl<'a, NC, PC>,
+    _sda: I2cSda<'b, ND, PD>,
     _gate: ClockGate,
     bus: u8,
     op_mode: OpMode,
 }
 
 #[cfg(feature = "i2c-slave")]
-pub struct I2cSlave<'a, 'b, const NC: PortName, const ND: PortName> {
+pub struct I2cSlave<'a, 'b, const NC: PortName, const ND: PortName, const PC: PinNum, const PD: PinNum> {
     _reg: &'static mut I2cRegs,
-    _scl: I2cScl<'a, NC>,
-    _sda: I2cSda<'b, ND>,
+    _scl: I2cScl<'a, NC, PC>,
+    _sda: I2cSda<'b, ND, PD>,
     _gate: ClockGate,
 }
 
@@ -169,14 +169,14 @@ pub enum Error {
 // TODO: maybe rework to use a builder
 // TODO: helpful errors
 // TODO: don't require passing NVIC on immediate mode
-impl<'a, 'b, const NC: PortName, const ND: PortName> I2cMaster<'a, 'b, NC, ND> {
+impl<'a, 'b, const NC: PortName, const ND: PortName, const PC: PinNum, const PD: PinNum> I2cMaster<'a, 'b, NC, ND, PC, PD> {
     pub unsafe fn new(
-        scl: I2cScl<'a, NC>,
-        sda: I2cSda<'b, ND>,
+        scl: I2cScl<'a, NC, PC>,
+        sda: I2cSda<'b, ND, PD>,
         (mul, clkdiv): (Multiplier, Divider),
         op_mode: OpMode,
         gate: ClockGate,
-    ) -> Result<I2cMaster<'a, 'b, NC, ND>, ()> {
+    ) -> Result<I2cMaster<'a, 'b, NC, ND, PC, PD>, ()> {
         if scl.bus() != sda.bus() {
             return Err(());
         }
@@ -312,7 +312,7 @@ impl<'a, 'b, const NC: PortName, const ND: PortName> I2cMaster<'a, 'b, NC, ND> {
     /// Setup Master
     ///
     /// Initializes TX buffer with slave address.
-    pub fn begin_transmission<'c>(&'c mut self, addr: Address) -> Transmission<'a, 'b, 'c, NC, ND> {
+    pub fn begin_transmission<'c>(&'c mut self, addr: Address) -> Transmission<'a, 'b, 'c, NC, ND, PC, PD> {
         interrupt::free(|cs| {
             let mut state = match self.bus {
                 0 => I2C0_STATE.borrow(cs).borrow_mut(),
@@ -761,11 +761,11 @@ impl<'a, 'b, const NC: PortName, const ND: PortName> I2cMaster<'a, 'b, NC, ND> {
     }
 }
 
-pub struct Transmission<'a: 'c, 'b: 'c, 'c, const NC: PortName, const ND: PortName> {
-    i2c: &'c mut I2cMaster<'a, 'b, NC, ND>,
+pub struct Transmission<'a: 'c, 'b: 'c, 'c, const NC: PortName, const ND: PortName, const PC: PinNum, const PD: PinNum> {
+    i2c: &'c mut I2cMaster<'a, 'b, NC, ND, PC, PD>,
 }
 
-impl<'a, 'b, 'c, const NC: PortName, const ND: PortName> Transmission<'a, 'b, 'c, NC, ND> {
+impl<'a, 'b, 'c, const NC: PortName, const ND: PortName, const PC: PinNum, const PD: PinNum> Transmission<'a, 'b, 'c, NC, ND, PC, PD> {
     pub fn send_transmission(self, stop: Stop) -> Result<(), Error> {
         self.i2c.send_transmission(stop)
     }
@@ -782,14 +782,14 @@ impl<'a, 'b, 'c, const NC: PortName, const ND: PortName> Transmission<'a, 'b, 'c
 // TODO: support slave address range
 // TODO: way to set slave callbacks
 #[cfg(feature = "i2c-slave")]
-impl<'a, 'b, const NC: PortName, const ND: PortName> I2cSlave<'a, 'b, NC, ND> {
+impl<'a, 'b, const NC: PortName, const ND: PortName, const PC: PinNum, const PD: PinNum> I2cSlave<'a, 'b, NC, ND, PC, PD> {
     pub unsafe fn new(
-        scl: I2cScl<'a, NC>,
-        sda: I2cSda<'b, ND>,
+        scl: I2cScl<'a, NC, PC>,
+        sda: I2cSda<'b, ND, PD>,
         addr: Address,
         general_call: bool,
         gate: ClockGate,
-    ) -> Result<I2cSlave<'a, 'b, NC, ND>, ()> {
+    ) -> Result<I2cSlave<'a, 'b, NC, ND, PC, PD>, ()> {
         if scl.bus() != sda.bus() {
             return Err(());
         }
@@ -1232,7 +1232,7 @@ unsafe fn slave_isr(reg: &mut I2cRegs, state: &mut IsrState, status: u8, c1: u8)
     }
 }
 
-impl<'a, 'b, const NC: PortName, const ND: PortName> i2c::Read for I2cMaster<'a, 'b, NC, ND> {
+impl<'a, 'b, const NC: PortName, const ND: PortName, const PC: PinNum, const PD: PinNum> i2c::Read for I2cMaster<'a, 'b, NC, ND, PC, PD> {
     type Error = Error;
 
     fn read(&mut self, address: u8, buffer: &mut [u8]) -> Result<(), Self::Error> {
@@ -1248,7 +1248,7 @@ impl<'a, 'b, const NC: PortName, const ND: PortName> i2c::Read for I2cMaster<'a,
     }
 }
 
-impl<'a, 'b, const NC: PortName, const ND: PortName> i2c::Write for I2cMaster<'a, 'b, NC, ND> {
+impl<'a, 'b, const NC: PortName, const ND: PortName, const PC: PinNum, const PD: PinNum> i2c::Write for I2cMaster<'a, 'b, NC, ND, PC, PD> {
     type Error = Error;
 
     fn write(&mut self, address: u8, bytes: &[u8]) -> Result<(), Self::Error> {
@@ -1264,7 +1264,7 @@ impl<'a, 'b, const NC: PortName, const ND: PortName> i2c::Write for I2cMaster<'a
     }
 }
 
-impl<'a, 'b, const NC: PortName, const ND: PortName> i2c::WriteRead for I2cMaster<'a, 'b, NC, ND> {
+impl<'a, 'b, const NC: PortName, const ND: PortName, const PC: PinNum, const PD: PinNum> i2c::WriteRead for I2cMaster<'a, 'b, NC, ND, PC, PD> {
     type Error = Error;
 
     fn write_read(

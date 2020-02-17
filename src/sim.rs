@@ -9,7 +9,7 @@ use crate::i2c::{self, Divider, I2cMaster, Multiplier};
 use crate::i2c::{Address, I2cSlave};
 use crate::pit::Pit;
 use crate::port::{I2cScl, I2cSda};
-use crate::port::{Port, PortName};
+use crate::port::{PinNum, Port, PortName};
 use crate::port::{SpiCs, SpiMiso, SpiMosi, SpiSck};
 use crate::port::{UartRx, UartTx};
 use crate::spi::{self, Divisor, SpiMaster};
@@ -161,16 +161,16 @@ impl Sim {
         unsafe { Port::new(gate) }
     }
 
-    pub fn uart<'a, 'b, R, T, const NR: PortName, const NT: PortName>(
+    pub fn uart<'a, 'b, R, T, const NR: PortName, const NT: PortName, const PT: PinNum, const PR: PinNum>(
         &mut self,
         uart: UartNum,
         rx: R,
         tx: T,
         clkdiv: u16,
-    ) -> Result<Uart<'a, 'b, u8, NR, NT>, ()>
+    ) -> Result<Uart<'a, 'b, u8, NR, NT, PR, PT>, ()>
     where
-        R: Into<Option<UartRx<'a, NR>>>,
-        T: Into<Option<UartTx<'b, NT>>>
+        R: Into<Option<UartRx<'a, NR, PR>>>,
+        T: Into<Option<UartTx<'b, NT, PT>>>
     {
         let mut gate = match uart {
             UartNum::UART0 => ClockGate::new(4, 10),
@@ -184,11 +184,12 @@ impl Sim {
         unsafe { Uart::new(uart, rx.into(), tx.into(), clkdiv, ConnMode::TwoWire, gate) }
     }
 
+    // TODO: fix the false const generics
     pub fn uart_loopback<'a, 'b>(
         &mut self,
         uart: UartNum,
         clkdiv: u16,
-    ) -> Result<Uart<'a, 'b, u8, {PortName::A}, {PortName::A}>, ()> {
+    ) -> Result<Uart<'a, 'b, u8, {PortName::A}, {PortName::A}, {PinNum::P0}, {PinNum::P0}>, ()> {
         let mut gate = match uart {
             UartNum::UART0 => ClockGate::new(4, 10),
             UartNum::UART1 => ClockGate::new(4, 11),
@@ -215,13 +216,13 @@ impl Sim {
         });
     }
 
-    pub fn i2c_master<'a, 'b, const NC: PortName, const ND: PortName>(
+    pub fn i2c_master<'a, 'b, const NC: PortName, const ND: PortName, const PC: PinNum, const PD: PinNum>(
         &mut self,
-        scl: I2cScl<'a, NC>,
-        sda: I2cSda<'b, ND>,
+        scl: I2cScl<'a, NC, PC>,
+        sda: I2cSda<'b, ND, PD>,
         clkdiv: (Multiplier, Divider),
         op_mode: i2c::OpMode,
-    ) -> Result<I2cMaster<'a, 'b, NC, ND>, ()> {
+    ) -> Result<I2cMaster<'a, 'b, NC, ND, PC, PD>, ()> {
         if scl.bus() != sda.bus() {
             return Err(());
         }
@@ -239,13 +240,13 @@ impl Sim {
     }
 
     #[cfg(feature = "i2c-slave")]
-    pub fn i2c_slave<'a, 'b, const NC: PortName, const ND: PortName>(
+    pub fn i2c_slave<'a, 'b, const NC: PortName, const ND: PortName, const PC: PinNum, const PD: PinNum>(
         &mut self,
-        scl: I2cScl<'a, NC>,
-        sda: I2cSda<'b, ND>,
+        scl: I2cScl<'a, NC, PC>,
+        sda: I2cSda<'b, ND, PD>,
         addr: Address,
         general_call: bool,
-    ) -> Result<I2cSlave<'a, 'b, NC, ND>, ()> {
+    ) -> Result<I2cSlave<'a, 'b, NC, ND, PC, PD>, ()> {
         let mut gate = match scl.bus() {
             0 => ClockGate::new(4, 6),
             1 => ClockGate::new(4, 7),
@@ -258,21 +259,38 @@ impl Sim {
         unsafe { I2cSlave::new(scl, sda, addr, general_call, gate) }
     }
 
-    pub fn spi_master<'a, 'b, 'c, 'd, O, I, S, W, const NO: PortName, const NI: PortName, const NC: PortName, const NS: PortName>(
+    pub fn spi_master<
+        'a,
+        'b,
+        'c,
+        'd,
+        O,
+        I,
+        S,
+        W,
+        const NO: PortName,
+        const NI: PortName,
+        const NC: PortName,
+        const NS: PortName,
+        const PO: PinNum,
+        const PI: PinNum,
+        const PC: PinNum,
+        const PS: PinNum,
+    >(
         &mut self,
         mosi: O,
         miso: I,
-        sck: SpiSck<'c, NC>,
+        sck: SpiSck<'c, NC, PC>,
         cs: S,
         clkdiv: (spi::Prescale, Divisor),
         op_mode: spi::OpMode,
         Mode { polarity, phase }: Mode,
         fifo: bool,
-    ) -> Result<SpiMaster<'a, 'b, 'c, 'd, W, NO, NI, NC, NS>, ()>
+    ) -> Result<SpiMaster<'a, 'b, 'c, 'd, W, NO, NI, NC, NS, PO, PI, PC, PS>, ()>
     where
-        O: Into<Option<SpiMosi<'a, NO>>>,
-        I: Into<Option<SpiMiso<'b, NI>>>,
-        S: Into<Option<SpiCs<'d, NS>>>,
+        O: Into<Option<SpiMosi<'a, NO, PO>>>,
+        I: Into<Option<SpiMiso<'b, NI, PI>>>,
+        S: Into<Option<SpiCs<'d, NS, PS>>>,
         W: spi::Word,
     {
         let mut gate = match sck.bus() {
