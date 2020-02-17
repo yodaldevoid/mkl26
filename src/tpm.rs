@@ -4,7 +4,7 @@ use embedded_hal::timer;
 use void::Void;
 use volatile_register::RW;
 
-use crate::port::{PinNum, PortName, TpmPin};
+use crate::port::{PortName, TpmPin};
 use crate::sim::ClockGate;
 
 // KL26 manual - pp 570-571
@@ -173,7 +173,7 @@ impl TpmPeriodic {
         }
     }
 
-    pub fn channel<'a, 'b, T, const N: PortName, const P: PinNum>(
+    pub fn channel<'a, 'b, T, const N: PortName, const P: usize>(
         &'a self,
         channel: ChannelNum,
         mode: ChannelMode,
@@ -347,7 +347,7 @@ impl TpmSingleShot {
         }
     }
 
-    pub fn channel<'a, 'b, T, const N: PortName, const P: PinNum>(
+    pub fn channel<'a, 'b, T, const N: PortName, const P: usize>(
         &'a self,
         channel: ChannelNum,
         mode: ChannelMode,
@@ -455,12 +455,12 @@ impl timer::CountDown for TpmSingleShot {
 
 // TODO: separate channel modes into different structs
 // TODO: impl embedded_hal timer traits
-pub struct Channel<'a, 'b, const N: PortName, const P: PinNum> {
+pub struct Channel<'a, 'b, const N: PortName, const P: usize> {
     reg: &'a ChannelRegs,
     _pin: Option<TpmPin<'b, N, P>>,
 }
 
-impl<'a, 'b, const N: PortName, const P: PinNum> Channel<'a, 'b, N, P> {
+impl<'a, 'b, const N: PortName, const P: usize> Channel<'a, 'b, N, P> {
     unsafe fn new(
         reg: &'a ChannelRegs,
         mode: ChannelMode,
@@ -556,7 +556,7 @@ impl<'a, 'b, const N: PortName, const P: PinNum> Channel<'a, 'b, N, P> {
     }
 }
 
-impl<'a, 'b, const N: PortName, const P: PinNum> Drop for Channel<'a, 'b, N, P> {
+impl<'a, 'b, const N: PortName, const P: usize> Drop for Channel<'a, 'b, N, P> {
     fn drop(&mut self) {
         unsafe {
             self.reg.cnsc.write(0);

@@ -1,7 +1,7 @@
 use bit_field::BitField;
 use volatile_register::{RO, RW};
 
-use crate::port::{AdcDiffMPin, AdcDiffPPin, AdcPin, PinNum, PortName};
+use crate::port::{AdcDiffMPin, AdcDiffPPin, AdcPin, PortName};
 use crate::sim::ClockGate;
 
 const ADC0_ADDR: usize = 0x4003_B000;
@@ -168,7 +168,7 @@ impl Adc {
         }
     }
 
-    pub fn channel<'a, 'b, 'c: 'b, A, const N: PortName, const P: PinNum>(
+    pub fn channel<'a, 'b, 'c: 'b, A, const N: PortName, const P: usize>(
         &'a mut self,
         ch: u8,
         pin: A,
@@ -179,7 +179,7 @@ impl Adc {
         Channel::new(self, ch, pin.into())
     }
 
-    pub fn diff_channel<'a, 'b, 'c, 'd, 'e, P, N, const NP: PortName, const NN: PortName, const PP: PinNum, const PN: PinNum>(
+    pub fn diff_channel<'a, 'b, 'c, 'd, 'e, P, N, const NP: PortName, const NN: PortName, const PP: usize, const PN: usize>(
         &'a mut self,
         ch: u8,
         pos: P,
@@ -205,13 +205,13 @@ impl Adc {
     }
 }
 
-pub struct Channel<'a, 'b, 'c: 'b, const N: PortName, const P: PinNum> {
+pub struct Channel<'a, 'b, 'c: 'b, const N: PortName, const P: usize> {
     adc: &'a mut Adc,
     _pin: Option<&'b mut AdcPin<'c, N, P>>,
 }
 
 // TODO: impls using port name
-impl<'a, 'b, 'c, const N: PortName, const P: PinNum> Channel<'a, 'b, 'c, N, P> {
+impl<'a, 'b, 'c, const N: PortName, const P: usize> Channel<'a, 'b, 'c, N, P> {
     fn new(
         adc: &'a mut Adc,
         ch: u8,
@@ -219,26 +219,26 @@ impl<'a, 'b, 'c, const N: PortName, const P: PinNum> Channel<'a, 'b, 'c, N, P> {
     ) -> Result<Channel<'a, 'b, 'c, N, P>, ()> {
         let mux = match (adc.id, ch, pin.as_ref().map(|_| (N, P))) {
             // ADC0
-            (0, 0, Some((PortName::E, PinNum::P20))) => AdcMux::A, // e20:0-S0,0
-            (0, 1, Some((PortName::E, PinNum::P16))) => AdcMux::A, // e16:0-S0,1
-            (0, 2, Some((PortName::E, PinNum::P18))) => AdcMux::A, // e18:0-S0,2
-            (0, 3, Some((PortName::E, PinNum::P22))) => AdcMux::A, // e22:0-S0,3
-            (0, 4, Some((PortName::E, PinNum::P21))) => AdcMux::A, // e21:0-S0,4a
-            (0, 4, Some((PortName::E, PinNum::P29))) => AdcMux::B, // e29:0-S0,4b
-            (0, 5, Some((PortName::E, PinNum::P17))) => AdcMux::A, // e17:0-S0,5a
-            (0, 5, Some((PortName::D, PinNum::P1))) => AdcMux::B,  // d1:0-S0,5b
-            (0, 6, Some((PortName::E, PinNum::P19))) => AdcMux::A, // e19:0-S0,6a
-            (0, 6, Some((PortName::D, PinNum::P5))) => AdcMux::B,  // d5:0-S0,6b
-            (0, 7, Some((PortName::E, PinNum::P23))) => AdcMux::A, // e23:0-S0,7a
-            (0, 7, Some((PortName::D, PinNum::P6))) => AdcMux::B,  // d6:0-S0,7b
-            (0, 8, Some((PortName::B, PinNum::P0))) => AdcMux::A,  // b0:0-S0,8
-            (0, 9, Some((PortName::B, PinNum::P1))) => AdcMux::A,  // b1:0-S0,9
-            (0, 11, Some((PortName::C, PinNum::P2))) => AdcMux::A, // c2:0-S0,11
-            (0, 12, Some((PortName::B, PinNum::P2))) => AdcMux::A, // b2:0-S0,12
-            (0, 13, Some((PortName::B, PinNum::P3))) => AdcMux::A, // b3:0-S0,13
-            (0, 14, Some((PortName::C, PinNum::P0))) => AdcMux::A, // c0:0-S0,14
-            (0, 15, Some((PortName::C, PinNum::P1))) => AdcMux::A, // c1:0-S0,15
-            (0, 23, Some((PortName::E, PinNum::P30))) => AdcMux::A, // e30:0-S0,23
+            (0, 0, Some((PortName::E, 20))) => AdcMux::A, // e20:0-S0,0
+            (0, 1, Some((PortName::E, 16))) => AdcMux::A, // e16:0-S0,1
+            (0, 2, Some((PortName::E, 18))) => AdcMux::A, // e18:0-S0,2
+            (0, 3, Some((PortName::E, 22))) => AdcMux::A, // e22:0-S0,3
+            (0, 4, Some((PortName::E, 21))) => AdcMux::A, // e21:0-S0,4a
+            (0, 4, Some((PortName::E, 29))) => AdcMux::B, // e29:0-S0,4b
+            (0, 5, Some((PortName::E, 17))) => AdcMux::A, // e17:0-S0,5a
+            (0, 5, Some((PortName::D, 1))) => AdcMux::B,  // d1:0-S0,5b
+            (0, 6, Some((PortName::E, 19))) => AdcMux::A, // e19:0-S0,6a
+            (0, 6, Some((PortName::D, 5))) => AdcMux::B,  // d5:0-S0,6b
+            (0, 7, Some((PortName::E, 23))) => AdcMux::A, // e23:0-S0,7a
+            (0, 7, Some((PortName::D, 6))) => AdcMux::B,  // d6:0-S0,7b
+            (0, 8, Some((PortName::B, 0))) => AdcMux::A,  // b0:0-S0,8
+            (0, 9, Some((PortName::B, 1))) => AdcMux::A,  // b1:0-S0,9
+            (0, 11, Some((PortName::C, 2))) => AdcMux::A, // c2:0-S0,11
+            (0, 12, Some((PortName::B, 2))) => AdcMux::A, // b2:0-S0,12
+            (0, 13, Some((PortName::B, 3))) => AdcMux::A, // b3:0-S0,13
+            (0, 14, Some((PortName::C, 0))) => AdcMux::A, // c0:0-S0,14
+            (0, 15, Some((PortName::C, 1))) => AdcMux::A, // c1:0-S0,15
+            (0, 23, Some((PortName::E, 30))) => AdcMux::A, // e30:0-S0,23
 
             (_, 26, None) => AdcMux::A, // Single-ended Temp Sensor
             (_, 27, None) => AdcMux::A, // Single-ended Bandgap
@@ -277,14 +277,14 @@ impl<'a, 'b, 'c, const N: PortName, const P: PinNum> Channel<'a, 'b, 'c, N, P> {
     }
 }
 
-pub struct DiffChannel<'a, 'b, 'c: 'b, 'd, 'e: 'd, const NP: PortName, const NN: PortName, const PP: PinNum, const PN: PinNum> {
+pub struct DiffChannel<'a, 'b, 'c: 'b, 'd, 'e: 'd, const NP: PortName, const NN: PortName, const PP: usize, const PN: usize> {
     adc: &'a mut Adc,
     _pos: Option<&'b mut AdcDiffPPin<'c, NP, PP>>,
     _neg: Option<&'d mut AdcDiffMPin<'e, NN, PN>>,
 }
 
 // TODO: impls using port name
-impl<'a, 'b, 'c, 'd, 'e, const NP: PortName, const NN: PortName, const PP: PinNum, const PN: PinNum> DiffChannel<'a, 'b, 'c, 'd, 'e, NP, NN, PP, PN> {
+impl<'a, 'b, 'c, 'd, 'e, const NP: PortName, const NN: PortName, const PP: usize, const PN: usize> DiffChannel<'a, 'b, 'c, 'd, 'e, NP, NN, PP, PN> {
     fn new(
         adc: &'a mut Adc,
         ch: u8,
@@ -295,16 +295,16 @@ impl<'a, 'b, 'c, 'd, 'e, const NP: PortName, const NN: PortName, const PP: PinNu
             // ADC0
             // e20:0-D0,0P
             // e21:0-D0,0M
-            (0, 0, Some((PortName::E, PinNum::P20)), Some((PortName::E, PinNum::P21))) |
+            (0, 0, Some((PortName::E, 20)), Some((PortName::E, 21))) |
             // e16:0-D0,1P
             // e17:0-D0,1M
-            (0, 1, Some((PortName::E, PinNum::P16)), Some((PortName::E, PinNum::P17))) |
+            (0, 1, Some((PortName::E, 16)), Some((PortName::E, 17))) |
             // e18:0-D0,1P
             // e19:0-D0,1M
-            (0, 2, Some((PortName::E, PinNum::P18)), Some((PortName::E, PinNum::P19))) |
+            (0, 2, Some((PortName::E, 18)), Some((PortName::E, 19))) |
             // e22:0-D0,3P
             // e23:0-D0,3M
-            (0, 3, Some((PortName::E, PinNum::P22)), Some((PortName::E, PinNum::P23))) |
+            (0, 3, Some((PortName::E, 22)), Some((PortName::E, 23))) |
 
             // Differential Temp Sensor
             (_, 26, None, None) |

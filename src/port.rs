@@ -57,16 +57,16 @@ impl<const N: PortName> Port<N> {
         }
     }
 
-    pub fn pin<const P: PinNum>(&self) -> Pin<N, P> {
-        let was_init = self.locks[P as usize].swap(true);
+    pub fn pin<const P: usize>(&self) -> Pin<N, P> {
+        let was_init = self.locks[P].swap(true);
         if was_init {
-            panic!("Pin {} is already in use", P as usize);
+            panic!("Pin {} is already in use", P);
         }
         Pin { port: self }
     }
 
-    unsafe fn drop_pin(&self, p: PinNum) {
-        self.locks[p as usize].store(false)
+    unsafe fn drop_pin(&self, p: usize) {
+        self.locks[p].store(false)
     }
 
     fn reg(&self) -> &'static mut PortRegs {
@@ -79,43 +79,7 @@ impl<const N: PortName> Port<N> {
     }
 }
 
-#[derive(Clone, Copy, Eq, PartialEq)]
-pub enum PinNum {
-    P0 = 0,
-    P1 = 1,
-    P2 = 2,
-    P3 = 3,
-    P4 = 4,
-    P5 = 5,
-    P6 = 6,
-    P7 = 7,
-    P8 = 8,
-    P9 = 9,
-    P10 = 10,
-    P11 = 11,
-    P12 = 12,
-    P13 = 13,
-    P14 = 14,
-    P15 = 15,
-    P16 = 16,
-    P17 = 17,
-    P18 = 18,
-    P19 = 19,
-    P20 = 20,
-    P21 = 21,
-    P22 = 22,
-    P23 = 23,
-    P24 = 24,
-    P25 = 25,
-    P26 = 26,
-    P27 = 27,
-    P28 = 28,
-    P29 = 29,
-    P30 = 30,
-    P31 = 31,
-}
-
-pub struct Pin<'a, const N: PortName, const P: PinNum> {
+pub struct Pin<'a, const N: PortName, const P: usize> {
     port: &'a Port<N>,
 }
 
@@ -151,10 +115,10 @@ pub enum InterruptConfig {
     LogicOne = 0xC,
 }
 
-impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
+impl<'a, const N: PortName, const P: usize> Pin<'a, N, P> {
     fn set_mode(&mut self, mode: u32) {
         unsafe {
-            self.port.reg().pcr[P as usize].modify(|mut pcr| {
+            self.port.reg().pcr[P].modify(|mut pcr| {
                 pcr.set_bits(8..11, mode);
                 pcr
             });
@@ -163,7 +127,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
 
     pub fn drive_strength(&mut self, strength: DriveStrength) {
         unsafe {
-            self.port.reg().pcr[P as usize].modify(|mut pcr| {
+            self.port.reg().pcr[P].modify(|mut pcr| {
                 pcr.set_bit(6, strength == DriveStrength::High);
                 pcr
             });
@@ -172,7 +136,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
 
     pub fn open_drain(&mut self, enable: bool) {
         unsafe {
-            self.port.reg().pcr[P as usize].modify(|mut pcr| {
+            self.port.reg().pcr[P].modify(|mut pcr| {
                 pcr.set_bit(5, enable);
                 pcr
             });
@@ -181,7 +145,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
 
     pub fn slew_rate(&mut self, rate: SlewRate) {
         unsafe {
-            self.port.reg().pcr[P as usize].modify(|mut pcr| {
+            self.port.reg().pcr[P].modify(|mut pcr| {
                 pcr.set_bit(2, rate == SlewRate::Slow);
                 pcr
             });
@@ -190,7 +154,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
 
     pub fn pull(&mut self, pull: Pull) {
         unsafe {
-            self.port.reg().pcr[P as usize].modify(|mut pcr| {
+            self.port.reg().pcr[P].modify(|mut pcr| {
                 pcr.set_bits(0..2, pull as u32);
                 pcr
             });
@@ -199,7 +163,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
 
     pub fn interrupt_config(&mut self, config: InterruptConfig) {
         unsafe {
-            self.port.reg().pcr[P as usize].modify(|mut pcr| {
+            self.port.reg().pcr[P].modify(|mut pcr| {
                 pcr.set_bits(16..20, config as u32);
                 pcr
             });
@@ -207,12 +171,12 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
     }
 
     pub fn is_interrupted(&self) -> bool {
-        unsafe { self.port.reg().pcr[P as usize].read().get_bit(24) }
+        unsafe { self.port.reg().pcr[P].read().get_bit(24) }
     }
 
     pub fn clear_interrupt(&mut self) {
         unsafe {
-            self.port.reg().pcr[P as usize].modify(|mut pcr| {
+            self.port.reg().pcr[P].modify(|mut pcr| {
                 pcr.set_bit(24, true);
                 pcr
             });
@@ -227,49 +191,49 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
     }
 }
 
-impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
+impl<'a, const N: PortName, const P: usize> Pin<'a, N, P> {
     pub fn to_adc(mut self) -> Result<AdcPin<'a, N, P>, ()> {
         match (N, P) {
             // e16:0-S0,1
-            (PortName::E, PinNum::P16) |
+            (PortName::E, 16) |
             // e17:0-S0,5a
-            (PortName::E, PinNum::P17) |
+            (PortName::E, 17) |
             // e18:0-S0,2
-            (PortName::E, PinNum::P18) |
+            (PortName::E, 18) |
             // e19:0-S0,6a
-            (PortName::E, PinNum::P19) |
+            (PortName::E, 19) |
             // e20:0-S0,0
-            (PortName::E, PinNum::P20) |
+            (PortName::E, 20) |
             // e21:0-S0,4a
-            (PortName::E, PinNum::P21) |
+            (PortName::E, 21) |
             // e22:0-S0,3
-            (PortName::E, PinNum::P22) |
+            (PortName::E, 22) |
             // e23:0-S0,7a
-            (PortName::E, PinNum::P23) |
+            (PortName::E, 23) |
             // e29:0-S0,4b
-            (PortName::E, PinNum::P29) |
+            (PortName::E, 29) |
             // e30:0-S0,23
-            (PortName::E, PinNum::P30) |
+            (PortName::E, 30) |
             // b0:0-S0,8
-            (PortName::B, PinNum::P0) |
+            (PortName::B, 0) |
             // b1:0-S0,9
-            (PortName::B, PinNum::P1) |
+            (PortName::B, 1) |
             // b2:0-S0,12
-            (PortName::B, PinNum::P2) |
+            (PortName::B, 2) |
             // b3:0-S0,13
-            (PortName::B, PinNum::P3) |
+            (PortName::B, 3) |
             // c0:0-S0,14
-            (PortName::C, PinNum::P0) |
+            (PortName::C, 0) |
             // c1:0-S0,15
-            (PortName::C, PinNum::P1) |
+            (PortName::C, 1) |
             // c2:0-S0,11
-            (PortName::C, PinNum::P2) |
+            (PortName::C, 2) |
             // d1:0-S0,5b
-            (PortName::D, PinNum::P1) |
+            (PortName::D, 1) |
             // d5:0-S0,6b
-            (PortName::D, PinNum::P5) |
+            (PortName::D, 5) |
             // d6:0-S0,7b
-            (PortName::D, PinNum::P6) => {
+            (PortName::D, 6) => {
                 self.set_mode(0);
                 Ok(AdcPin { _pin: self })
             },
@@ -280,13 +244,13 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
     pub fn to_adc_diff_p(mut self) -> Result<AdcDiffPPin<'a, N, P>, ()> {
         match (N, P) {
             // e16:0-D0,1P
-            (PortName::E, PinNum::P16) |
+            (PortName::E, 16) |
             // e18:0-D0,1P
-            (PortName::E, PinNum::P18) |
+            (PortName::E, 18) |
             //  9-e20:0-D0,0P
-            (PortName::E, PinNum::P20) |
+            (PortName::E, 20) |
             // 11-e22:0-D0,3P
-            (PortName::E, PinNum::P22) => {
+            (PortName::E, 22) => {
                 self.set_mode(0);
                 Ok(AdcDiffPPin { _pin: self })
             }
@@ -297,13 +261,13 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
     pub fn to_adc_diff_m(mut self) -> Result<AdcDiffMPin<'a, N, P>, ()> {
         match (N, P) {
             // e17:0-D0,1M
-            (PortName::E, PinNum::P17) |
+            (PortName::E, 17) |
             // e19:0-D0,1M
-            (PortName::E, PinNum::P19) |
+            (PortName::E, 19) |
             // 10-e21:0-D0,0M
-            (PortName::E, PinNum::P21) |
+            (PortName::E, 21) |
             // 12-e23:0-D0,3M
-            (PortName::E, PinNum::P23) => {
+            (PortName::E, 23) => {
                 self.set_mode(0);
                 Ok(AdcDiffMPin { _pin: self })
             }
@@ -314,35 +278,35 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
     // TODO: maybe make the bool an enum ot make it clear at the callsite what is going on.
     pub fn to_i2c_scl(mut self, pullup_ext: bool) -> Result<I2cScl<'a, N, P>, ()> {
         let bus = match (N, P) {
-            (PortName::E, PinNum::P1) => {
+            (PortName::E, 1) => {
                 self.set_mode(6);
                 1
             }
-            (PortName::E, PinNum::P24) => {
+            (PortName::E, 24) => {
                 self.set_mode(5);
                 0
             }
-            (PortName::A, PinNum::P3) => {
+            (PortName::A, 3) => {
                 self.set_mode(2);
                 1
             }
-            (PortName::B, PinNum::P0) => {
+            (PortName::B, 0) => {
                 self.set_mode(2);
                 0
             }
-            (PortName::B, PinNum::P2) => {
+            (PortName::B, 2) => {
                 self.set_mode(2);
                 0
             }
-            (PortName::C, PinNum::P1) => {
+            (PortName::C, 1) => {
                 self.set_mode(2);
                 1
             }
-            (PortName::C, PinNum::P8) => {
+            (PortName::C, 8) => {
                 self.set_mode(2);
                 0
             }
-            (PortName::C, PinNum::P10) => {
+            (PortName::C, 10) => {
                 self.set_mode(2);
                 1
             }
@@ -370,35 +334,35 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
     // TODO: maybe make the bool an enum ot make it clear at the callsite what is going on.
     pub fn to_i2c_sda(mut self, pullup_ext: bool) -> Result<I2cSda<'a, N, P>, ()> {
         let bus = match (N, P) {
-            (PortName::E, PinNum::P0) => {
+            (PortName::E, 0) => {
                 self.set_mode(6);
                 1
             }
-            (PortName::E, PinNum::P25) => {
+            (PortName::E, 25) => {
                 self.set_mode(5);
                 0
             }
-            (PortName::A, PinNum::P4) => {
+            (PortName::A, 4) => {
                 self.set_mode(2);
                 1
             }
-            (PortName::B, PinNum::P1) => {
+            (PortName::B, 1) => {
                 self.set_mode(2);
                 0
             }
-            (PortName::B, PinNum::P3) => {
+            (PortName::B, 3) => {
                 self.set_mode(2);
                 0
             }
-            (PortName::C, PinNum::P2) => {
+            (PortName::C, 2) => {
                 self.set_mode(2);
                 1
             }
-            (PortName::C, PinNum::P9) => {
+            (PortName::C, 9) => {
                 self.set_mode(2);
                 0
             }
-            (PortName::C, PinNum::P11) => {
+            (PortName::C, 11) => {
                 self.set_mode(2);
                 1
             }
@@ -425,59 +389,59 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
 
     pub fn to_spi_mosi(mut self) -> Result<SpiMosi<'a, N, P>, ()> {
         match (N, P) {
-            (PortName::E, PinNum::P1) => {
+            (PortName::E, 1) => {
                 self.set_mode(2);
                 Ok(SpiMosi { spi: 1, _pin: self })
             }
-            (PortName::E, PinNum::P3) => {
+            (PortName::E, 3) => {
                 self.set_mode(5);
                 Ok(SpiMosi { spi: 1, _pin: self })
             }
-            (PortName::E, PinNum::P18) => {
+            (PortName::E, 18) => {
                 self.set_mode(2);
                 Ok(SpiMosi { spi: 0, _pin: self })
             }
-            (PortName::E, PinNum::P19) => {
+            (PortName::E, 19) => {
                 self.set_mode(5);
                 Ok(SpiMosi { spi: 0, _pin: self })
             }
-            (PortName::A, PinNum::P16) => {
+            (PortName::A, 16) => {
                 self.set_mode(2);
                 Ok(SpiMosi { spi: 0, _pin: self })
             }
-            (PortName::A, PinNum::P17) => {
+            (PortName::A, 17) => {
                 self.set_mode(5);
                 Ok(SpiMosi { spi: 0, _pin: self })
             }
-            (PortName::B, PinNum::P16) => {
+            (PortName::B, 16) => {
                 self.set_mode(2);
                 Ok(SpiMosi { spi: 1, _pin: self })
             }
-            (PortName::B, PinNum::P17) => {
+            (PortName::B, 17) => {
                 self.set_mode(5);
                 Ok(SpiMosi { spi: 1, _pin: self })
             }
-            (PortName::C, PinNum::P6) => {
+            (PortName::C, 6) => {
                 self.set_mode(2);
                 Ok(SpiMosi { spi: 0, _pin: self })
             }
-            (PortName::C, PinNum::P7) => {
+            (PortName::C, 7) => {
                 self.set_mode(5);
                 Ok(SpiMosi { spi: 0, _pin: self })
             }
-            (PortName::D, PinNum::P2) => {
+            (PortName::D, 2) => {
                 self.set_mode(2);
                 Ok(SpiMosi { spi: 0, _pin: self })
             }
-            (PortName::D, PinNum::P3) => {
+            (PortName::D, 3) => {
                 self.set_mode(5);
                 Ok(SpiMosi { spi: 0, _pin: self })
             }
-            (PortName::D, PinNum::P6) => {
+            (PortName::D, 6) => {
                 self.set_mode(2);
                 Ok(SpiMosi { spi: 1, _pin: self })
             }
-            (PortName::D, PinNum::P7) => {
+            (PortName::D, 7) => {
                 self.set_mode(5);
                 Ok(SpiMosi { spi: 1, _pin: self })
             }
@@ -487,63 +451,63 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
 
     pub fn to_spi_miso(mut self) -> Result<SpiMiso<'a, N, P>, ()> {
         match (N, P) {
-            (PortName::E, PinNum::P0) => {
+            (PortName::E, 0) => {
                 self.set_mode(2);
                 Ok(SpiMiso { spi: 1, _pin: self })
             }
-            (PortName::E, PinNum::P1) => {
+            (PortName::E, 1) => {
                 self.set_mode(5);
                 Ok(SpiMiso { spi: 1, _pin: self })
             }
-            (PortName::E, PinNum::P3) => {
+            (PortName::E, 3) => {
                 self.set_mode(2);
                 Ok(SpiMiso { spi: 1, _pin: self })
             }
-            (PortName::E, PinNum::P18) => {
+            (PortName::E, 18) => {
                 self.set_mode(5);
                 Ok(SpiMiso { spi: 0, _pin: self })
             }
-            (PortName::E, PinNum::P19) => {
+            (PortName::E, 19) => {
                 self.set_mode(2);
                 Ok(SpiMiso { spi: 0, _pin: self })
             }
-            (PortName::A, PinNum::P16) => {
+            (PortName::A, 16) => {
                 self.set_mode(5);
                 Ok(SpiMiso { spi: 0, _pin: self })
             }
-            (PortName::A, PinNum::P17) => {
+            (PortName::A, 17) => {
                 self.set_mode(2);
                 Ok(SpiMiso { spi: 0, _pin: self })
             }
-            (PortName::B, PinNum::P16) => {
+            (PortName::B, 16) => {
                 self.set_mode(5);
                 Ok(SpiMiso { spi: 1, _pin: self })
             }
-            (PortName::B, PinNum::P17) => {
+            (PortName::B, 17) => {
                 self.set_mode(2);
                 Ok(SpiMiso { spi: 1, _pin: self })
             }
-            (PortName::C, PinNum::P6) => {
+            (PortName::C, 6) => {
                 self.set_mode(5);
                 Ok(SpiMiso { spi: 0, _pin: self })
             }
-            (PortName::C, PinNum::P7) => {
+            (PortName::C, 7) => {
                 self.set_mode(2);
                 Ok(SpiMiso { spi: 0, _pin: self })
             }
-            (PortName::D, PinNum::P2) => {
+            (PortName::D, 2) => {
                 self.set_mode(5);
                 Ok(SpiMiso { spi: 0, _pin: self })
             }
-            (PortName::D, PinNum::P3) => {
+            (PortName::D, 3) => {
                 self.set_mode(2);
                 Ok(SpiMiso { spi: 0, _pin: self })
             }
-            (PortName::D, PinNum::P6) => {
+            (PortName::D, 6) => {
                 self.set_mode(5);
                 Ok(SpiMiso { spi: 1, _pin: self })
             }
-            (PortName::D, PinNum::P7) => {
+            (PortName::D, 7) => {
                 self.set_mode(2);
                 Ok(SpiMiso { spi: 1, _pin: self })
             }
@@ -553,35 +517,35 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
 
     pub fn to_spi_sck(mut self) -> Result<SpiSck<'a, N, P>, ()> {
         match (N, P) {
-            (PortName::E, PinNum::P2) => {
+            (PortName::E, 2) => {
                 self.set_mode(2);
                 Ok(SpiSck { spi: 1, _pin: self })
             }
-            (PortName::E, PinNum::P17) => {
+            (PortName::E, 17) => {
                 self.set_mode(2);
                 Ok(SpiSck { spi: 0, _pin: self })
             }
-            (PortName::A, PinNum::P15) => {
+            (PortName::A, 15) => {
                 self.set_mode(2);
                 Ok(SpiSck { spi: 0, _pin: self })
             }
-            (PortName::B, PinNum::P9) => {
+            (PortName::B, 9) => {
                 self.set_mode(2);
                 Ok(SpiSck { spi: 1, _pin: self })
             }
-            (PortName::B, PinNum::P11) => {
+            (PortName::B, 11) => {
                 self.set_mode(2);
                 Ok(SpiSck { spi: 1, _pin: self })
             }
-            (PortName::C, PinNum::P5) => {
+            (PortName::C, 5) => {
                 self.set_mode(2);
                 Ok(SpiSck { spi: 0, _pin: self })
             }
-            (PortName::D, PinNum::P1) => {
+            (PortName::D, 1) => {
                 self.set_mode(2);
                 Ok(SpiSck { spi: 0, _pin: self })
             }
-            (PortName::D, PinNum::P5) => {
+            (PortName::D, 5) => {
                 self.set_mode(2);
                 Ok(SpiSck { spi: 1, _pin: self })
             }
@@ -591,35 +555,35 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
 
     pub fn to_spi_cs(mut self) -> Result<SpiCs<'a, N, P>, ()> {
         match (N, P) {
-            (PortName::E, PinNum::P4) => {
+            (PortName::E, 4) => {
                 self.set_mode(2);
                 Ok(SpiCs { spi: 1, _pin: self })
             }
-            (PortName::E, PinNum::P16) => {
+            (PortName::E, 16) => {
                 self.set_mode(2);
                 Ok(SpiCs { spi: 0, _pin: self })
             }
-            (PortName::A, PinNum::P14) => {
+            (PortName::A, 14) => {
                 self.set_mode(2);
                 Ok(SpiCs { spi: 0, _pin: self })
             }
-            (PortName::B, PinNum::P8) => {
+            (PortName::B, 8) => {
                 self.set_mode(2);
                 Ok(SpiCs { spi: 1, _pin: self })
             }
-            (PortName::B, PinNum::P10) => {
+            (PortName::B, 10) => {
                 self.set_mode(2);
                 Ok(SpiCs { spi: 1, _pin: self })
             }
-            (PortName::C, PinNum::P4) => {
+            (PortName::C, 4) => {
                 self.set_mode(2);
                 Ok(SpiCs { spi: 0, _pin: self })
             }
-            (PortName::D, PinNum::P0) => {
+            (PortName::D, 0) => {
                 self.set_mode(2);
                 Ok(SpiCs { spi: 0, _pin: self })
             }
-            (PortName::D, PinNum::P4) => {
+            (PortName::D, 4) => {
                 self.set_mode(2);
                 Ok(SpiCs { spi: 1, _pin: self })
             }
@@ -630,7 +594,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
     pub fn to_tpm(mut self) -> Result<TpmPin<'a, N, P>, ()> {
         match (N, P) {
             // e20:3-1,0
-            (PortName::E, PinNum::P20) => {
+            (PortName::E, 20) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM1,
@@ -639,7 +603,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // e21:3-1,1
-            (PortName::E, PinNum::P21) => {
+            (PortName::E, 21) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM1,
@@ -648,7 +612,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // e22:3-2,0
-            (PortName::E, PinNum::P22) => {
+            (PortName::E, 22) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM2,
@@ -657,7 +621,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // e23:3-2,1
-            (PortName::E, PinNum::P23) => {
+            (PortName::E, 23) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM2,
@@ -666,7 +630,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // e29:3-0,2
-            (PortName::E, PinNum::P29) => {
+            (PortName::E, 29) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -675,7 +639,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // e30:3-0,3
-            (PortName::E, PinNum::P30) => {
+            (PortName::E, 30) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -684,7 +648,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // e31:3-0,4
-            (PortName::E, PinNum::P31) => {
+            (PortName::E, 31) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -693,7 +657,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // e24:3-0,0
-            (PortName::E, PinNum::P24) => {
+            (PortName::E, 24) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -702,7 +666,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // e25:3-0,1
-            (PortName::E, PinNum::P25) => {
+            (PortName::E, 25) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -711,7 +675,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // e26:3-0,5
-            (PortName::E, PinNum::P26) => {
+            (PortName::E, 26) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -720,7 +684,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // a0:3-0,5
-            (PortName::A, PinNum::P0) => {
+            (PortName::A, 0) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -729,7 +693,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // a1:3-2,0
-            (PortName::A, PinNum::P1) => {
+            (PortName::A, 1) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM2,
@@ -738,7 +702,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // a2:3-2,1
-            (PortName::A, PinNum::P2) => {
+            (PortName::A, 2) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM2,
@@ -747,7 +711,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // a3:3-0,0
-            (PortName::A, PinNum::P3) => {
+            (PortName::A, 3) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -756,7 +720,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // a4:3-0,1
-            (PortName::A, PinNum::P4) => {
+            (PortName::A, 4) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -765,7 +729,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // a5:3-0,2
-            (PortName::A, PinNum::P5) => {
+            (PortName::A, 5) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -774,7 +738,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // a6:3-0,3
-            (PortName::A, PinNum::P6) => {
+            (PortName::A, 6) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -783,7 +747,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // a7:3-0,4
-            (PortName::A, PinNum::P7) => {
+            (PortName::A, 7) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -792,7 +756,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // a12:3-1,0
-            (PortName::A, PinNum::P12) => {
+            (PortName::A, 12) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM1,
@@ -801,7 +765,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // a13:3-1,1
-            (PortName::A, PinNum::P13) => {
+            (PortName::A, 13) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM1,
@@ -810,7 +774,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // b0:3-1,0
-            (PortName::B, PinNum::P0) => {
+            (PortName::B, 0) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM1,
@@ -819,7 +783,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // b1:3-1,1
-            (PortName::B, PinNum::P1) => {
+            (PortName::B, 1) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM1,
@@ -828,7 +792,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // b2:3-2,0
-            (PortName::B, PinNum::P2) => {
+            (PortName::B, 2) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM2,
@@ -837,7 +801,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // b3:3-2,1
-            (PortName::B, PinNum::P3) => {
+            (PortName::B, 3) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM2,
@@ -846,7 +810,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // b18:3-2,0
-            (PortName::B, PinNum::P18) => {
+            (PortName::B, 18) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM2,
@@ -855,7 +819,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // b19:3-2,1
-            (PortName::B, PinNum::P19) => {
+            (PortName::B, 19) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM2,
@@ -865,7 +829,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
             }
 
             // c1:4-0,0
-            (PortName::C, PinNum::P1) => {
+            (PortName::C, 1) => {
                 self.set_mode(4);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -874,7 +838,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // c2:4-0,1
-            (PortName::C, PinNum::P2) => {
+            (PortName::C, 2) => {
                 self.set_mode(4);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -883,7 +847,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // c3:4-0,2
-            (PortName::C, PinNum::P3) => {
+            (PortName::C, 3) => {
                 self.set_mode(4);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -892,7 +856,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // c4:4-0,3
-            (PortName::C, PinNum::P4) => {
+            (PortName::C, 4) => {
                 self.set_mode(4);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -902,7 +866,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
             }
 
             // c8:3-0,4
-            (PortName::C, PinNum::P8) => {
+            (PortName::C, 8) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -911,7 +875,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // c9:3-0,5
-            (PortName::C, PinNum::P9) => {
+            (PortName::C, 9) => {
                 self.set_mode(3);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -921,7 +885,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
             }
 
             // d0:4-0,0
-            (PortName::D, PinNum::P0) => {
+            (PortName::D, 0) => {
                 self.set_mode(4);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -930,7 +894,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // d1:4-0,1
-            (PortName::D, PinNum::P1) => {
+            (PortName::D, 1) => {
                 self.set_mode(4);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -939,7 +903,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // d2:4-0,2
-            (PortName::D, PinNum::P2) => {
+            (PortName::D, 2) => {
                 self.set_mode(4);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -948,7 +912,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // d3:4-0,3
-            (PortName::D, PinNum::P3) => {
+            (PortName::D, 3) => {
                 self.set_mode(4);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -957,7 +921,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // d4:4-0,4
-            (PortName::D, PinNum::P4) => {
+            (PortName::D, 4) => {
                 self.set_mode(4);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -966,7 +930,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
                 })
             }
             // d5:4-0,5
-            (PortName::D, PinNum::P5) => {
+            (PortName::D, 5) => {
                 self.set_mode(4);
                 Ok(TpmPin {
                     tpm: TpmNum::TPM0,
@@ -981,84 +945,84 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
 
     pub fn to_uart_rx(mut self) -> Result<UartRx<'a, N, P>, ()> {
         match (N, P) {
-            (PortName::E, PinNum::P1) => {
+            (PortName::E, 1) => {
                 self.set_mode(3);
                 Ok(UartRx {
                     uart: UartNum::UART1,
                     _pin: self,
                 })
             }
-            (PortName::E, PinNum::P17) => {
+            (PortName::E, 17) => {
                 self.set_mode(3);
                 Ok(UartRx {
                     uart: UartNum::UART2,
                     _pin: self,
                 })
             }
-            (PortName::E, PinNum::P21) => {
+            (PortName::E, 21) => {
                 self.set_mode(4);
                 Ok(UartRx {
                     uart: UartNum::UART0,
                     _pin: self,
                 })
             }
-            (PortName::E, PinNum::P23) => {
+            (PortName::E, 23) => {
                 self.set_mode(4);
                 Ok(UartRx {
                     uart: UartNum::UART2,
                     _pin: self,
                 })
             }
-            (PortName::A, PinNum::P1) => {
+            (PortName::A, 1) => {
                 self.set_mode(2);
                 Ok(UartRx {
                     uart: UartNum::UART0,
                     _pin: self,
                 })
             }
-            (PortName::A, PinNum::P15) => {
+            (PortName::A, 15) => {
                 self.set_mode(3);
                 Ok(UartRx {
                     uart: UartNum::UART0,
                     _pin: self,
                 })
             }
-            (PortName::A, PinNum::P18) => {
+            (PortName::A, 18) => {
                 self.set_mode(3);
                 Ok(UartRx {
                     uart: UartNum::UART1,
                     _pin: self,
                 })
             }
-            (PortName::B, PinNum::P16) => {
+            (PortName::B, 16) => {
                 self.set_mode(3);
                 Ok(UartRx {
                     uart: UartNum::UART0,
                     _pin: self,
                 })
             }
-            (PortName::C, PinNum::P3) => {
+            (PortName::C, 3) => {
                 self.set_mode(3);
                 Ok(UartRx {
                     uart: UartNum::UART1,
                     _pin: self,
                 })
             }
-            (PortName::D, PinNum::P2) => {
+            (PortName::D, 2) => {
                 self.set_mode(3);
                 Ok(UartRx {
                     uart: UartNum::UART2,
                     _pin: self,
                 })
             }
-            (PortName::D, PinNum::P4) => {
+            (PortName::D, 4) => {
                 self.set_mode(3);
                 Ok(UartRx {
                     uart: UartNum::UART2,
                     _pin: self,
                 })
             }
-            (PortName::D, PinNum::P6) => {
+            (PortName::D, 6) => {
                 self.set_mode(3);
                 Ok(UartRx {
                     uart: UartNum::UART0,
@@ -1071,84 +1035,84 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
 
     pub fn to_uart_tx(mut self) -> Result<UartTx<'a, N, P>, ()> {
         match (N, P) {
-            (PortName::E, PinNum::P0) => {
+            (PortName::E, 0) => {
                 self.set_mode(3);
                 Ok(UartTx {
                     uart: UartNum::UART1,
                     _pin: self,
                 })
             }
-            (PortName::E, PinNum::P16) => {
+            (PortName::E, 16) => {
                 self.set_mode(3);
                 Ok(UartTx {
                     uart: UartNum::UART2,
                     _pin: self,
                 })
             }
-            (PortName::E, PinNum::P20) => {
+            (PortName::E, 20) => {
                 self.set_mode(4);
                 Ok(UartTx {
                     uart: UartNum::UART0,
                     _pin: self,
                 })
             }
-            (PortName::E, PinNum::P22) => {
+            (PortName::E, 22) => {
                 self.set_mode(4);
                 Ok(UartTx {
                     uart: UartNum::UART2,
                     _pin: self,
                 })
             }
-            (PortName::A, PinNum::P2) => {
+            (PortName::A, 2) => {
                 self.set_mode(2);
                 Ok(UartTx {
                     uart: UartNum::UART0,
                     _pin: self,
                 })
             }
-            (PortName::A, PinNum::P14) => {
+            (PortName::A, 14) => {
                 self.set_mode(3);
                 Ok(UartTx {
                     uart: UartNum::UART0,
                     _pin: self,
                 })
             }
-            (PortName::A, PinNum::P19) => {
+            (PortName::A, 19) => {
                 self.set_mode(3);
                 Ok(UartTx {
                     uart: UartNum::UART1,
                     _pin: self,
                 })
             }
-            (PortName::B, PinNum::P17) => {
+            (PortName::B, 17) => {
                 self.set_mode(3);
                 Ok(UartTx {
                     uart: UartNum::UART0,
                     _pin: self,
                 })
             }
-            (PortName::C, PinNum::P4) => {
+            (PortName::C, 4) => {
                 self.set_mode(3);
                 Ok(UartTx {
                     uart: UartNum::UART1,
                     _pin: self,
                 })
             }
-            (PortName::D, PinNum::P3) => {
+            (PortName::D, 3) => {
                 self.set_mode(3);
                 Ok(UartTx {
                     uart: UartNum::UART2,
                     _pin: self,
                 })
             }
-            (PortName::D, PinNum::P5) => {
+            (PortName::D, 5) => {
                 self.set_mode(3);
                 Ok(UartTx {
                     uart: UartNum::UART2,
                     _pin: self,
                 })
             }
-            (PortName::D, PinNum::P7) => {
+            (PortName::D, 7) => {
                 self.set_mode(3);
                 Ok(UartTx {
                     uart: UartNum::UART0,
@@ -1160,7 +1124,7 @@ impl<'a, const N: PortName, const P: PinNum> Pin<'a, N, P> {
     }
 }
 
-impl<'a, const N: PortName, const P: PinNum> Drop for Pin<'a, N, P> {
+impl<'a, const N: PortName, const P: usize> Drop for Pin<'a, N, P> {
     fn drop(&mut self) {
         unsafe {
             self.port.drop_pin(P);
@@ -1200,12 +1164,12 @@ struct GpioRegs {
 }
 
 // TODO: maybe split into input and output
-pub struct Gpio<'a, const N: PortName, const P: PinNum> {
+pub struct Gpio<'a, const N: PortName, const P: usize> {
     gpio: *mut GpioRegs,
     pin: Pin<'a, N, P>,
 }
 
-impl<'a, const N: PortName, const P: PinNum> Gpio<'a, N, P> {
+impl<'a, const N: PortName, const P: usize> Gpio<'a, N, P> {
     // TODO: BME?
     pub unsafe fn new(pin: Pin<'a, N, P>) -> Gpio<'a, N, P> {
         let gpio = match N {
@@ -1285,7 +1249,7 @@ impl<'a, const N: PortName, const P: PinNum> Gpio<'a, N, P> {
     }
 }
 
-impl<'a, const N: PortName, const P: PinNum> InputPin for Gpio<'a, N, P> {
+impl<'a, const N: PortName, const P: usize> InputPin for Gpio<'a, N, P> {
     type Error = Void;
 
     fn is_high(&self) -> Result<bool, Void> {
@@ -1297,7 +1261,7 @@ impl<'a, const N: PortName, const P: PinNum> InputPin for Gpio<'a, N, P> {
     }
 }
 
-impl<'a, const N: PortName, const P: PinNum> OutputPin for Gpio<'a, N, P> {
+impl<'a, const N: PortName, const P: usize> OutputPin for Gpio<'a, N, P> {
     type Error = Void;
 
     fn set_high(&mut self) -> Result<(), Void> {
@@ -1313,7 +1277,7 @@ impl<'a, const N: PortName, const P: PinNum> OutputPin for Gpio<'a, N, P> {
     }
 }
 
-impl<'a, const N: PortName, const P: PinNum> ToggleableOutputPin for Gpio<'a, N, P> {
+impl<'a, const N: PortName, const P: usize> ToggleableOutputPin for Gpio<'a, N, P> {
     type Error = Void;
 
     fn toggle(&mut self) -> Result<(), Void> {
@@ -1323,91 +1287,91 @@ impl<'a, const N: PortName, const P: PinNum> ToggleableOutputPin for Gpio<'a, N,
     }
 }
 
-pub struct AdcPin<'a, const N: PortName, const P: PinNum> {
+pub struct AdcPin<'a, const N: PortName, const P: usize> {
     _pin: Pin<'a, N, P>,
 }
 
-pub struct AdcDiffPPin<'a, const N: PortName, const P: PinNum> {
+pub struct AdcDiffPPin<'a, const N: PortName, const P: usize> {
     _pin: Pin<'a, N, P>,
 }
 
-pub struct AdcDiffMPin<'a, const N: PortName, const P: PinNum> {
+pub struct AdcDiffMPin<'a, const N: PortName, const P: usize> {
     _pin: Pin<'a, N, P>,
 }
 
-pub struct I2cScl<'a, const N: PortName, const P: PinNum> {
+pub struct I2cScl<'a, const N: PortName, const P: usize> {
     i2c: u8,
     _pin: Pin<'a, N, P>,
 }
 
-pub struct I2cSda<'a, const N: PortName, const P: PinNum> {
+pub struct I2cSda<'a, const N: PortName, const P: usize> {
     i2c: u8,
     _pin: Pin<'a, N, P>,
 }
 
-impl<'a, const N: PortName, const P: PinNum> I2cScl<'a, N, P> {
+impl<'a, const N: PortName, const P: usize> I2cScl<'a, N, P> {
     pub fn bus(&self) -> u8 {
         self.i2c
     }
 }
 
-impl<'a, const N: PortName, const P: PinNum> I2cSda<'a, N, P> {
+impl<'a, const N: PortName, const P: usize> I2cSda<'a, N, P> {
     pub fn bus(&self) -> u8 {
         self.i2c
     }
 }
 
-pub struct SpiMosi<'a, const N: PortName, const P: PinNum> {
+pub struct SpiMosi<'a, const N: PortName, const P: usize> {
     spi: u8,
     _pin: Pin<'a, N, P>,
 }
 
-pub struct SpiMiso<'a, const N: PortName, const P: PinNum> {
+pub struct SpiMiso<'a, const N: PortName, const P: usize> {
     spi: u8,
     _pin: Pin<'a, N, P>,
 }
 
-pub struct SpiSck<'a, const N: PortName, const P: PinNum> {
+pub struct SpiSck<'a, const N: PortName, const P: usize> {
     spi: u8,
     _pin: Pin<'a, N, P>,
 }
 
-pub struct SpiCs<'a, const N: PortName, const P: PinNum> {
+pub struct SpiCs<'a, const N: PortName, const P: usize> {
     spi: u8,
     _pin: Pin<'a, N, P>,
 }
 
-impl<'a, const N: PortName, const P: PinNum> SpiMosi<'a, N, P> {
+impl<'a, const N: PortName, const P: usize> SpiMosi<'a, N, P> {
     pub fn bus(&self) -> u8 {
         self.spi
     }
 }
 
-impl<'a, const N: PortName, const P: PinNum> SpiMiso<'a, N, P> {
+impl<'a, const N: PortName, const P: usize> SpiMiso<'a, N, P> {
     pub fn bus(&self) -> u8 {
         self.spi
     }
 }
 
-impl<'a, const N: PortName, const P: PinNum> SpiSck<'a, N, P> {
+impl<'a, const N: PortName, const P: usize> SpiSck<'a, N, P> {
     pub fn bus(&self) -> u8 {
         self.spi
     }
 }
 
-impl<'a, const N: PortName, const P: PinNum> SpiCs<'a, N, P> {
+impl<'a, const N: PortName, const P: usize> SpiCs<'a, N, P> {
     pub fn bus(&self) -> u8 {
         self.spi
     }
 }
 
-pub struct TpmPin<'a, const N: PortName, const P: PinNum> {
+pub struct TpmPin<'a, const N: PortName, const P: usize> {
     tpm: TpmNum,
     ch: ChannelNum,
     _pin: Pin<'a, N, P>,
 }
 
-impl<'a, const N: PortName, const P: PinNum> TpmPin<'a, N, P> {
+impl<'a, const N: PortName, const P: usize> TpmPin<'a, N, P> {
     pub fn tpm(&self) -> TpmNum {
         self.tpm
     }
@@ -1417,23 +1381,23 @@ impl<'a, const N: PortName, const P: PinNum> TpmPin<'a, N, P> {
     }
 }
 
-pub struct UartRx<'a, const N: PortName, const P: PinNum> {
+pub struct UartRx<'a, const N: PortName, const P: usize> {
     uart: UartNum,
     _pin: Pin<'a, N, P>,
 }
 
-pub struct UartTx<'a, const N: PortName, const P: PinNum> {
+pub struct UartTx<'a, const N: PortName, const P: usize> {
     uart: UartNum,
     _pin: Pin<'a, N, P>,
 }
 
-impl<'a, const N: PortName, const P: PinNum> UartRx<'a, N, P> {
+impl<'a, const N: PortName, const P: usize> UartRx<'a, N, P> {
     pub fn bus(&self) -> UartNum {
         self.uart
     }
 }
 
-impl<'a, const N: PortName, const P: PinNum> UartTx<'a, N, P> {
+impl<'a, const N: PortName, const P: usize> UartTx<'a, N, P> {
     pub fn bus(&self) -> UartNum {
         self.uart
     }

@@ -9,7 +9,7 @@ use crate::i2c::{self, Divider, I2cMaster, Multiplier};
 use crate::i2c::{Address, I2cSlave};
 use crate::pit::Pit;
 use crate::port::{I2cScl, I2cSda};
-use crate::port::{PinNum, Port, PortName};
+use crate::port::{Port, PortName};
 use crate::port::{SpiCs, SpiMiso, SpiMosi, SpiSck};
 use crate::port::{UartRx, UartTx};
 use crate::spi::{self, Divisor, SpiMaster};
@@ -161,7 +161,7 @@ impl Sim {
         unsafe { Port::new(gate) }
     }
 
-    pub fn uart<'a, 'b, R, T, const NR: PortName, const NT: PortName, const PT: PinNum, const PR: PinNum>(
+    pub fn uart<'a, 'b, R, T, const NR: PortName, const NT: PortName, const PT: usize, const PR: usize>(
         &mut self,
         uart: UartNum,
         rx: R,
@@ -189,7 +189,7 @@ impl Sim {
         &mut self,
         uart: UartNum,
         clkdiv: u16,
-    ) -> Result<Uart<'a, 'b, u8, {PortName::A}, {PortName::A}, {PinNum::P0}, {PinNum::P0}>, ()> {
+    ) -> Result<Uart<'a, 'b, u8, {PortName::A}, {PortName::A}, {0}, {0}>, ()> {
         let mut gate = match uart {
             UartNum::UART0 => ClockGate::new(4, 10),
             UartNum::UART1 => ClockGate::new(4, 11),
@@ -216,7 +216,7 @@ impl Sim {
         });
     }
 
-    pub fn i2c_master<'a, 'b, const NC: PortName, const ND: PortName, const PC: PinNum, const PD: PinNum>(
+    pub fn i2c_master<'a, 'b, const NC: PortName, const ND: PortName, const PC: usize, const PD: usize>(
         &mut self,
         scl: I2cScl<'a, NC, PC>,
         sda: I2cSda<'b, ND, PD>,
@@ -240,7 +240,7 @@ impl Sim {
     }
 
     #[cfg(feature = "i2c-slave")]
-    pub fn i2c_slave<'a, 'b, const NC: PortName, const ND: PortName, const PC: PinNum, const PD: PinNum>(
+    pub fn i2c_slave<'a, 'b, const NC: PortName, const ND: PortName, const PC: usize, const PD: usize>(
         &mut self,
         scl: I2cScl<'a, NC, PC>,
         sda: I2cSda<'b, ND, PD>,
@@ -272,10 +272,10 @@ impl Sim {
         const NI: PortName,
         const NC: PortName,
         const NS: PortName,
-        const PO: PinNum,
-        const PI: PinNum,
-        const PC: PinNum,
-        const PS: PinNum,
+        const PO: usize,
+        const PI: usize,
+        const PC: usize,
+        const PS: usize,
     >(
         &mut self,
         mosi: O,

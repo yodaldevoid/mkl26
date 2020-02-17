@@ -7,7 +7,7 @@ use embedded_hal::spi::{FullDuplex, Phase, Polarity};
 use nb::{self, Error};
 use volatile_register::{RO, RW};
 
-use crate::port::{PinNum, PortName, SpiCs, SpiMiso, SpiMosi, SpiSck};
+use crate::port::{PortName, SpiCs, SpiMiso, SpiMosi, SpiSck};
 use crate::sim::ClockGate;
 
 const SPI0_ADDR: usize = 0x4007_6000;
@@ -38,10 +38,10 @@ pub struct SpiMaster<
     const NI: PortName,
     const NC: PortName,
     const NS: PortName,
-    const PO: PinNum,
-    const PI: PinNum,
-    const PC: PinNum,
-    const PS: PinNum,
+    const PO: usize,
+    const PI: usize,
+    const PC: usize,
+    const PS: usize,
 > {
     reg: &'static mut SpiRegs,
     _mosi: Option<SpiMosi<'a, NO, PO>>,
@@ -64,10 +64,10 @@ pub struct SpiSlave<
     const NI: PortName,
     const NC: PortName,
     const NS: PortName,
-    const PO: PinNum,
-    const PI: PinNum,
-    const PC: PinNum,
-    const PS: PinNum,
+    const PO: usize,
+    const PI: usize,
+    const PC: usize,
+    const PS: usize,
 > {
     _reg: &'static mut SpiRegs,
     _mosi: Option<SpiMosi<'a, NO, PO>>,
@@ -156,10 +156,10 @@ impl<
     const NI: PortName,
     const NC: PortName,
     const NS: PortName,
-    const PO: PinNum,
-    const PI: PinNum,
-    const PC: PinNum,
-    const PS: PinNum,
+    const PO: usize,
+    const PI: usize,
+    const PC: usize,
+    const PS: usize,
 > SpiMaster<'a, 'b, 'c, 'd, W, NO, NI, NC, NS, PO, PI, PC, PS> {
     pub(crate) unsafe fn new(
         mosi: Option<SpiMosi<'a, NO, PO>>,
@@ -261,10 +261,10 @@ impl<
     const NI: PortName,
     const NC: PortName,
     const NS: PortName,
-    const PO: PinNum,
-    const PI: PinNum,
-    const PC: PinNum,
-    const PS: PinNum,
+    const PO: usize,
+    const PI: usize,
+    const PC: usize,
+    const PS: usize,
 > FullDuplex<u8> for SpiMaster<'a, 'b, 'c, 'd, u8, NO, NI, NC, NS, PO, PI, PC, PS> {
     type Error = ();
 
@@ -305,10 +305,10 @@ impl<
     const NI: PortName,
     const NC: PortName,
     const NS: PortName,
-    const PO: PinNum,
-    const PI: PinNum,
-    const PC: PinNum,
-    const PS: PinNum,
+    const PO: usize,
+    const PI: usize,
+    const PC: usize,
+    const PS: usize,
 > FullDuplex<u16> for SpiMaster<'a, 'b, 'c, 'd, u16, NO, NI, NC, NS, PO, PI, PC, PS> {
     type Error = ();
 
