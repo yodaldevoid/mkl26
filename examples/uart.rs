@@ -2,6 +2,8 @@
 #![no_std]
 #![no_builtins]
 
+#![feature(const_generics)]
+
 use core::fmt::Write;
 
 use cortex_m_rt::{entry, pre_init};
@@ -52,13 +54,13 @@ fn main() -> ! {
         panic!("Somehow the clock wasn't in FEI mode");
     }
 
-    let port_c = sim.port(PortName::C);
-    let mut led = port_c.pin(5).to_gpio();
+    let port_c = sim.port::<{PortName::C}>();
+    let mut led = port_c.pin::<5>().to_gpio();
     led.output();
 
-    let port_b = sim.port(PortName::B);
-    let rx = port_b.pin(16).to_uart_rx().ok();
-    let tx = port_b.pin(17).to_uart_tx().ok();
+    let port_b = sim.port::<{PortName::B}>();
+    let rx = port_b.pin::<16>().to_uart_rx();
+    let tx = port_b.pin::<17>().to_uart_tx();
     unsafe {
         sim.set_uart0_clksrc(ClkSrc::McgXLL);
     }
@@ -71,11 +73,21 @@ fn main() -> ! {
         )
         .unwrap();
     //unsafe { sim.set_uart0_clksrc(Uart0ClkSrc::OscER); }
-    //let mut uart = sim.uart(0, rx, tx, uart::calc_clkdiv(115200, 16_000_000)).unwrap();
+    //let mut uart = sim.uart(
+    //    UartNum::UART0,
+    //    rx,
+    //    tx,
+    //    uart::calc_clkdiv(115200, 16_000_000),
+    //).unwrap();
 
-    //let rx = port_c.pin(3).to_uart_rx().ok();
-    //let tx = port_c.pin(4).to_uart_tx().ok();
-    //let mut uart = sim.uart(1, rx, tx, uart::calc_clkdiv(115200, 24_000_000)).unwrap();
+    //let rx = port_c.pin::<3>().to_uart_rx().ok();
+    //let tx = port_c.pin::<4>().to_uart_tx().ok();
+    //let mut uart = sim.uart(
+    //    UartNum::UART1,
+    //    rx,
+    //    tx,
+    //    uart::calc_clkdiv(115200, 24_000_000),
+    //).unwrap();
 
     led.high();
 

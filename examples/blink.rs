@@ -2,6 +2,8 @@
 #![no_std]
 #![no_builtins]
 
+#![feature(const_generics)]
+
 use cortex_m::asm;
 use cortex_m_rt::{entry, pre_init};
 use panic_halt as _;
@@ -50,9 +52,9 @@ fn main() -> ! {
         panic!("Somehow the clock wasn't in FEI mode");
     }
 
-    let port_c = sim.port(PortName::C);
+    let port_c = sim.port::<{PortName::C}>();
 
-    let mut led = port_c.pin(5).to_gpio();
+    let mut led = port_c.pin::<5>().to_gpio();
     led.output();
 
     loop {

@@ -53,14 +53,14 @@ fn main() -> ! {
         panic!("Somehow the clock wasn't in FEI mode");
     }
 
-    let port_b = sim.port(PortName::B);
-    let port_c = sim.port(PortName::C);
+    let port_b = sim.port::<{PortName::B}>();
+    let port_c = sim.port::<{PortName::C}>();
 
-    let mut led = port_c.pin(5).to_gpio();
+    let mut led = port_c.pin::<5>().to_gpio();
     led.output();
 
-    let rx = port_b.pin(16).to_uart_rx().ok();
-    let tx = port_b.pin(17).to_uart_tx().ok();
+    let rx = port_b.pin::<16>().to_uart_rx().ok();
+    let tx = port_b.pin::<17>().to_uart_tx().ok();
     unsafe {
         sim.set_uart0_clksrc(ClkSrc::McgXLL);
     }

@@ -27,8 +27,8 @@ unsafe fn disable_wdog() {
     Cop::new().init(None);
 }
 
-static mut PORT_C: Option<Port> = None;
-static mut LED_PIN: Option<Gpio<'static>> = None;
+static mut PORT_C: Option<Port<{PortName::C}>> = None;
+static mut LED_PIN: Option<Gpio<'static, {PortName::C}, 5>> = None;
 
 static mut PIT0: Option<Pit> = None;
 static mut PIT0_TIMER0: Option<Timer> = None;
@@ -59,9 +59,9 @@ fn main() -> ! {
     }
 
     unsafe {
-        PORT_C = Some(sim.port(PortName::C));
+        PORT_C = Some(sim.port::<{PortName::C}>());
 
-        LED_PIN = Some(PORT_C.as_mut().unwrap().pin(5).to_gpio());
+        LED_PIN = Some(PORT_C.as_mut().unwrap().pin::<5>().to_gpio());
         LED_PIN.as_mut().unwrap().output();
 
         // Interrupt Timers

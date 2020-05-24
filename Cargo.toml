@@ -7,7 +7,7 @@ authors = ["Gabriel Smith <ga29smith@gmail.com>"]
 [dependencies]
 arraydeque = { version = "^0.4", default-features = false }
 bit_field = "^0.8"
-cortex-m = { version = "^0.6", features = ["const-fn", "inline-asm"] }
+cortex-m = "^0.6"
 cortex-m-rt = "^0.6"
 embedded-hal = { version = "^0.2.3", features = ["unproven"] }
 mkl26z4 = "^0.1"
@@ -45,3 +45,6 @@ lto = true
 lto = true
 debug = true
 opt-level = "s"
+
+[patch.crates-io]
+syn = { git = "https://github.com/dtolnay/syn.git" }

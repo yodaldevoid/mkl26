@@ -54,15 +54,15 @@ fn main() -> ! {
         panic!("Somehow the clock wasn't in FEI mode");
     }
 
-    let port_b = sim.port(PortName::B);
-    let port_c = sim.port(PortName::C);
-    let port_d = sim.port(PortName::D);
+    let port_b = sim.port::<{PortName::B}>();
+    let port_c = sim.port::<{PortName::C}>();
+    let port_d = sim.port::<{PortName::D}>();
 
-    let mut led = port_c.pin(5).to_gpio();
+    let mut led = port_c.pin:<5>().to_gpio();
     led.output();
 
-    let rx = port_b.pin(16).to_uart_rx().ok();
-    let tx = port_b.pin(17).to_uart_tx().ok();
+    let rx = port_b.pin::<16>().to_uart_rx().ok();
+    let tx = port_b.pin::<17>().to_uart_tx().ok();
     unsafe {
         sim.set_uart0_clksrc(ClkSrc::McgXLL);
     }
@@ -75,10 +75,10 @@ fn main() -> ! {
         )
         .unwrap();
 
-    let mosi = port_c.pin(6).to_spi_mosi().ok();
-    let miso = port_c.pin(7).to_spi_miso().ok();
-    let sck = port_d.pin(1).to_spi_sck().unwrap();
-    let cs = port_c.pin(4).to_spi_cs().ok();
+    let mosi = port_c.pin::<6>().to_spi_mosi().ok();
+    let miso = port_c.pin::<7>().to_spi_miso().ok();
+    let sck = port_d.pin::<1>().to_spi_sck().unwrap();
+    let cs = port_c.pin::<4>().to_spi_cs().ok();
     let spi_mode = Mode {
         polarity: Polarity::IdleLow,
         phase: Phase::CaptureOnFirstTransition,
