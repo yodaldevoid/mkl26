@@ -189,7 +189,7 @@ impl Sim {
         &mut self,
         uart: UartNum,
         clkdiv: u16,
-    ) -> Result<Uart<'a, 'b, u8, {PortName::A}, {PortName::A}, {0}, {0}>, ()> {
+    ) -> Result<Uart<'a, 'b, u8, {PortName::A}, {PortName::A}, 0, 0>, ()> {
         let mut gate = match uart {
             UartNum::UART0 => ClockGate::new(4, 10),
             UartNum::UART1 => ClockGate::new(4, 11),
